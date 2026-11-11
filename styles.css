@@ -865,7 +865,7 @@ body { overflow-wrap: break-word; }
 .chip { max-width: 100%; }
 .sheet .chips .chip, .quick .chip, #species-find-results .chip { white-space: normal; text-align: left; overflow-wrap: anywhere; }
 /* Messages sit at the top while a sheet is open, so they never cover its fields or buttons. */
-body.sheet-open .toast { bottom: auto; top: calc(var(--safe-t) + 70px); transform: translate(-50%, -20px); }
+body.sheet-open .toast { bottom: auto; top: calc(var(--safe-t) + 8px); transform: translate(-50%, -20px); }
 body.sheet-open .toast.show { transform: translate(-50%, 0); }
 /* Welcome: keep the two buttons in reach on short screens. */
 .welcome-actions { position: sticky; bottom: 0; display: grid; gap: 10px; padding: 12px 0 calc(8px + var(--safe-b)); background: linear-gradient(to bottom, transparent, var(--surface) 14px); }
