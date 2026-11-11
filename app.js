@@ -8,31 +8,75 @@
 
   // ---------------------------------------------------------------- constants
   // Common recreational species (North America), grouped for the dropdown.
-  // Primary species, grouped. A primary species can carry subspecies and close variants (hybrids, strains, recent splits):
-  // ['Cutthroat Trout', ['Westslope Cutthroat Trout', …]]. The catch form shows those in a second dropdown.
+  // The fish list, by type. Main menu: fish types ('Bass', 'Trout & char', 'Tuna') and one-of-a-kind fish ('Bowfin').
+  // A type's kinds appear in a second menu, in labelled sections where a type is large: ['Bass', [['Black bass', […]], …]].
   const SPECIES_TREE = [
-    ['Freshwater · Black bass', [['Largemouth Bass', ['Florida Bass']], 'Smallmouth Bass', ['Spotted Bass', ['Alabama Bass']], 'Guadalupe Bass', 'Shoal Bass', ['Redeye Bass', ['Bartram’s Bass', 'Altamaha Bass', 'Cahaba Bass', 'Chattahoochee Bass', 'Tallapoosa Bass', 'Warrior Bass']], 'Suwannee Bass', 'Choctaw Bass', 'Peacock Bass']],
-    ['Freshwater · Striped & white bass', [['Striped Bass', ['Hybrid Striped Bass (Wiper)', 'Sunshine Bass']], 'White Bass', 'Yellow Bass', 'White Perch']],
-    ['Freshwater · Trout & char', [['Rainbow Trout', ['Steelhead', 'Redband Trout', 'Golden Trout']], ['Brown Trout', ['Tiger Trout']], 'Brook Trout', ['Cutthroat Trout', ['Westslope Cutthroat Trout', 'Yellowstone Cutthroat Trout', 'Lahontan Cutthroat Trout', 'Bonneville Cutthroat Trout', 'Colorado River Cutthroat Trout', 'Greenback Cutthroat Trout', 'Rio Grande Cutthroat Trout', 'Coastal Cutthroat Trout', 'Cutbow']], 'Apache Trout', 'Gila Trout', ['Lake Trout', ['Splake']], 'Bull Trout', 'Dolly Varden', 'Arctic Char']],
-    ['Freshwater · Salmon, whitefish & grayling', ['Chinook (King) Salmon', 'Coho (Silver) Salmon', ['Sockeye Salmon', ['Kokanee']], 'Pink Salmon', 'Chum Salmon', ['Atlantic Salmon', ['Landlocked Atlantic Salmon']], 'Lake Whitefish', 'Mountain Whitefish', 'Round Whitefish', 'Broad Whitefish', 'Humpback Whitefish', 'Cisco (Lake Herring)', 'Inconnu (Sheefish)', 'Arctic Grayling']],
-    ['Freshwater · Panfish & sunfish', [['Bluegill', ['Hybrid Sunfish']], 'Redear Sunfish (Shellcracker)', 'Pumpkinseed', 'Green Sunfish', 'Redbreast Sunfish', 'Longear Sunfish', 'Spotted Sunfish (Stumpknocker)', 'Orangespotted Sunfish', 'Dollar Sunfish', 'Bluespotted Sunfish', 'Flier', 'Warmouth', 'Rock Bass', 'Ozark Bass', 'Shadow Bass', 'Roanoke Bass', 'Sacramento Perch', 'Black Crappie', 'White Crappie']],
-    ['Freshwater · Walleye, perch & pike', [['Walleye', ['Saugeye']], 'Sauger', 'Yellow Perch', 'Northern Pike', ['Muskellunge', ['Tiger Muskie']], 'Chain Pickerel', 'Redfin Pickerel', 'Grass Pickerel']],
-    ['Freshwater · Catfish & bullheads', ['Channel Catfish', 'Blue Catfish', 'Flathead Catfish', 'White Catfish', 'Headwater Catfish', 'Brown Bullhead', 'Black Bullhead', 'Yellow Bullhead', 'Flat Bullhead', 'Snail Bullhead', 'Spotted Bullhead', 'Stonecat', 'Walking Catfish', 'Sailfin Catfish (Pleco)']],
-    ['Freshwater · Carp & buffalo', [['Common Carp', ['Mirror Carp', 'Koi']], 'Grass Carp', 'Silver Carp', 'Bighead Carp', 'Black Carp', 'Goldfish', 'Bigmouth Buffalo', 'Smallmouth Buffalo', 'Black Buffalo', 'River Carpsucker', 'Quillback']],
-    ['Freshwater · Suckers & redhorse', ['White Sucker', 'Longnose Sucker', 'Largescale Sucker', 'Sacramento Sucker', 'Northern Hog Sucker', 'Shorthead Redhorse', 'Golden Redhorse', 'Silver Redhorse', 'River Redhorse', 'Greater Redhorse', 'Blue Sucker']],
-    ['Freshwater · Minnows & chubs', ['Fallfish', 'Creek Chub', 'Northern Pikeminnow', 'Sacramento Pikeminnow', 'Colorado Pikeminnow', 'Hardhead', 'Hitch', 'Tui Chub', 'Peamouth', 'Chiselmouth', 'Golden Shiner']],
-    ['Freshwater · Gar, sturgeon & bowfin', ['Longnose Gar', 'Spotted Gar', 'Shortnose Gar', 'Florida Gar', 'Alligator Gar', 'Bowfin', 'White Sturgeon', 'Green Sturgeon', 'Lake Sturgeon', 'Shovelnose Sturgeon', 'Pallid Sturgeon', 'Atlantic Sturgeon', 'Paddlefish']],
-    ['Freshwater · Shad, herring & mooneye', ['American Shad', 'Hickory Shad', 'Gizzard Shad', 'Threadfin Shad', 'Skipjack Herring', 'Alewife', 'Blueback Herring', 'Rainbow Smelt', 'Goldeye', 'Mooneye']],
-    ['Freshwater · Other', ['Freshwater Drum', 'Burbot', 'American Eel', 'Tilapia', 'Oscar', 'Mayan Cichlid', 'Jaguar Guapote', 'Clown Knifefish', 'Northern Snakehead', 'Bullseye Snakehead', 'Round Goby', 'Ruffe']],
-    ['Saltwater · Pacific coast', ['Calico Bass (Kelp Bass)', 'Barred Sand Bass', 'Spotted Bay Bass', 'California Halibut', 'Pacific Halibut', 'Yellowtail', 'White Seabass', 'California Sheephead', 'Lingcod', 'Rockfish', 'Cabezon', 'Barred Surfperch', 'California Corbina', 'Opaleye', 'Pacific Bonito', 'Pacific Mackerel', 'Leopard Shark']],
-    ['Saltwater · Inshore (Atlantic & Gulf)', ['Red Drum (Redfish)', 'Black Drum', 'Spotted Seatrout', 'Weakfish', 'Snook', 'Tarpon', 'Bonefish', 'Permit', 'Sheepshead', 'Summer Flounder (Fluke)', 'Southern Flounder', 'Winter Flounder', 'Bluefish', 'Spanish Mackerel', 'Florida Pompano', 'Jack Crevalle', 'Ladyfish', 'Atlantic Croaker', 'Spot', 'Kingfish (Whiting)', 'Tautog', 'Scup (Porgy)']],
-    ['Saltwater · Reef & bottom', ['Red Snapper', 'Mangrove (Gray) Snapper', 'Mutton Snapper', 'Yellowtail Snapper', 'Vermilion Snapper', 'Gag Grouper', 'Red Grouper', 'Black Grouper', 'Goliath Grouper', 'Black Sea Bass', 'Gray Triggerfish', 'Hogfish', 'Greater Amberjack', 'Cobia', 'Atlantic Cod', 'Haddock', 'Pollock']],
-    ['Saltwater · Offshore', ['Mahi-mahi (Dorado)', 'Yellowfin Tuna', 'Bluefin Tuna', 'Bigeye Tuna', 'Blackfin Tuna', 'Albacore', 'Skipjack Tuna', 'Wahoo', 'King Mackerel', 'Sailfish', 'Blue Marlin', 'White Marlin', 'Striped Marlin', 'Swordfish', 'Mako Shark']],
+    ['Freshwater', [
+      ['Bass', [['Black bass', ['Largemouth Bass', 'Florida Bass', 'Smallmouth Bass', 'Spotted Bass', 'Alabama Bass', 'Guadalupe Bass', 'Shoal Bass', 'Redeye Bass', 'Suwannee Bass', 'Choctaw Bass', 'Bartram’s Bass', 'Altamaha Bass', 'Cahaba Bass', 'Chattahoochee Bass', 'Tallapoosa Bass', 'Warrior Bass']], ['Striped & white bass', ['Striped Bass', 'Hybrid Striped Bass (Wiper)', 'Sunshine Bass', 'White Bass', 'Yellow Bass']], ['Rock bass', ['Rock Bass', 'Ozark Bass', 'Shadow Bass', 'Roanoke Bass']], ['Peacock bass', ['Peacock Bass']]]],
+      ['Trout & char', [['Rainbow trout', ['Rainbow Trout', 'Steelhead', 'Redband Trout', 'Golden Trout']], ['Cutthroat trout', ['Cutthroat Trout', 'Westslope Cutthroat Trout', 'Yellowstone Cutthroat Trout', 'Lahontan Cutthroat Trout', 'Bonneville Cutthroat Trout', 'Colorado River Cutthroat Trout', 'Greenback Cutthroat Trout', 'Rio Grande Cutthroat Trout', 'Coastal Cutthroat Trout', 'Cutbow']], ['Brown & brook trout', ['Brown Trout', 'Brook Trout', 'Tiger Trout']], ['Southwest native trout', ['Apache Trout', 'Gila Trout']], ['Lake trout & char', ['Lake Trout', 'Splake', 'Bull Trout', 'Dolly Varden', 'Arctic Char']]]],
+      ['Salmon', ['Chinook (King) Salmon', 'Coho (Silver) Salmon', 'Sockeye Salmon', 'Kokanee', 'Pink Salmon', 'Chum Salmon', 'Atlantic Salmon', 'Landlocked Atlantic Salmon']],
+      ['Whitefish & grayling', ['Lake Whitefish', 'Mountain Whitefish', 'Round Whitefish', 'Broad Whitefish', 'Humpback Whitefish', 'Cisco (Lake Herring)', 'Inconnu (Sheefish)', 'Arctic Grayling']],
+      ['Sunfish & bream', ['Bluegill', 'Redear Sunfish (Shellcracker)', 'Pumpkinseed', 'Green Sunfish', 'Redbreast Sunfish', 'Longear Sunfish', 'Spotted Sunfish (Stumpknocker)', 'Orangespotted Sunfish', 'Dollar Sunfish', 'Bluespotted Sunfish', 'Flier', 'Warmouth', 'Hybrid Sunfish']],
+      ['Crappie', ['Black Crappie', 'White Crappie']],
+      ['Perch', ['Yellow Perch', 'White Perch', 'Sacramento Perch']],
+      ['Walleye & sauger', ['Walleye', 'Sauger', 'Saugeye']],
+      ['Pike, muskie & pickerel', ['Northern Pike', 'Muskellunge', 'Tiger Muskie', 'Chain Pickerel', 'Redfin Pickerel', 'Grass Pickerel']],
+      ['Catfish', ['Channel Catfish', 'Blue Catfish', 'Flathead Catfish', 'White Catfish', 'Headwater Catfish', 'Stonecat', 'Walking Catfish', 'Sailfin Catfish (Pleco)']],
+      ['Bullhead', ['Brown Bullhead', 'Black Bullhead', 'Yellow Bullhead', 'Flat Bullhead', 'Snail Bullhead', 'Spotted Bullhead']],
+      ['Carp & goldfish', ['Common Carp', 'Mirror Carp', 'Koi', 'Grass Carp', 'Silver Carp', 'Bighead Carp', 'Black Carp', 'Goldfish']],
+      ['Buffalo & carpsucker', ['Bigmouth Buffalo', 'Smallmouth Buffalo', 'Black Buffalo', 'River Carpsucker', 'Quillback']],
+      ['Sucker & redhorse', ['White Sucker', 'Longnose Sucker', 'Largescale Sucker', 'Sacramento Sucker', 'Northern Hog Sucker', 'Blue Sucker', 'Shorthead Redhorse', 'Golden Redhorse', 'Silver Redhorse', 'River Redhorse', 'Greater Redhorse']],
+      ['Minnow, chub & pikeminnow', ['Fallfish', 'Creek Chub', 'Tui Chub', 'Hitch', 'Hardhead', 'Peamouth', 'Chiselmouth', 'Golden Shiner', 'Northern Pikeminnow', 'Sacramento Pikeminnow', 'Colorado Pikeminnow']],
+      ['Gar', ['Longnose Gar', 'Spotted Gar', 'Shortnose Gar', 'Florida Gar', 'Alligator Gar']],
+      ['Sturgeon & paddlefish', ['White Sturgeon', 'Green Sturgeon', 'Lake Sturgeon', 'Shovelnose Sturgeon', 'Pallid Sturgeon', 'Atlantic Sturgeon', 'Paddlefish']],
+      ['Shad, herring & smelt', ['American Shad', 'Hickory Shad', 'Gizzard Shad', 'Threadfin Shad', 'Skipjack Herring', 'Alewife', 'Blueback Herring', 'Rainbow Smelt']],
+      ['Mooneye & goldeye', ['Mooneye', 'Goldeye']],
+      ['Tilapia & cichlids', ['Tilapia', 'Oscar', 'Mayan Cichlid', 'Jaguar Guapote']],
+      ['Snakehead', ['Northern Snakehead', 'Bullseye Snakehead']],
+      'Bowfin',
+      'Burbot',
+      'Freshwater Drum',
+      'American Eel',
+      'Clown Knifefish',
+      'Round Goby',
+      'Ruffe',
+    ]],
+    ['Saltwater', [
+      ['Saltwater bass', ['Calico Bass (Kelp Bass)', 'Barred Sand Bass', 'Spotted Bay Bass', 'Black Sea Bass']],
+      ['Drum, croaker & seatrout', ['Red Drum (Redfish)', 'Black Drum', 'White Seabass', 'Spotted Seatrout', 'Weakfish', 'California Corbina', 'Atlantic Croaker', 'Spot', 'Kingfish (Whiting)']],
+      ['Halibut & flounder', ['California Halibut', 'Pacific Halibut', 'Summer Flounder (Fluke)', 'Southern Flounder', 'Winter Flounder']],
+      ['Snapper', ['Red Snapper', 'Mangrove (Gray) Snapper', 'Mutton Snapper', 'Yellowtail Snapper', 'Vermilion Snapper']],
+      ['Grouper', ['Gag Grouper', 'Red Grouper', 'Black Grouper', 'Goliath Grouper']],
+      ['Jacks & amberjack', ['Yellowtail', 'Greater Amberjack', 'Jack Crevalle', 'Florida Pompano', 'Permit']],
+      ['Tuna', ['Yellowfin Tuna', 'Bluefin Tuna', 'Bigeye Tuna', 'Blackfin Tuna', 'Albacore', 'Skipjack Tuna']],
+      ['Mackerel, bonito & wahoo', ['Pacific Mackerel', 'Spanish Mackerel', 'King Mackerel', 'Pacific Bonito', 'Wahoo']],
+      ['Billfish', ['Sailfish', 'Blue Marlin', 'White Marlin', 'Striped Marlin', 'Swordfish']],
+      ['Rockfish, lingcod & cabezon', ['Rockfish', 'Lingcod', 'Cabezon']],
+      ['Cod, haddock & pollock', ['Atlantic Cod', 'Haddock', 'Pollock']],
+      ['Shark', ['Leopard Shark', 'Mako Shark']],
+      ['Wrasse & porgy', ['California Sheephead', 'Hogfish', 'Tautog', 'Sheepshead', 'Scup (Porgy)']],
+      ['Tarpon, snook & bonefish', ['Tarpon', 'Snook', 'Bonefish', 'Ladyfish']],
+      'Mahi-mahi (Dorado)',
+      'Cobia',
+      'Bluefish',
+      'Gray Triggerfish',
+      'Barred Surfperch',
+      'Opaleye',
+    ]],
   ];
-  const SUBSPECIES = new Map(); const PARENT_SPECIES = new Map();
-  SPECIES_TREE.forEach(([, items]) => items.forEach((it) => { if (Array.isArray(it)) { SUBSPECIES.set(it[0], it[1]); it[1].forEach((x) => PARENT_SPECIES.set(x, it[0])); } }));
-  // Every name, flat, for the other species menus (filters, bag limits).
-  const SPECIES_GROUPS = SPECIES_TREE.map(([g, items]) => [g, items.flatMap((it) => (Array.isArray(it) ? [it[0], ...it[1]] : [it]))]);
+  // Lookups: a fish type ('Bass') → its kinds (with optional sections), and each kind → its type.
+  const FISH_TYPES = new Map(); const PARENT_SPECIES = new Map(); const SUBSPECIES = new Map();
+  SPECIES_TREE.forEach(([region, items]) => items.forEach((it) => {
+    if (!Array.isArray(it)) return;
+    const sections = it[1].map((g) => (Array.isArray(g) ? g : [null, [g]]));
+    const flat = sections.flatMap((g) => g[1]);
+    FISH_TYPES.set(it[0], { region, sections, flat }); SUBSPECIES.set(it[0], flat); flat.forEach((x) => PARENT_SPECIES.set(x, it[0]));
+  }));
+  // Every fish, flat, for the other species menus (filters, bag limits): one group per type.
+  const SPECIES_GROUPS = SPECIES_TREE.flatMap(([region, items]) => [
+    ...items.filter(Array.isArray).map((it) => [`${region} · ${it[0]}`, FISH_TYPES.get(it[0]).flat]),
+    [`${region} · Other`, items.filter((it) => !Array.isArray(it))],
+  ]);
   const KNOWN_SPECIES = new Set(SPECIES_GROUPS.flatMap((g) => g[1]));
   const OTHER = '__other';
 
@@ -85,7 +129,7 @@
   function store(key, val) { try { if (val === undefined) return localStorage.getItem(key); localStorage.setItem(key, val); } catch { return null; } }
 
   // ---------------------------------------------------------------- units
-  const APP_VERSION = '3.2 (Nov 10, 2026)';
+  const APP_VERSION = '3.3 (Nov 11, 2026)';
   // Night (dim red) mode and large text, applied before anything is drawn.
   function applyDisplay() {
     const night = store('tl.theme') === 'night'; const large = store('tl.text') === 'large';
@@ -534,16 +578,22 @@
     }
     // Keeps the dropdown, the "other" text box and the quick-pick chips in step.
     // Second dropdown for a primary species' subspecies and variants. Its first choice records just the primary species.
-    function paintSubspecies(primary, value) {
-      const subs = primary && SUBSPECIES.get(primary); const wrap = $('#sub-species-wrap');
-      if (!subs) { wrap.hidden = true; $('#f-subspecies').innerHTML = ''; return; }
-      wrap.hidden = false; $('#sub-species-label').textContent = `Which ${primary}?`;
-      $('#f-subspecies').innerHTML = `<option value="${esc(primary)}">Any / not sure – ${esc(primary)}</option>` + subs.map((x) => `<option value="${esc(x)}">${esc(x)}</option>`).join('');
-      $('#f-subspecies').value = subs.includes(value) ? value : primary;
+    // Second menu: every kind of the chosen fish type, in sections for big types. "Not sure which" records just the type.
+    const typeWord = (t) => t.toLowerCase().replace(' & ', ' or ');   // 'Trout & char' → 'trout or char'
+    function paintSubspecies(type, value) {
+      const T = type && FISH_TYPES.get(type); const wrap = $('#sub-species-wrap'); const sub = $('#f-subspecies');
+      if (!T) { wrap.hidden = true; sub.innerHTML = ''; return; }
+      wrap.hidden = false; $('#sub-species-label').textContent = `Which ${typeWord(type)}?`;
+      const opt = (x) => `<option value="${esc(x)}">${esc(x)}</option>`;
+      sub.innerHTML = `<option value="" disabled>Choose a kind…</option>` +
+        T.sections.map(([label, list]) => (label ? `<optgroup label="${esc(label)}">${list.map(opt).join('')}</optgroup>` : list.map(opt).join(''))).join('') +
+        `<optgroup label="Not sure"><option value="${esc(type)}">Not sure which – save as “${esc(type)}”</option></optgroup>`;
+      sub.value = value && (T.flat.includes(value) || value === type) ? value : '';
+      sub.classList.toggle('placeholder', !sub.value); sub.classList.remove('invalid');
     }
     function setSpecies(v, fromOther) {
       const sel = $('#f-species-select'); const input = $('#f-species');
-      const parent = v && PARENT_SPECIES.get(v);
+      const parent = v && (PARENT_SPECIES.get(v) || (FISH_TYPES.has(v) ? v : null));
       const listed = v && (parent || [...sel.options].some((o) => o.value === v && o.value !== OTHER));
       if (!fromOther) {
         if (!v) { sel.value = ''; input.hidden = true; paintSubspecies(null); }
@@ -559,6 +609,7 @@
     $('#f-species-select').addEventListener('change', (e) => {
       const v = e.target.value; dirty = true;
       if (v === OTHER) { $('#f-species').value = ''; $('#f-species').hidden = false; paintSubspecies(null); setSpecies('', true); $('#f-species').focus(); }
+      else if (FISH_TYPES.has(v)) { $('#f-species').value = ''; $('#f-species').hidden = true; paintSubspecies(v, ''); setSpecies('', true); $('#f-subspecies').focus(); }
       else setSpecies(v);
     });
     $('#f-species').addEventListener('input', () => setSpecies($('#f-species').value, true));
@@ -921,11 +972,14 @@
     el.addEventListener('submit', async (e) => {
       e.preventDefault();
       const species = $('#f-species').value.trim(); const bait = $('#f-bait').value.trim();
-      ($('#f-species').hidden ? $('#f-species-select') : $('#f-species')).classList.toggle('invalid', !species); ($('#f-bait').hidden ? $('#f-bait-select') : $('#f-bait')).classList.toggle('invalid', !bait);
+      const typeOpen = !species && FISH_TYPES.has($('#f-species-select').value);
+      const spField = typeOpen ? $('#f-subspecies') : ($('#f-species').hidden ? $('#f-species-select') : $('#f-species'));
+      spField.classList.toggle('invalid', !species); ($('#f-bait').hidden ? $('#f-bait-select') : $('#f-bait')).classList.toggle('invalid', !bait);
       $('#err-species').hidden = !!species; $('#err-bait').hidden = !!bait;
       if (!species || !bait) {
-        const missing = [!species && 'the fish type', !bait && 'the lure or bait'].filter(Boolean).join(' and ');
-        formError(`Add ${missing} to save.`, !species ? ($('#f-species').hidden ? $('#f-species-select') : $('#f-species')) : ($('#f-bait').hidden ? $('#f-bait-select') : $('#f-bait')));
+        const missing = [!species && (typeOpen ? `which ${typeWord($('#f-species-select').value)} it is` : 'the fish type'), !bait && 'the lure or bait'].filter(Boolean).join(' and ');
+        $('#err-species').textContent = typeOpen ? `Choose which ${typeWord($('#f-species-select').value)} (or "Not sure which").` : 'Choose the fish type.';
+        formError(`${typeOpen ? 'Choose' : 'Add'} ${missing} to save.`, !species ? spField : ($('#f-bait').hidden ? $('#f-bait-select') : $('#f-bait')));
         return;
       }
       if (draftReleased === false && !(await overLimitOk(species, draftCount, editing && editing.id))) return;

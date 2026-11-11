@@ -80,6 +80,11 @@ Tides show only where they apply:
 - **Saltwater spot:** always.
 - **Freshwater spot:** never. Use this for lakes and rivers near the coast.
 
+**New in 3.3: fish organised by type**
+- The main fish menu now lists fish *types*, under Freshwater and Saltwater: Bass, Trout & char, Salmon, Sunfish & bream, Crappie, Perch, Walleye & sauger, Pike, muskie & pickerel, Catfish, Bullhead, Carp, Gar, Sturgeon and more; Saltwater bass, Drum & croaker, Halibut & flounder, Snapper, Grouper, Tuna, Billfish and more. One-of-a-kind fish such as Bowfin, Burbot and Cobia are listed on their own.
+- Choosing a type opens a second menu with every kind of it, in sections for big types. **Bass** holds all the freshwater bass: black bass (Largemouth, Smallmouth, Spotted and the rest), striped and white bass (including Wiper and Sunshine Bass), rock bass and peacock bass.
+- You choose the exact fish, or **Not sure which** to save just the type. Search still finds any fish by name and sets both menus.
+
 **New in 3.2: a much bigger fish list, with subspecies and search**
 - About 250 species: 177 freshwater fish from lakes and rivers across the US and Canada (black bass, temperate bass, trout and char, salmon and whitefish, panfish and sunfish, walleye, perch and pike, catfish and bullheads, carp and buffalo, suckers and redhorse, minnows and chubs, gar, sturgeon and bowfin, shad and mooneye, and invasive species), plus the saltwater list.
 - **Two-level picker:** the main menu lists primary species. Fish marked ▸ have subspecies or close variants, which appear in a second menu: for example Cutthroat Trout → Westslope, Yellowstone, Lahontan and more; Redeye Bass → Bartram's, Altamaha, Cahaba, Chattahoochee, Tallapoosa and Warrior Bass; Rainbow Trout → Steelhead, Redband and Golden Trout; Largemouth Bass → Florida Bass; plus hybrids such as Wiper, Saugeye, Tiger Muskie, Tiger Trout and Splake. "Any / not sure" records just the primary species.
