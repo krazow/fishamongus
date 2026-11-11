@@ -160,7 +160,7 @@
 
   // ---------------------------------------------------------------- units
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition; // speech recognition, where the browser has it
-  const APP_VERSION = '4.3 (Nov 11, 2026)';
+  const APP_VERSION = '4.4 (Nov 11, 2026)';
   // Night (dim red) mode and large text, applied before anything is drawn.
   function applyDisplay() {
     const night = store('tl.theme') === 'night'; const large = store('tl.text') === 'large';
@@ -653,12 +653,22 @@
 
     // Crab sex, shell and width; pots and soak time; a biotoxin note for clams, oysters, mussels and scallops.
     let draftSex = null; let draftShell = null;
+    let beachKey = '';
+    function paintBeachStatus() {
+      const L = draft && draft.location; const box = $('#shell-live'); if (!box) return;
+      if (!L || !inWA(L.lat, L.lon) || !navigator.onLine) { box.innerHTML = ''; return; }
+      const key = `${L.lat.toFixed(3)},${L.lon.toFixed(3)}`; if (key === beachKey) return; beachKey = key;
+      box.innerHTML = '<span class="help small"><span class="spin"></span>Checking beach status…</span>';
+      beachesNear(L, 600).then((list) => { if (beachKey === key) box.innerHTML = list.length ? beachHtml(list, { max: 2 }) : '<span class="help small">No public shellfish beach mapped within 600 m.</span>'; })
+        .catch(() => { if (beachKey === key) box.innerHTML = ''; });
+    }
     function paintShellExtras() {
       const shell = draftKind === 'shellfish'; const sp = $('#f-species').value.trim(); const type = typeOf(sp) || (FISH_TYPES.has($('#f-species-select').value) ? $('#f-species-select').value : null);
       $('#shell-extras').hidden = !shell;
       const crab = shell && (type === 'Crab' || sp === 'Crab'); $('#crab-fields').hidden = !crab;
       $('#pot-fields').hidden = !shell || !isPotGear($('#f-bait').value);
       $('#shell-safety').hidden = !shell || !BIVALVE_TYPES.has(type || sp);
+      if (!$('#shell-safety').hidden) paintBeachStatus();
       $$('#seg-sex button').forEach((b) => b.classList.toggle('on', b.dataset.sex === draftSex));
       $$('#seg-shell button').forEach((b) => b.classList.toggle('on', b.dataset.shell === draftShell));
       const h = $('#crab-hint'); const problems = crab ? keepProblems({ species: sp, crabSex: draftSex, shellHard: draftShell ? draftShell === 'hard' : null, carapaceCm: U.lenIn(num($('#f-carapace').value)) }) : [];
@@ -1118,6 +1128,10 @@
         }
       }
       const shellFields = draftKind === 'shellfish' ? { crabSex: $('#crab-fields').hidden ? null : draftSex, shellHard: $('#crab-fields').hidden || !draftShell ? null : draftShell === 'hard', carapaceCm: $('#crab-fields').hidden ? null : U.lenIn(num($('#f-carapace').value)) } : {};
+      if (draftReleased === false && draft.location) {
+        const cr = await closureFor(species, draft.location, caughtAtValue(), draft.spotId ? spotById(draft.spotId) : null);
+        if (cr && !(await askConfirm(`WDFW lists “${cr.title}” (${ruleDates(cr)}). Save this ${species} as kept anyway?`, 'Save anyway'))) return;
+      }
       if (draftReleased === false && !(await overLimitOk(species, draftCount, editing && editing.id, shellFields))) return;
       let spotId = draft.newSpot ? null : (draft.spotId || null);
       let createdSpot = null;
@@ -1363,6 +1377,7 @@
       <div class="spot-head"><h3>${esc(sp.name)}</h3><p>${sp.water === 'salt' ? 'Saltwater · ' : sp.water === 'fresh' ? 'Freshwater · ' : ''}${sp.lat.toFixed(5)}, ${sp.lon.toFixed(5)} · within ${fmtDist(sp.radiusM)}${d != null ? ` · ${fromYou(d)}` : ''}</p></div>
       ${sp.notes ? `<div class="card notes-card" style="margin-bottom:12px"><h3 style="margin-bottom:6px">Notes</h3><p>${esc(sp.notes)}</p></div>` : ''}
       ${sp.water !== 'salt' && !list.some((c) => tideShown(c)) ? '<div id="spot-flow"></div>' : ''}
+      ${inWA(sp.lat, sp.lon) ? '<div id="spot-wa"></div>' : ''}
       ${list.length ? `
         <div class="tiles" style="margin-bottom:12px">
           <div class="stat"><b>${fishIn(list)}</b><span>Fish</span></div>
@@ -1381,6 +1396,7 @@
         <a class="btn" href="${mapsLink(sp)}" target="_blank" rel="noopener">Directions in Maps</a>
       </div>`;
     $$('#spot-body .card .sub').forEach((el) => { if (el.innerHTML === '&nbsp;') el.remove(); });
+    if ($('#spot-wa')) fillWA($('#spot-wa'), { lat: sp.lat, lon: sp.lon, name: sp.name, salt: sp.water === 'salt' || (sp.water !== 'fresh' && list.some((c) => tideShown(c))), spotId: sp.id }, { title: 'Washington rules at this spot' }).catch(() => {});
     if ($('#spot-flow') && navigator.onLine) {
       flowNear(sp).then((f) => { const box = $('#spot-flow'); if (box && f && spotDetailId === id) box.innerHTML = `<div class="card" style="margin-bottom:12px"><div class="now-grid">${flowCell(f)}</div></div>`; }).catch(() => {});
     }
@@ -2009,6 +2025,15 @@
     add('crabW' + (y - 1), 'Winter crab card due', new Date(y, 1, 1), wc, `You logged ${fishIn(wc)} Dungeness crab last winter (${fishIn(wc.filter((c) => c.released === false))} kept)`);
     return out;
   }
+  let nowWAKey = '';
+  function renderNowWA() {
+    const box = $('#now-wa'); if (!box) return;
+    if (!nowState || !nowState.loc || !inWA(nowState.loc.lat, nowState.loc.lon)) { box.innerHTML = ''; nowWAKey = ''; return; }
+    const st = nowState; const pl = nowPlace(st.loc); const sp = pl.spotId ? spotById(pl.spotId) : null;
+    const salt = sp ? sp.water === 'salt' || (sp.water !== 'fresh' && !!(st.tide && tideShown({ tide: st.tide, spotId: sp.id }))) : !!(st.tide && tideShown({ tide: st.tide }));
+    const key = `${st.at}|${pl.spotId}|${wa ? wa.at : 0}`; if (key === nowWAKey && box.innerHTML) return; nowWAKey = key;
+    fillWA(box, { lat: st.loc.lat, lon: st.loc.lon, name: sp ? sp.name : '', salt, spotId: sp && sp.id }).catch(() => {});
+  }
   function renderNowCrc() {
     const box = $('#now-crc'); if (!box) return;
     const r = crcReminders();
@@ -2570,6 +2595,7 @@
         ${recs.length ? recs.map((r) => `<div class="rec"><b>${esc(r.lure)}</b><small>${esc(r.reasons.join('; '))}</small></div>`).join('') : (hist.list.length ? '<p class="sub" style="margin:0">Not enough matching catches yet.</p>' : '')}</div>
       ${speciesCard}
       ${gearCard}
+      ${inWA(t.lat, t.lon) ? '<div id="trip-wa"></div>' : ''}
       <div class="card" style="margin-bottom:12px"><h3>Regulations</h3>
         <p style="margin:0 0 8px">${t.type === 'crabbing' ? 'Carry your license with its crab endorsement and, in Puget Sound, your catch record card. Check seasons and open days – they change every year and some areas are closed.'
           : t.type === 'clamming' ? 'Carry your shellfish license, check the beach is open for the species you want, and check for biotoxin closures on the day – they can start without warning.'
@@ -2585,6 +2611,12 @@
       ${t.notes ? `<div class="card notes-card" style="margin-bottom:12px"><h3 style="margin-bottom:6px">Notes</h3><p>${esc(t.notes)}</p></div>` : ''}
       <p class="help small">${t.forecast && t.forecast.fetchedAt ? `Forecast updated ${fmtDate(t.forecast.fetchedAt)}, ${fmtTime(t.forecast.fetchedAt)}.` : ''}${showTide ? ' Tide predictions from NOAA.' : ''}</p>`;
     if (showTide) bindChart(t.tide.ev, dayStart(t.start), 'trip-tide');
+    if ($('#trip-wa')) {
+      const sp = t.spotId ? spotById(t.spotId) : null; const shellTrip = ['crabbing', 'clamming', 'shrimping'].includes(t.type);
+      const groups = [...new Set([...(t.species || []).flatMap(wdfwGroups), ...(t.type === 'crabbing' ? ['Crab'] : t.type === 'clamming' ? ['Clams', 'Oysters', 'Razor clams'] : t.type === 'shrimping' ? ['Shrimp'] : [])])];
+      fillWA($('#trip-wa'), { lat: t.lat, lon: t.lon, name: sp ? sp.name : '', salt: shellTrip || (sp ? sp.water === 'salt' : showTide), spotId: sp && sp.id },
+        { at: Math.max(t.start, Date.now()), groups: groups.length ? groups : null, title: 'Washington rules for this trip' }).catch(() => {});
+    }
   }
 
   async function refreshTrip(t) {
@@ -2937,6 +2969,163 @@
     }
   }
 
+  // ---------------------------------------------------------------- Washington rules, shellfish safety, trout stocking
+  // Rules and stocking come from data/wa-*.json, which a scheduled GitHub Actions job refreshes from WDFW every 30 minutes.
+  // Shellfish beach status comes straight from the Department of Health's public map layer (updated hourly).
+  // Marine areas come from WDFW's map service. All of it is a helper: every card links to the official source.
+  let wa = (() => { try { return JSON.parse(store('tl.wa') || 'null'); } catch { return null; } })();
+  let waBusy = false;
+  async function loadWA(force) {
+    if (waBusy || !navigator.onLine) return wa; if (!force && wa && Date.now() - wa.at < 15 * 60000) return wa;
+    waBusy = true;
+    try {
+      const get = (f) => fetch(`data/${f}?t=${Math.floor(Date.now() / 60000)}`, { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error(f + ' ' + r.status); return r.json(); });
+      const [status, rules, stock] = await Promise.all([get('wa-status.json'), get('wa-rules.json'), get('wa-stocking.json')]);
+      wa = { at: Date.now(), status, rules: rules.rules || [], plants: stock.plants || [] };
+      store('tl.wa', JSON.stringify(wa));
+    } catch { /* keep the last copy */ } finally { waBusy = false; }
+    return wa;
+  }
+  // How much to trust what we have: 'ok', 'stale' (no good check for 6 hours), 'error' (the last check failed), 'pending' (never run), 'none' (never downloaded).
+  function waHealth(part = 'rules') {
+    if (!wa) return { state: 'none' }; const st = wa.status && wa.status[part];
+    if (!st || st.pending) return { state: 'pending' };
+    if (!st.ok) return { state: 'error', checked: st.checked, error: st.error };
+    if (Date.now() - st.checked > 6 * HOUR_MS) return { state: 'stale', checked: st.checked };
+    return { state: 'ok', checked: st.checked };
+  }
+  // WDFW's species groups (the ones its emergency rules use) for a species in the app.
+  function wdfwGroups(sp) {
+    const t = typeOf(sp) || ''; const n = (sp || '').toLowerCase(); const out = [];
+    if (/razor clam/.test(n)) out.push('Razor clams'); else if (t === 'Clams') out.push('Clams');
+    if (t === 'Oysters') out.push('Oysters'); if (t === 'Crab') out.push('Crab'); if (t === 'Shrimp & prawns') out.push('Shrimp'); if (t === 'Squid & octopus') out.push('Octopus/Squid');
+    if (/steelhead/.test(n)) out.push('Steelhead'); else if (t === 'Salmon' || /salmon|kokanee/.test(n)) out.push('Salmon');
+    else if (/trout|char\b|cutthroat|grayling|whitefish/.test(n) || /trout/i.test(t)) out.push('Trout');
+    if (/sturgeon/.test(n)) out.push('Sturgeon'); if (/halibut/.test(n)) out.push('Halibut'); if (/lingcod/.test(n)) out.push('Lingcod'); if (/rockfish/.test(n)) out.push('Rockfish');
+    if (/cabezon|greenling|sole\b|flounder|sanddab|surfperch|perch/.test(n) && (SPECIES_INFO.get(sp) || {}).region === 'Saltwater') out.push('Bottomfish');
+    if (/tuna|mackerel/.test(n)) out.push('Tuna'); if (/\bbass\b/.test(n)) out.push('Bass'); if (/walleye/.test(n)) out.push('Walleye'); if (/\bshad\b/.test(n)) out.push('Shad'); if (/smelt|eulachon/.test(n)) out.push('Smelt');
+    return out;
+  }
+  const waterKey = (n) => String(n || '').toLowerCase().replace(/\(.*?\)/g, ' ').replace(/\b(lake|lk|pond|pd|reservoir|res|the)\b/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
+  // Marine area (1–13, 8-1, 8-2…) at a point, from WDFW's map service. Cached per ~1 km.
+  async function marineAreaAt(loc) {
+    if (!loc || !inWA(loc.lat, loc.lon)) return null;
+    const key = `${loc.lat.toFixed(2)},${loc.lon.toFixed(2)}`; const memo = (() => { try { return JSON.parse(store('tl.ma') || '{}'); } catch { return {}; } })();
+    if (key in memo) return memo[key];
+    const url = `https://geodataservices.wdfw.wa.gov/arcgis/rest/services/ApplicationServices/Marine_Areas/MapServer/0/query?geometry=${loc.lon},${loc.lat}&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&returnGeometry=false&f=json`;
+    const r = await fetch(url); if (!r.ok) throw new Error('WDFW map ' + r.status); const j = await r.json(); if (j.error) throw new Error('WDFW map error');
+    const at = (j.features && j.features[0] && j.features[0].attributes) || null; let area = null;
+    if (at) for (const [k, v] of Object.entries(at)) { const sv = String(v == null ? '' : v).trim(); const m = sv.match(/^(?:marine area\s*)?(\d{1,2}(?:-\d)?)\b/i); if (m && /area|ma\b|name|code|crc|label/i.test(k) && Number(m[1].split('-')[0]) <= 13) { area = m[1]; break; } }
+    memo[key] = area; const ks = Object.keys(memo); if (ks.length > 200) delete memo[ks[0]]; store('tl.ma', JSON.stringify(memo));
+    return area;
+  }
+  // Rules that apply to a place on a date. place: { lat, lon, name, salt, area }
+  function rulesFor(place, at = Date.now(), groups = null, startsBy = null) {
+    if (!wa || !place) return [];
+    const nk = waterKey(place.name);
+    return wa.rules.filter((r) => {
+      if (startsBy) { if (!r.start || r.start <= at || r.start > startsBy) return false; }
+      else { if (r.start && r.start > at) return false; if (r.end && r.end < at) return false; }
+      const byArea = place.area && r.areas && r.areas.includes(String(place.area));
+      const byName = !place.salt && nk.length > 2 && (r.waters || []).some((w) => waterKey(w) === nk);
+      if (!byArea && !byName) return false;
+      if (groups && groups.length && r.groups && r.groups.length && !r.groups.includes('Other') && !r.groups.some((g) => groups.includes(g))) return false;
+      return true;
+    }).map((r) => ({ ...r, matched: place.area && r.areas && r.areas.includes(String(place.area)) ? 'area' : 'name' }));
+  }
+  // Rules starting in the next two weeks, for trip planning and "coming up".
+  const upcomingRules = (place, from = Date.now(), days = 14) => rulesFor(place, from, null, from + days * 86400000);
+  // Department of Health shellfish beaches near a point (status: Open, Closed, Conditionally Open, Unclassified).
+  const beachMemo = new Map();
+  async function beachesNear(loc, radiusM = 800) {
+    const key = `${loc.lat.toFixed(3)},${loc.lon.toFixed(3)},${radiusM}`; const hit = beachMemo.get(key); if (hit && Date.now() - hit.at < 30 * 60000) return hit.list;
+    const f = 'BEACHNAME,FINALSTATUS,DOHDFWStatus,PopupStatus,PopupClosedFor,PopupEmergency,PopupMessage,Vibrio,ALLSPECIEDESCRIPTIONS,COUNTYNAME,Cseason,Oseason,BIDN,UPDATED,Midx,Midy';
+    const url = `https://services8.arcgis.com/rGGrs6HCnw87OFOT/ArcGIS/rest/services/Recreational_Shellfish_Beaches/FeatureServer/0/query?where=1%3D1&geometry=${loc.lon},${loc.lat}&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&distance=${radiusM}&units=esriSRUnit_Meter&outFields=${f}&returnGeometry=false&f=json`;
+    const r = await fetch(url); if (!r.ok) throw new Error('DOH map ' + r.status); const j = await r.json(); if (j.error) throw new Error('DOH map error');
+    const list = (j.features || []).map((x) => x.attributes || {}).map((a) => ({ name: a.BEACHNAME || 'Beach', status: a.FINALSTATUS || a.DOHDFWStatus || a.PopupStatus || 'Unknown', closedFor: a.PopupClosedFor || a.ALLSPECIEDESCRIPTIONS || '', emergency: a.PopupEmergency || '',
+      message: a.PopupMessage || '', vibrio: /^y/i.test(a.Vibrio || ''), clams: a.Cseason || '', oysters: a.Oseason || '', id: a.BIDN || null, updated: a.UPDATED || null, d: Number.isFinite(a.Midy) && Number.isFinite(a.Midx) ? distM(loc, { lat: a.Midy, lon: a.Midx }) : null }))
+      .sort((a, b) => (a.d ?? 1e9) - (b.d ?? 1e9));
+    beachMemo.set(key, { at: Date.now(), list }); store('tl.beach.' + key, JSON.stringify({ at: Date.now(), list })); return list;
+  }
+  const lastBeaches = (loc, radiusM = 800) => { try { return JSON.parse(store(`tl.beach.${loc.lat.toFixed(3)},${loc.lon.toFixed(3)},${radiusM}`) || 'null'); } catch { return null; } };
+  const beachClass = (st) => (/^open/i.test(st) ? 'ok' : /closed/i.test(st) ? 'bad' : 'warn');
+  function beachHtml(list, opts = {}) {
+    if (!list || !list.length) return opts.none ? `<p class="help small" style="margin:0">${opts.none}</p>` : '';
+    return `<ul class="wa-list">${list.slice(0, opts.max || 3).map((b) => `<li><span class="wa-chip ${beachClass(b.status)}">${esc(b.status)}</span><span><b>${esc(b.name)}</b>${b.d != null ? ` <small>${esc(fmtDist(b.d))}</small>` : ''}
+      ${b.closedFor ? `<small class="wa-why">${esc(b.closedFor)}</small>` : ''}${b.emergency ? `<small class="wa-why">${esc(b.emergency)}</small>` : ''}${b.vibrio ? '<small class="wa-why">Vibrio advisory: cook shellfish thoroughly.</small>' : ''}</span></li>`).join('')}</ul>`;
+  }
+  // County at a point (OpenStreetMap Nominatim), for "stocked in your county". Cached per ~5 km for a month.
+  async function countyAt(loc) {
+    const key = `${loc.lat.toFixed(1)},${loc.lon.toFixed(1)}`; const memo = (() => { try { return JSON.parse(store('tl.county') || '{}'); } catch { return {}; } })();
+    if (memo[key] && Date.now() - memo[key].at < 30 * 86400000) return memo[key].c;
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=8&lat=${loc.lat}&lon=${loc.lon}`, { headers: { Accept: 'application/json' } });
+    if (!r.ok) throw new Error('county lookup ' + r.status); const j = await r.json();
+    const c = ((j.address && (j.address.county || j.address.state_district)) || '').replace(/ County$/i, '') || null;
+    memo[key] = { at: Date.now(), c }; store('tl.county', JSON.stringify(memo)); return c;
+  }
+  const plantsFor = (name, days = 21) => (!wa ? [] : wa.plants.filter((p) => Date.now() - p.date < days * 86400000 && waterKey(p.lake) === waterKey(name) && waterKey(name).length > 2));
+  const plantsInCounty = (county, days = 14) => (!wa || !county ? [] : wa.plants.filter((p) => Date.now() - p.date < days * 86400000 && String(p.county || '').toLowerCase() === county.toLowerCase()));
+  function plantsHtml(list, max = 5) {
+    if (!list.length) return '';
+    return `<ul class="wa-list">${list.slice(0, max).map((p) => `<li><span class="wa-chip ok">${esc(new Date(p.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }))}</span><span><b>${esc(p.lake)}</b> <small>${esc(p.number.toLocaleString())} ${esc(p.species.toLowerCase())}${p.perLb ? ` · ${p.perLb < 1 ? 'big ones, ' + round(1 / p.perLb, 1) + ' lb each' : round(p.perLb, 1) + ' per lb'}` : ''}</small></span></li>`).join('')}</ul>`;
+  }
+  const ruleChip = (r) => `<span class="wa-chip ${r.kind === 'closed' ? 'bad' : r.kind === 'open' ? 'ok' : 'warn'}">${r.kind === 'closed' ? 'Closed' : r.kind === 'open' ? 'Open' : 'Changed'}</span>`;
+  const ruleDates = (r) => { const f = (ms) => new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return r.start && r.end ? (dayStart(r.start) === dayStart(r.end) ? f(r.start) : `${f(r.start)} – ${f(r.end)}`) : r.start ? `${r.start > Date.now() ? 'From' : 'Since'} ${f(r.start)}${r.untilFurtherNotice ? ', until further notice' : ''}` : ''; };
+  function rulesHtml(list, max = 4) {
+    return `<ul class="wa-list">${list.slice(0, max).map((r) => `<li>${ruleChip(r)}<span><a href="${esc(r.url)}" target="_blank" rel="noopener"><b>${esc(r.title)}</b></a>
+      <small>${esc([(r.groups || []).filter((g) => g !== 'Other').join(', '), ruleDates(r)].filter(Boolean).join(' · '))}${r.matched === 'name' ? ' · matched by name' : ''}</small>${r.rule ? `<small class="wa-why">${esc(r.rule.slice(0, 160))}</small>` : ''}</span></li>`).join('')}</ul>${list.length > max ? `<p class="help small" style="margin:4px 0 0">${list.length - max} more on WDFW.</p>` : ''}`;
+  }
+  function waFreshness(part = 'rules') {
+    const h = waHealth(part);
+    if (h.state === 'ok') return `<p class="wa-fresh">Checked ${esc(relAgo(h.checked))} · <a href="https://wdfw.wa.gov/fishing/regulations/emergency-rules" target="_blank" rel="noopener">all WDFW rules</a></p>`;
+    const why = h.state === 'pending' ? 'Rule checks haven’t started yet.' : h.state === 'none' ? 'Rules haven’t been downloaded yet.' : h.state === 'stale' ? `Last checked ${relAgo(h.checked)}.` : 'The last check of WDFW’s pages failed.';
+    return `<p class="wa-unverified">Couldn’t verify – check WDFW before you go. ${esc(why)} <a href="https://wdfw.wa.gov/fishing/regulations/emergency-rules" target="_blank" rel="noopener">WDFW emergency rules</a></p>`;
+  }
+  function relAgo(ms) { const m = Math.round((Date.now() - ms) / 60000); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 48 * 60 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} days ago`; }
+
+  // Fills a box with the Washington card for a place: rules, shellfish beaches, stocking. place: { lat, lon, name, salt, spotId }
+  async function fillWA(box, place, opts = {}) {
+    if (!box || !place || !inWA(place.lat, place.lon)) { if (box) box.innerHTML = ''; return; }
+    const at = opts.at || Date.now(); const draw = (x) => { if (box.isConnected) box.innerHTML = x; };
+    const render = (area, beaches, county) => {
+      const pl = { ...place, area };
+      const groups = opts.groups || null;
+      const now = rulesFor(pl, at, groups); const soon = opts.at ? [] : upcomingRules(pl, at).filter((r) => !groups || !r.groups.length || r.groups.some((g) => groups.includes(g) || g === 'Other'));
+      const where = area ? `Marine Area ${area}` : place.name || 'this water';
+      const plants = place.salt ? [] : (place.name ? plantsFor(place.name) : []);
+      const cplants = place.salt || plants.length || !county ? [] : plantsInCounty(county);
+      const showBeaches = place.salt;
+      draw(`<div class="card wa-card" style="margin-bottom:12px"><h3>${esc(opts.title || 'Washington rules here')}</h3>
+        ${now.length ? `<p class="sub">WDFW emergency rules ${opts.at ? 'in effect on ' + new Date(at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : 'in effect now'} for ${esc(where)}:</p>${rulesHtml(now)}`
+          : `<p class="sub" style="margin-bottom:6px">${!area && !place.salt && !place.name ? 'Lake and river rules are matched by name: save this place as a spot (with the lake or river’s name) to see them here.'
+            : place.salt && !area ? 'Couldn’t work out the marine area here yet.'
+              : wa && waHealth().state === 'ok' ? `No WDFW emergency rules ${opts.at ? 'on that date' : 'right now'} for ${esc(where)}${area ? '' : ' (matched by name)'}. The normal rules in the pamphlet apply.` : 'WDFW emergency rules couldn’t be checked for this place yet (see below).'}</p>`}
+        ${soon.length ? `<p class="sub" style="margin:10px 0 4px">Coming up:</p>${rulesHtml(soon, 3)}` : ''}
+        ${showBeaches ? `<h4 class="wa-h">Shellfish safety</h4>${beaches == null ? '<p class="help small" style="margin:0">Couldn’t reach the Department of Health map. <a href="https://fortress.wa.gov/doh/biotoxin/biotoxin.html" target="_blank" rel="noopener">Check the Shellfish Safety Map</a>.</p>' : beachHtml(beaches, { none: 'No public shellfish beach mapped here. <a href="https://fortress.wa.gov/doh/biotoxin/biotoxin.html" target="_blank" rel="noopener">Shellfish Safety Map</a>' })}${beaches && beaches.length ? '<p class="wa-fresh">Department of Health, updated hourly · <a href="https://fortress.wa.gov/doh/biotoxin/biotoxin.html" target="_blank" rel="noopener">Shellfish Safety Map</a></p>' : ''}` : ''}
+        ${plants.length ? `<h4 class="wa-h">Trout stocking</h4>${plantsHtml(plants)}` : cplants.length ? `<h4 class="wa-h">Stocked in ${esc(county)} County, last 2 weeks</h4>${plantsHtml(cplants)}` : ''}
+        ${waFreshness()}</div>`);
+    };
+    // draw at once from what we have, then fill in from the network
+    const lb = place.salt ? lastBeaches(place) : null; render(null, lb ? lb.list : null, null);
+    await loadWA();
+    let area = null; let beaches = lb ? lb.list : null; let county = null;
+    await Promise.all([
+      place.salt ? marineAreaAt(place).then((a) => { area = a; }).catch(() => {}) : null,
+      place.salt ? beachesNear(place, 800).then((b) => { beaches = b; }).catch(() => {}) : null,
+      !place.salt ? countyAt(place).then((c) => { county = c; }).catch(() => {}) : null,
+    ]);
+    render(area, beaches, county);
+  }
+  // A WDFW closure for this catch, if one matches where and when it was caught.
+  async function closureFor(species, loc, at, spot) {
+    if (!loc || !inWA(loc.lat, loc.lon) || !wa) return null;
+    let area = null; if (!spot || spot.water !== 'fresh') { try { area = await withTimeout(marineAreaAt(loc), 3000); } catch { /* unknown */ } }
+    const salt = !!area || (spot && spot.water === 'salt');
+    const g = wdfwGroups(species); if (!g.length) return null;
+    return rulesFor({ lat: loc.lat, lon: loc.lon, name: spot ? spot.name : '', salt, area }, at, g).find((r) => r.kind === 'closed') || null;
+  }
+
   async function quickSave(combo) {
     if (quickBusy) return; quickBusy = true;
     toast(`Saving ${combo.species}…`);
@@ -3183,7 +3372,7 @@
   }
   function renderNow() {
     if (!$('#view-now')) return;
-    renderNowSession(); renderNowCrc(); renderNowCond(); renderNowSolunar(); renderNowRecs(); renderNowTrip();
+    renderNowSession(); renderNowCrc(); renderNowCond(); renderNowWA(); renderNowSolunar(); renderNowRecs(); renderNowTrip();
   }
   $('#view-now').addEventListener('click', (e) => {
     if (e.target.closest('#ses-start')) return startSession();
