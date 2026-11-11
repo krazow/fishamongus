@@ -160,7 +160,7 @@
 
   // ---------------------------------------------------------------- units
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition; // speech recognition, where the browser has it
-  const APP_VERSION = '4.4 (Nov 11, 2026)';
+  const APP_VERSION = '4.5 (Nov 11, 2026)';
   // Night (dim red) mode and large text, applied before anything is drawn.
   function applyDisplay() {
     const night = store('tl.theme') === 'night'; const large = store('tl.text') === 'large';
@@ -1129,7 +1129,7 @@
       }
       const shellFields = draftKind === 'shellfish' ? { crabSex: $('#crab-fields').hidden ? null : draftSex, shellHard: $('#crab-fields').hidden || !draftShell ? null : draftShell === 'hard', carapaceCm: $('#crab-fields').hidden ? null : U.lenIn(num($('#f-carapace').value)) } : {};
       if (draftReleased === false && draft.location) {
-        const cr = await closureFor(species, draft.location, caughtAtValue(), draft.spotId ? spotById(draft.spotId) : null);
+        const cr = await closureFor(species, draft.location, caughtAtValue(), draft.spotId ? spotById(draft.spotId) : null, draft.tide);
         if (cr && !(await askConfirm(`WDFW lists “${cr.title}” (${ruleDates(cr)}). Save this ${species} as kept anyway?`, 'Save anyway'))) return;
       }
       if (draftReleased === false && !(await overLimitOk(species, draftCount, editing && editing.id, shellFields))) return;
@@ -1994,17 +1994,19 @@
   };
   const crcGroup = (sp) => Object.keys(CRC_FISH).find((g) => CRC_FISH[g].includes(sp)) || (/\b(chinook|coho|sockeye|chum|pink) salmon\b|king salmon|silver salmon/i.test(sp || '') ? 'Salmon' : null);
   const HALIBUT_YEAR_LIMIT = 6; // WDFW 2026: six halibut per angler per year
-  const catchWA = (c) => { const L = c.location || (c.spotId && spotById(c.spotId)); return !L || inWA(L.lat, L.lon); };
+  const fishesInWA = () => spots.some((x) => inWA(x.lat, x.lon)) || catches.some((c) => c.location && inWA(c.location.lat, c.location.lon)) || !!(nowState && nowState.loc && inWA(nowState.loc.lat, nowState.loc.lon));
+  const catchWA = (c) => { const L = c.location || (c.spotId && spotById(c.spotId)); return L ? inWA(L.lat, L.lon) : fishesInWA(); };
   const needsCrc = (c) => c.released === false && catchWA(c) && (crcGroup(c.species) || (c.species === 'Dungeness Crab' && (() => { const L = c.location || (c.spotId && spotById(c.spotId)); return !L || L.lon > -124.4; })()));
   function licenseYear(ms) { const d = new Date(ms); const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return { start: new Date(y, 3, 1).getTime(), end: new Date(y + 1, 3, 1).getTime(), due: new Date(y + 1, 3, 30), label: `${y}–${String(y + 1).slice(2)}` }; }
   function crcFishCard() {
     const ly = licenseYear(Date.now());
     const kept = catches.filter((c) => c.released === false && crcGroup(c.species) && catchWA(c) && c.caughtAt >= ly.start && c.caughtAt < ly.end);
     if (!kept.length) return '';
-    const n = (g) => fishIn(kept.filter((c) => crcGroup(c.species) === g));
+    const yr0 = new Date(new Date().getFullYear(), 0, 1).getTime();
+    const n = (g) => fishIn(kept.filter((c) => crcGroup(c.species) === g && (g !== 'Halibut' || c.caughtAt >= yr0)));
     const groups = Object.keys(CRC_FISH).filter((g) => n(g));
     return `<div class="card"><h3>Fish catch record card</h3><p class="sub">Salmon, steelhead, sturgeon and halibut you kept in the ${ly.label} license year (April 1 – March 31). Record each one in ink, or in the eCRC, before you keep fishing; this is only a check.</p>
-      <div class="tiles">${groups.map((g) => `<div class="stat"><b>${n(g)}</b><span>${g}</span>${g === 'Halibut' ? `<small>of ${HALIBUT_YEAR_LIMIT} a year</small>` : g === 'Sturgeon' ? '<small>record each length</small>' : ''}</div>`).join('')}</div>
+      <div class="tiles">${groups.map((g) => `<div class="stat"><b>${n(g)}</b><span>${g}</span>${g === 'Halibut' ? `<small>of ${HALIBUT_YEAR_LIMIT} this year</small>` : g === 'Sturgeon' ? '<small>record each length</small>' : ''}</div>`).join('')}</div>
       <p class="note">Report by ${ly.due.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}, even if you kept nothing. <a href="https://wdfw.wa.gov/licenses/fishing/catch-reporting" target="_blank" rel="noopener">WDFW catch reporting</a></p></div>`;
   }
   // Reminders on the Now screen in the month before a card is due.
@@ -3010,13 +3012,17 @@
   // Marine area (1–13, 8-1, 8-2…) at a point, from WDFW's map service. Cached per ~1 km.
   async function marineAreaAt(loc) {
     if (!loc || !inWA(loc.lat, loc.lon)) return null;
-    const key = `${loc.lat.toFixed(2)},${loc.lon.toFixed(2)}`; const memo = (() => { try { return JSON.parse(store('tl.ma') || '{}'); } catch { return {}; } })();
+    const key = `${loc.lat.toFixed(3)},${loc.lon.toFixed(3)}`; const memo = (() => { try { return JSON.parse(store('tl.ma2') || '{}'); } catch { return {}; } })();
     if (key in memo) return memo[key];
-    const url = `https://geodataservices.wdfw.wa.gov/arcgis/rest/services/ApplicationServices/Marine_Areas/MapServer/0/query?geometry=${loc.lon},${loc.lat}&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&returnGeometry=false&f=json`;
-    const r = await fetch(url); if (!r.ok) throw new Error('WDFW map ' + r.status); const j = await r.json(); if (j.error) throw new Error('WDFW map error');
-    const at = (j.features && j.features[0] && j.features[0].attributes) || null; let area = null;
-    if (at) for (const [k, v] of Object.entries(at)) { const sv = String(v == null ? '' : v).trim(); const m = sv.match(/^(?:marine area\s*)?(\d{1,2}(?:-\d)?)\b/i); if (m && /area|ma\b|name|code|crc|label/i.test(k) && Number(m[1].split('-')[0]) <= 13) { area = m[1]; break; } }
-    memo[key] = area; const ks = Object.keys(memo); if (ks.length > 200) delete memo[ks[0]]; store('tl.ma', JSON.stringify(memo));
+    // WDFW's marine area polygons (layer 2 of Recreational_Marine_Area; AreaName is "13", "8-1"…). They cover islands too, so only use this for saltwater places.
+    const q = (dist) => `https://geodataservices.wdfw.wa.gov/arcgis/rest/services/FP_Projects/Recreational_Marine_Area/MapServer/2/query?geometry=${loc.lon},${loc.lat}&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects${dist ? `&distance=${dist}&units=esriSRUnit_Meter` : ''}&outFields=AreaName,AreaTitle&returnGeometry=false&f=json`;
+    let area = null;
+    for (const dist of [0, 400, 1500]) {
+      const r = await fetch(q(dist)); if (!r.ok) throw new Error('WDFW map ' + r.status); const j = await r.json(); if (j.error) throw new Error('WDFW map error');
+      const a = (j.features || []).map((f) => String((f.attributes || {}).AreaName || '').trim()).find((x) => /^\d{1,2}(-\d)?$/.test(x));
+      if (a) { area = a; break; }
+    }
+    memo[key] = area; const ks = Object.keys(memo); if (ks.length > 300) delete memo[ks[0]]; store('tl.ma2', JSON.stringify(memo));
     return area;
   }
   // Rules that apply to a place on a date. place: { lat, lon, name, salt, area }
@@ -3118,10 +3124,11 @@
     render(area, beaches, county);
   }
   // A WDFW closure for this catch, if one matches where and when it was caught.
-  async function closureFor(species, loc, at, spot) {
-    if (!loc || !inWA(loc.lat, loc.lon) || !wa) return null;
-    let area = null; if (!spot || spot.water !== 'fresh') { try { area = await withTimeout(marineAreaAt(loc), 3000); } catch { /* unknown */ } }
-    const salt = !!area || (spot && spot.water === 'salt');
+  async function closureFor(species, loc, at, spot, tide) {
+    if (!loc || !inWA(loc.lat, loc.lon)) return null; await loadWA(); if (!wa) return null;
+    // Saltwater if the spot says so, the fish only lives in saltwater, or the place is tidal (a NOAA station close by).
+    const salt = spot ? spot.water === 'salt' || (spot.water !== 'fresh' && !!(tide && tideShown({ tide, spotId: spot.id }))) : (SPECIES_INFO.get(species) || {}).region === 'Saltwater' || !!(tide && tideShown({ tide }));
+    let area = null; if (salt) { try { area = await withTimeout(marineAreaAt(loc), 4000); } catch { /* unknown */ } }
     const g = wdfwGroups(species); if (!g.length) return null;
     return rulesFor({ lat: loc.lat, lon: loc.lon, name: spot ? spot.name : '', salt, area }, at, g).find((r) => r.kind === 'closed') || null;
   }
@@ -3139,6 +3146,11 @@
       const rel = combo.released !== undefined ? combo.released : ({ released: true, kept: false }[store('tl.lastReleased')] ?? null);
       const n = Math.max(1, Math.min(999, Math.round(combo.count || 1)));
       if (rel === false && !(await overLimitOk(combo.species, n))) { toast('Not saved'); return; }
+      if (rel === false && loc) {
+        const m0 = matchSpot(loc); const sp0 = m0 ? m0.spot : null;
+        const cr = await closureFor(combo.species, loc, Date.now(), sp0, nowState && nowState.tide).catch(() => null);
+        if (cr && !(await askConfirm(`WDFW lists “${cr.title}” (${ruleDates(cr)}). Save this ${combo.species} as kept anyway?`, 'Save anyway'))) { toast('Not saved'); return; }
+      }
       const rec = { id: uid(), createdAt: now, updatedAt: now, caughtAt: now, species: combo.species, bait: combo.bait, lureColor: combo.lureColor || '', lureSize: combo.lureSize || '',
         lengthCm: null, weightKg: null, released: rel, notes: '', photo: null, thumb: null, extraPhotos: [], count: 1,
         location: loc, weather, weatherTries: 0, tide: undefined, marine: undefined, tideTries: 0,
@@ -3660,12 +3672,21 @@
 
   // ---------------------------------------------------------------- sample data
   // A realistic month of fishing around Santa Monica, so a new user can see what Stats, Spots and Trips do.
+  // In Washington, the sample is a month around Anderson Island instead (salmon and crab in Oro Bay, trout in Lake Josephine).
+  async function demoInWA() {
+    if (nowState && nowState.loc) return inWA(nowState.loc.lat, nowState.loc.lon);
+    try { const P = await withTimeout(getPosition(3600000), 4000); return inWA(P.lat, P.lon); } catch { return false; }
+  }
   async function loadDemo() {
     const H = 3600000, D = 86400000, now = Date.now(); let seed = 11; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
-    const sp = [{ id: 'demo-sp1', name: 'Santa Monica Pier (sample)', lat: 34.0092, lon: -118.4976, radiusM: 250, notes: 'Sample spot.', water: 'salt' }, { id: 'demo-sp2', name: 'Malibu Lagoon (sample)', lat: 34.0335, lon: -118.6795, radiusM: 500, notes: '', water: 'salt' }].map((x) => ({ ...x, demo: true, createdAt: now, updatedAt: now }));
-    const kinds = [['Calico Bass (Kelp Bass)', 'Swimbait', 'Sardine', '5 in'], ['Barred Sand Bass', 'Curly-tail grub', 'Motor oil', ''], ['California Halibut', 'Live bait', '', ''], ['Spotted Bay Bass', 'Curly-tail grub', 'Motor oil', ''], ['California Corbina', 'Sand crab', '', ''], ['Calico Bass (Kelp Bass)', 'Curly-tail grub', '', '']];
+    const waDemo = await demoInWA();
+    const sp = (waDemo ? [{ id: 'demo-sp1', name: 'Oro Bay (sample)', lat: 47.1440, lon: -122.6750, radiusM: 400, notes: 'Sample spot.', water: 'salt' }, { id: 'demo-sp2', name: 'Lake Josephine (sample)', lat: 47.1607, lon: -122.6457, radiusM: 400, notes: '', water: 'fresh' }]
+      : [{ id: 'demo-sp1', name: 'Santa Monica Pier (sample)', lat: 34.0092, lon: -118.4976, radiusM: 250, notes: 'Sample spot.', water: 'salt' }, { id: 'demo-sp2', name: 'Malibu Lagoon (sample)', lat: 34.0335, lon: -118.6795, radiusM: 500, notes: '', water: 'salt' }]).map((x) => ({ ...x, demo: true, createdAt: now, updatedAt: now }));
+    const kindsCA = [['Calico Bass (Kelp Bass)', 'Swimbait', 'Sardine', '5 in'], ['Barred Sand Bass', 'Curly-tail grub', 'Motor oil', ''], ['California Halibut', 'Live bait', '', ''], ['Spotted Bay Bass', 'Curly-tail grub', 'Motor oil', ''], ['California Corbina', 'Sand crab', '', ''], ['Calico Bass (Kelp Bass)', 'Curly-tail grub', '', '']];
+    const kindsSalt = [['Coho (Silver) Salmon', 'Spoon', 'Chrome', ''], ['Coho (Silver) Salmon', 'Jig', 'Glow', ''], ['Chinook (King) Salmon', 'Spoon', 'Green', ''], ['Dungeness Crab', 'Crab pot', '', '']];
+    const kindsFresh = [['Rainbow Trout', 'PowerBait', 'Chartreuse', ''], ['Rainbow Trout', 'Inline spinner', 'Gold', ''], ['Cutthroat Trout', 'Inline spinner', 'Gold', ''], ['Largemouth Bass', 'Senko', 'Green pumpkin', '5 in']];
     const cs = [];
-    for (let i = 0; i < 24; i++) { const [s, b, col, size] = kinds[Math.floor(rnd() * kinds.length)]; const t = now - (1 + Math.floor(rnd() * 40)) * D + Math.floor(rnd() * 12) * H - 6 * H; const p = rnd() < 0.7 ? sp[0] : sp[1];
+    for (let i = 0; i < 24; i++) { const p = rnd() < 0.6 ? sp[0] : sp[1]; const kinds = waDemo ? (p === sp[0] ? kindsSalt : kindsFresh) : kindsCA; const [s, b, col, size] = kinds[Math.floor(rnd() * kinds.length)]; const t = now - (1 + Math.floor(rnd() * 40)) * D + Math.floor(rnd() * 12) * H - 6 * H;
       cs.push({ id: 'demo-c' + i, demo: true, createdAt: t, updatedAt: t, caughtAt: t, species: s, bait: b, lureColor: col, lureSize: size, count: rnd() < 0.15 ? 2 : 1,
         lengthCm: rnd() < 0.6 ? round(28 + rnd() * 30, 1) : null, weightKg: rnd() < 0.45 ? round(0.4 + rnd() * 2.2, 2) : null, released: rnd() < 0.75, notes: '', photo: null, thumb: null, extraPhotos: [],
         location: { lat: p.lat + (rnd() - 0.5) * 0.002, lon: p.lon + (rnd() - 0.5) * 0.002, accuracy: 8, source: 'gps', at: t }, spotId: p.id,
@@ -3676,6 +3697,21 @@
     cs[0].sessionId = ses.id; cs[0].caughtAt = now - 4 * D - 2.5 * H; cs[0].bait = 'Swimbait'; cs[1].sessionId = ses.id; cs[1].caughtAt = now - 4 * D - 1 * H; cs[1].bait = 'Curly-tail grub'; cs[2].sessionId = ses.id; cs[2].caughtAt = now - 4 * D - 0.5 * H; cs[2].bait = 'Curly-tail grub';
     const ts = new Date(now + 2 * D); ts.setHours(6, 0, 0, 0);
     const trip = { id: 'demo-t1', demo: true, name: 'Pier dawn session (sample)', lat: 34.0092, lon: -118.4976, spotId: 'demo-sp1', start: ts.getTime(), end: ts.getTime() + 4 * H, species: ['Calico Bass (Kelp Bass)'], gear: [], notes: '', createdAt: now, updatedAt: now };
+    if (waDemo) {
+      for (const c of cs) {
+        const salt = c.spotId === 'demo-sp1';
+        c.kind = (SPECIES_INFO.get(c.species) || {}).kind || 'fish';
+        if (c.weather) c.weather.tempC = round(4 + rnd() * 10, 1);
+        if (salt) { c.tide = { ...c.tide, stationId: '9446484', stationName: 'Tacoma, WA', distM: 14000 }; c.marine = { seaTempC: 11, waveM: 0.3, periodS: 4 }; }
+        else { c.tide = null; c.marine = null; }
+        if (c.kind === 'shellfish') { Object.assign(c, { lengthCm: null, weightKg: null, lureColor: '', lureSize: '', shellBait: 'Chicken', crabSex: 'male', shellHard: true, carapaceCm: round(16 + rnd() * 2.5, 1), pots: 2, soakH: 1.5, released: rnd() < 0.4 }); }
+        else if (/Salmon/.test(c.species)) { c.lengthCm = c.lengthCm && round(55 + rnd() * 20, 1); c.weightKg = c.weightKg && round(2.5 + rnd() * 3, 2); }
+        else { c.lengthCm = c.lengthCm && round(25 + rnd() * 15, 1); c.weightKg = c.weightKg && round(0.3 + rnd() * 0.8, 2); }
+      }
+      Object.assign(ses, { lat: sp[0].lat, lon: sp[0].lon, lures: [{ bait: 'Spoon', color: 'Chrome', size: '', at: ses.start }, { bait: 'Jig', color: 'Glow', size: '', at: ses.start + 1.5 * H }] });
+      [[0, 'Coho (Silver) Salmon', 'Spoon', 'Chrome'], [1, 'Coho (Silver) Salmon', 'Jig', 'Glow'], [2, 'Coho (Silver) Salmon', 'Jig', 'Glow']].forEach(([k, sp1, b, col]) => Object.assign(cs[k], { species: sp1, bait: b, lureColor: col, lureSize: '', kind: 'fish', spotId: 'demo-sp1', location: { ...cs[k].location, lat: sp[0].lat, lon: sp[0].lon }, crabSex: undefined, carapaceCm: undefined, pots: undefined, soakH: undefined, shellBait: undefined, shellHard: undefined }));
+      Object.assign(trip, { name: 'Oro Bay morning (sample)', lat: sp[0].lat, lon: sp[0].lon, species: ['Coho (Silver) Salmon'] });
+    }
     for (const x of sp) await DB.putSpot(x); for (const c of cs) await DB.put(c); await DB.putSession(ses); await DB.putTrip(trip);
     await reload(); toast('Sample data loaded – look around, then clear it from the banner');
   }

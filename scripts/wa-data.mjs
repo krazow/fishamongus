@@ -34,7 +34,11 @@ const textOf = (html) => decode(html.replace(/<script[\s\S]*?<\/script>|<style[\
 // ---------- dates
 const MONTHS = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, sept: 8, oct: 9, nov: 10, dec: 11 };
 const DATE_RE = /\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(\d{4}))?/gi;
+// "Nov. 5–30, 2026" -> "Nov. 5 through Nov. 30, 2026"; "Nov. 30–Dec. 2" stays two dates.
+const MON = '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
+const expandRanges = (t) => String(t || '').replace(new RegExp(`\\b${MON}(\\.?\\s+)(\\d{1,2})\\s*(?:–|—|-|to|through)\\s*(\\d{1,2})\\b(?!:)`, 'gi'), (m, mo, sp, a, b) => `${mo}${sp}${a} through ${mo}${sp}${b}`);
 function dates(text, yearHint) {
+  text = expandRanges(text);
   const out = []; let m; DATE_RE.lastIndex = 0;
   while ((m = DATE_RE.exec(text))) { const mo = MONTHS[m[1].toLowerCase().slice(0, m[1].toLowerCase().startsWith('sept') ? 4 : 3)]; out.push({ mo, d: Number(m[2]), y: m[3] ? Number(m[3]) : null, at: m.index }); }
   // years carry backwards (June 22 through June 30, 2019) and forwards
@@ -77,14 +81,23 @@ const GROUPS = [
 ];
 const groupsOf = (text) => { const g = GROUPS.filter(([, re]) => re.test(text || '')).map(([x]) => x); return g.includes('Razor clams') && !/other clams|clams other|hardshell|littleneck|manila|butter clam/i.test(text || '') ? g.filter((x) => x !== 'Clams') : g; };
 function waters(text) {
-  const out = new Set(); const t = (text || '').replace(/\s+/g, ' ');
-  const re = /\b((?:North|South|East|West|Middle|Upper|Lower|Little|Big|Fork of the |[A-Z][a-z]+\.? ?){1,4})(River|Creek|Lake|Reservoir|Pond|Slough|Bay|Inlet|Canal|Harbor)\b|\b(Lake|Lk\.?) ([A-Z][a-z]+(?: [A-Z][a-z]+)?)/g; let m;
+  const out = new Set(); const t = (text || '').replace(/\s*\([^)]*\)/g, '').replace(/\s+/g, ' ');
+  const W = '(?:River|Creek|Lake|Reservoir|Pond|Slough|Bay|Inlet|Canal|Harbor)';
+  const re = new RegExp(`\\b((?:(?!${W}\\b)(?:North|South|East|West|Middle|Upper|Lower|Little|Big|[A-Z][a-z]+)\\.? ?){1,4})(${W})\\b|\\b(Lake|Lk\\.?) ((?!${W}\\b)[A-Z][a-z]+(?: (?!${W}\\b)[A-Z][a-z]+)?)`, 'g'); let m;
   while ((m = re.exec(t))) { const n = (m[3] ? `Lake ${m[4]}` : `${m[1].trim()} ${m[2]}`).replace(/^(The|And|To|In|On|Of|For|At) /, ''); if (n.length > 5 && !/^(Marine|Puget|Washington|Columbia Basin)$/.test(n.split(' ')[0])) out.add(n); }
   return [...out].slice(0, 12);
 }
-const kindOf = (action, title) => { const t = `${action} ${title}`.toLowerCase();
-  if (/\b(close|closes|closed|closure|remain closed|not open|will not open)\b/.test(t) && !/\breopen/.test(t)) return 'closed';
-  if (/\b(open|opens|reopen|reopens|approved|dig)\b/.test(t)) return 'open'; return 'changed'; };
+// Closed, Open or Changed. The Action field decides when it's clear; mixed actions ("opens … closes …", "update") are Changed.
+const kindOf = (action, title) => {
+  const t = `${action} ${title}`.toLowerCase(); const a = (action || title).toLowerCase();
+  if (/\b(rescind|rescinds|rescinded|lifted|lifts)\b/.test(t)) return 'open';
+  const closes = /\b(close|closes|closed|closing|closure|remain closed|not open|will not open)\b/.test(a) && !/\breopen/.test(a);
+  const opens = /\b(open|opens|opening|reopen|reopens|reopening|approved|dig|digs|extend|extends|extended|adds|allows)\b/.test(a);
+  if (closes && opens) return 'changed';
+  if (closes) return 'closed'; if (opens) return 'open';
+  if (/\bupdate\b/.test(t)) return 'changed';
+  if (/\b(close|closes|closed|closing|closure)\b/.test(t)) return 'closed'; if (/\b(open|opens|reopen|extended)\b/.test(t)) return 'open';
+  return 'changed'; };
 
 // ---------- emergency rules
 function ruleLinks(html) {
@@ -131,6 +144,8 @@ async function rules(prev) {
     if (o && now - (o.fetchedAt || 0) < DAY && o.title === l.title) { out.push(o); continue; }
     try { out.push(parseRule(l, await get(l.url))); await sleep(400); } catch (e) { if (o) out.push(o); else out.push({ id: l.slug, url: l.url, title: l.title, kind: kindOf('', l.title), areas: marineAreas(l.title), groups: groupsOf(l.title), waters: waters(l.title), start: Date.parse(l.listFrom) || null, end: l.listTo ? Date.parse(l.listTo) + DAY - 1 : null, partial: true, fetchedAt: now }); }
   }
+  const real = out.filter((r) => r.partial || r.action || r.start || r.rule);
+  out.length = 0; out.push(...real);
   const parsedOk = out.filter((r) => r.action || r.rule || r.species).length;
   if (out.length >= 3 && parsedOk === 0) throw new Error(`found ${out.length} rules but could not read any rule details (page layout may have changed)`);
   const prevIds = new Set(old.keys());
@@ -178,7 +193,7 @@ try {
   if (changed) await writeFile(`${OUT}/wa-rules.json`, JSON.stringify(next, null, 1));
   if (changed || !status.rules || !status.rules.ok || now - (status.rules.checked || 0) > KEEPALIVE) status.rules = { ok: true, checked: now, count: r.rules.length, added: r.added, removed: r.removed };
   if (r.added.length || r.removed.length) status.rulesChanged = now;
-} catch (e) { status.rules = { ...(status.rules || {}), ok: false, checked: now, error: e.message }; failed.push('rules: ' + e.message); }
+} catch (e) { status.rules = { ...(status.rules || {}), ok: false, pending: false, checked: now, error: e.message }; failed.push('rules: ' + e.message); }
 const prevStock = await readJSON('wa-stocking.json', { plants: [] });
 try {
   const plants = await stocking(prevStock);
@@ -186,7 +201,7 @@ try {
   const changed = strip(next) !== strip(prevStock);
   if (changed) await writeFile(`${OUT}/wa-stocking.json`, JSON.stringify(next, null, 1));
   if (changed || !status.stocking || !status.stocking.ok || now - (status.stocking.checked || 0) > KEEPALIVE) status.stocking = { ok: true, checked: now, count: plants.length };
-} catch (e) { status.stocking = { ...(status.stocking || {}), ok: false, checked: now, error: e.message }; failed.push('stocking: ' + e.message); }
+} catch (e) { status.stocking = { ...(status.stocking || {}), ok: false, pending: false, checked: now, error: e.message }; failed.push('stocking: ' + e.message); }
 if (JSON.stringify(status) !== before) await writeFile(`${OUT}/wa-status.json`, JSON.stringify(status, null, 1));
 console.log(JSON.stringify(status));
 if (failed.length) { console.error('FAILED: ' + failed.join(' | ')); process.exitCode = 1; }
