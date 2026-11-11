@@ -838,7 +838,7 @@ html.night .map-legend i { filter: grayscale(1) sepia(1) hue-rotate(-50deg) satu
 /* ---------- fish or shellfish, and water ---------- */
 .kind-row { display: grid; gap: 6px; margin-bottom: 10px; }
 .seg-kind button { min-height: 46px; font-size: 16px; }
-.seg-water { padding: 3px; }
+.seg-water { padding: 3px; grid-template-columns: repeat(3, 1fr); }
 .seg-water button { min-height: 34px; font-size: 13.5px; padding: 4px 6px; }
 .sub-lbl { display: block; font-size: 13px; font-weight: 600; color: var(--ink-2); margin-bottom: 4px; }
 .carapace-help { align-self: end; margin: 0 0 6px; }
