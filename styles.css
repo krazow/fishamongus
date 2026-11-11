@@ -659,3 +659,18 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
 .catch:active, .btn:active, .next-trip:active, .ses-lure:active { transform: scale(.985); }
 .catch, .btn, .next-trip, .ses-lure { transition: transform .08s ease; }
 @media (prefers-reduced-motion: reduce) { .catch, .btn, .next-trip, .ses-lure { transition: none; } .catch:active, .btn:active, .next-trip:active, .ses-lure:active { transform: none; } }
+
+/* ---------- collapsible sections ---------- */
+.sec > :first-child { margin-bottom: 0; }
+.card.sec:not(.collapsed) > :first-child { margin-bottom: 4px; }
+.sec-toggle { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 36px; margin: -4px 0; padding: 4px 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; border-radius: 8px; }
+.sec-title { flex: 1; min-width: 0; }
+.sec-sum { flex: 0 1 auto; max-width: 58%; font-size: 13.5px; font-weight: 600; color: var(--ink-2); text-transform: none; letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sec:not(.collapsed) .sec-sum { display: none; }
+.sec-chev { flex: none; width: 9px; height: 9px; border-right: 2px solid var(--ink-3); border-bottom: 2px solid var(--ink-3); transform: rotate(45deg); margin: -5px 4px 0 2px; transition: transform .15s; }
+.sec.collapsed .sec-chev { transform: rotate(-45deg); margin-top: 0; }
+.sec.collapsed > :not(:first-child) { display: none !important; }
+.kv.sec > h4 { padding: 0; }
+.kv.sec .sec-toggle { padding: 12px 14px; margin: 0; min-height: 44px; }
+.kv.sec:not(.collapsed) .sec-toggle { padding-bottom: 6px; }
+@media (prefers-reduced-motion: reduce) { .sec-chev { transition: none; } }

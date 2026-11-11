@@ -78,6 +78,8 @@ Tides show only where they apply:
 - **Saltwater spot:** always.
 - **Freshwater spot:** never. Use this for lakes and rivers near the coast.
 
+**Collapsible sections:** on the Now screen, Stats, a spot's page, a trip plan, the tides panel and a catch's page, tap a section's header to fold it away or open it again. The app remembers what you folded. Long or less-used sections start folded: Catches by species, Top lures and Trips in Stats; Species here on a spot; Regulations on a trip; and a catch's Conditions, Tide and Location, which still show their key values (for example "⛅ Partly cloudy · 58°F") while folded. **Reset folded sections** in Settings puts them back.
+
 Settings (units, pounds or pounds and ounces, backup, and Help) is the gear icon at the top right. The app also has a map of all your catch spots, search, an "Open spot in Maps" button for getting back to a spot, sharing, and imperial/metric units.
 
 ## Get it on your phone (about 5 minutes)

@@ -74,7 +74,7 @@
   function store(key, val) { try { if (val === undefined) return localStorage.getItem(key); localStorage.setItem(key, val); } catch { return null; } }
 
   // ---------------------------------------------------------------- units
-  const APP_VERSION = '2.3 (Nov 10, 2026)';
+  const APP_VERSION = '2.4 (Nov 10, 2026)';
   const settings = { wtOz: store('tl.wtOz') === '1', units: store('tl.units') || (/^en-(US|LR|MM)/.test(navigator.language) ? 'imperial' : 'metric') };
   const imp = () => settings.units === 'imperial';
   const U = {
@@ -2456,6 +2456,57 @@
   $('#trips-back').addEventListener('click', () => showView('now'));
   document.addEventListener('visibilitychange', () => { if (!document.hidden && $('#view-now').classList.contains('active')) refreshNow(); });
   window.addEventListener('online', () => { if ($('#view-now').classList.contains('active')) refreshNow(true); });
+
+  // ---------------------------------------------------------------- collapsible sections
+  // Every section card on the long screens folds open or shut from its header, and the app remembers your choice.
+  // Cards are rebuilt often, so new ones are found with a MutationObserver instead of wiring each screen by hand.
+  const SECTION_SCOPES = [['#view-now', 'now'], ['#stats-body', 'stats'], ['#sheet-spot', 'spot'], ['#sheet-trip', 'trip'], ['#sheet-detail', 'catch'], ['#sheet-tides', 'tides']];
+  // Folded until you open them: the long or less-used sections.
+  const SECTION_DEFAULT_SHUT = new Set(['stats:catches by species', 'stats:top lures', 'stats:trips', 'spot:species here', 'trip:regulations',
+    'catch:conditions', 'catch:tide', 'catch:location']);
+  let sectionState = (() => { try { return JSON.parse(store('tl.sections') || '{}'); } catch { return {}; } })();
+  const sectionShut = (key) => (key in sectionState ? sectionState[key] : SECTION_DEFAULT_SHUT.has(key));
+  function sectionKey(sec, scope) {
+    const h = sec.firstElementChild; const first = [...h.childNodes].find((n) => n.nodeType === 3 && n.textContent.trim()) || h;
+    return `${scope}:${first.textContent.trim().toLowerCase().replace(/\s+/g, ' ')}`;
+  }
+  // A folded table of values (a catch's Conditions, Tide, Location) still shows its first two values in the header.
+  function sectionSummary(sec) {
+    if (!sec.classList.contains('kv')) return '';
+    return [...sec.querySelectorAll('dd')].map((d) => d.textContent.trim()).filter((v) => v && !/^-?\d+\.\d{4,}$/.test(v)).slice(0, 2).join(' · ');
+  }
+  let sectionSeq = 0;
+  function makeCollapsible(root) {
+    SECTION_SCOPES.forEach(([sel, scope]) => {
+      const box = root.matches && root.matches(sel) ? root : root.querySelector ? (root.closest && root.closest(sel)) || root.querySelector(sel) : null;
+      if (!box) return;
+      box.querySelectorAll('.card, .kv').forEach((sec) => {
+        const h = sec.firstElementChild;
+        if (!h || !/^H[34]$/.test(h.tagName) || sec.dataset.sec || sec.classList.contains('no-collapse') || sec.children.length < 2) return;
+        const key = sectionKey(sec, scope); sec.dataset.sec = key; sec.classList.add('sec');
+        const id = `sec-${++sectionSeq}`; const sum = sectionSummary(sec);
+        [...sec.children].slice(1).forEach((c) => { if (!c.id) c.dataset.secBody = id; });
+        h.innerHTML = `<button type="button" class="sec-toggle"><span class="sec-title">${h.innerHTML}</span>${sum ? `<span class="sec-sum">${esc(sum)}</span>` : ''}<span class="sec-chev" aria-hidden="true"></span></button>`;
+        setSection(sec, sectionShut(key));
+      });
+    });
+  }
+  function setSection(sec, shut) {
+    sec.classList.toggle('collapsed', shut);
+    const b = sec.querySelector(':scope > :first-child .sec-toggle'); if (b) { b.setAttribute('aria-expanded', String(!shut)); b.title = shut ? 'Show this section' : 'Hide this section'; }
+  }
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('.sec-toggle'); if (!b) return;
+    const sec = b.closest('.sec'); const shut = !sec.classList.contains('collapsed');
+    setSection(sec, shut); sectionState[sec.dataset.sec] = shut; store('tl.sections', JSON.stringify(sectionState));
+  });
+  const sectionObserver = new MutationObserver((list) => {
+    const roots = new Set(); list.forEach((m) => { if (m.addedNodes.length) roots.add(m.target); });
+    roots.forEach((r) => makeCollapsible(r));
+  });
+  SECTION_SCOPES.forEach(([sel]) => { const el = $(sel); if (el) { sectionObserver.observe(el, { childList: true, subtree: true }); makeCollapsible(el); } });
+  function resetSections() { sectionState = {}; store('tl.sections', '{}'); $$('.sec').forEach((s) => setSection(s, sectionShut(s.dataset.sec))); }
+  $('#btn-reset-sections').addEventListener('click', () => { resetSections(); toast('Sections are back to how they started'); });
 
   // ---------------------------------------------------------------- settings, export, import
   function paintBackupInfo() {
