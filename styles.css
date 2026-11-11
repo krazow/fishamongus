@@ -907,3 +907,21 @@ html.night .scale i { filter: grayscale(1) sepia(1) hue-rotate(-50deg) saturate(
 .crc-due .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .crc-due .btn { margin: 0; }
 .say-mini[hidden] { display: none; }
+
+/* ---------- 4.4 Washington rules, shellfish safety, stocking ---------- */
+.wa-card h4.wa-h { margin: 12px 0 6px; font-size: 15px; }
+.wa-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.wa-list li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; }
+.wa-list li > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.wa-list a { color: inherit; text-decoration: none; } .wa-list a b { text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+.wa-list small { color: var(--ink-3); font-size: 13px; }
+.wa-list small.wa-why { display: block; color: var(--ink-2); margin-top: 2px; }
+.wa-chip { display: inline-block; min-width: 64px; text-align: center; padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.wa-chip.ok { background: #e1f3e3; color: #1d5b27; } .wa-chip.bad { background: #fbe1de; color: #8f1d12; } .wa-chip.warn { background: #fdf0d8; color: #6b4a00; }
+@media (prefers-color-scheme: dark) { .wa-chip.ok { background: #183b20; color: #a5e0ae; } .wa-chip.bad { background: #4a1712; color: #ffb4a8; } .wa-chip.warn { background: #43350f; color: #f4d58a; } }
+html.night .wa-chip { background: #3a0805 !important; color: var(--ink) !important; }
+.wa-fresh { margin: 10px 0 0; font-size: 12px; color: var(--ink-3); }
+.wa-unverified { margin: 10px 0 0; padding: 8px 10px; border-radius: 10px; font-size: 13px; font-weight: 600; background: #fdf0d8; color: #5a4300; }
+@media (prefers-color-scheme: dark) { .wa-unverified { background: #43350f; color: #f4d58a; } }
+html.night .wa-unverified { background: #2a0505; color: var(--ink); }
+.shell-live { display: block; margin-top: 8px; }
