@@ -798,3 +798,32 @@ html.night .toast.pb { background: #5c0f0a; color: #ffb3a8; }
 html.night .toast.pb #toast-action { color: #ffb3a8; }
 html.night .swipe-acts button { background: #3a0805 !important; color: var(--ink); }
 html.night .map-legend i { filter: grayscale(1) sepia(1) hue-rotate(-50deg) saturate(4) brightness(.6); }
+
+/* ---------- solunar ---------- */
+.sol-dots { color: var(--accent); letter-spacing: 1px; font-size: 13px; }
+.sol-status { margin: 0 0 10px; padding: 9px 12px; border-radius: 10px; background: var(--surface-2); font-size: 14.5px; }
+.sol-status.on { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+.sol-strip { position: relative; height: 22px; border-radius: 6px; background: color-mix(in srgb, #f6c453 22%, var(--surface-2)); overflow: hidden; }
+.sol-night { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--lake) 22%, var(--surface-2)); }
+.sol-blk { position: absolute; top: 3px; bottom: 3px; border-radius: 4px; }
+.sol-blk.major { background: var(--accent); }
+.sol-blk.minor { background: color-mix(in srgb, var(--accent) 50%, var(--surface)); }
+.sol-now-mark { position: absolute; top: -2px; bottom: -2px; width: 2px; margin-left: -1px; background: var(--ink); }
+.sol-ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-3); margin: 3px 0 10px; }
+.sol-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.sol-list li { display: grid; grid-template-columns: auto auto 1fr; gap: 10px; align-items: baseline; padding: 6px 2px; border-top: 1px solid var(--line); font-size: 14.5px; }
+.sol-list li:first-child { border-top: 0; }
+.sol-list li.past { opacity: .55; }
+.sol-list li.on b { color: var(--accent); }
+.sol-list small { color: var(--ink-2); font-size: 13.5px; text-align: right; }
+.sol-k { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; padding: 2px 7px; border-radius: 999px; }
+.sol-k.major { background: var(--accent); color: var(--accent-ink); }
+.sol-k.minor { background: color-mix(in srgb, var(--accent) 22%, var(--surface)); color: var(--ink); }
+.sol-trip { margin: 12px 0 0; font-size: 14.5px; }
+.sol-trip-h { margin: 8px 0 2px; font-size: 13.5px; color: var(--ink-2); font-weight: 600; }
+/* automatic backup */
+.ab-box { margin: 0 0 12px; padding: 12px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); }
+.ab-label { display: block; font-weight: 650; font-size: 14px; margin-bottom: 6px; color: var(--ink-2); }
+#ab-file-row { margin-top: 10px; }
+#ab-file-row .help { margin-bottom: 8px; }
+#ab-status { margin: 8px 0 0; }

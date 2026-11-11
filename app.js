@@ -74,7 +74,7 @@
   function store(key, val) { try { if (val === undefined) return localStorage.getItem(key); localStorage.setItem(key, val); } catch { return null; } }
 
   // ---------------------------------------------------------------- units
-  const APP_VERSION = '3.0 (Nov 10, 2026)';
+  const APP_VERSION = '3.1 (Nov 10, 2026)';
   // Night (dim red) mode and large text, applied before anything is drawn.
   function applyDisplay() {
     const night = store('tl.theme') === 'night'; const large = store('tl.text') === 'large';
@@ -123,7 +123,7 @@
     open() {
       if (this._db) return Promise.resolve(this._db);
       return new Promise((res, rej) => {
-        const r = indexedDB.open('tightlines', 5);
+        const r = indexedDB.open('tightlines', 6);
         r.onupgradeneeded = () => {
           const db = r.result;
           if (!db.objectStoreNames.contains('catches')) db.createObjectStore('catches', { keyPath: 'id' }).createIndex('caughtAt', 'caughtAt');
@@ -131,6 +131,7 @@
           if (!db.objectStoreNames.contains('trips')) db.createObjectStore('trips', { keyPath: 'id' });
           if (!db.objectStoreNames.contains('sessions')) db.createObjectStore('sessions', { keyPath: 'id' });
           if (!db.objectStoreNames.contains('tackle')) db.createObjectStore('tackle', { keyPath: 'id' });
+          if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta');
         };
         r.onsuccess = () => { const db = r.result; this._db = db; db.onversionchange = () => { db.close(); if (this._db === db) this._db = null; }; res(db); };
         r.onerror = () => rej(r.error);
@@ -159,6 +160,9 @@
     allTackle() { return this.tx('readonly', (s) => s.getAll(), 'tackle'); },
     putTackle(x) { return this.tx('readwrite', (s) => s.put(x), 'tackle'); },
     delTackle(id) { return this.tx('readwrite', (s) => s.delete(id), 'tackle'); },
+    getMeta(k) { return this.tx('readonly', (s) => s.get(k), 'meta'); },
+    putMeta(k, v) { return this.tx('readwrite', (s) => s.put(v, k), 'meta'); },
+    delMeta(k) { return this.tx('readwrite', (s) => s.delete(k), 'meta'); },
   };
 
   // ---------------------------------------------------------------- state
@@ -1617,6 +1621,8 @@
       of: (c) => (tideShown(c) ? c.tide.stage : null) },
     coef: { label: 'Tide strength', needsTide: true, buckets: () => ['Weak (under 45)', 'Moderate (45–69)', 'Strong (70–94)', 'Very strong (95+)'],
       of: (c) => { if (!tideShown(c) || c.tide.coef == null) return null; const k = c.tide.coef; return DIMENSIONS.coef.buckets()[k < 45 ? 0 : k < 70 ? 1 : k < 95 ? 2 : 3]; } },
+    solunar: { label: 'Solunar', needsWx: false, buckets: () => ['Major period', 'Minor period', 'Outside periods'],
+      of: (c) => { const L = c.location || (c.spotId && spotById(c.spotId)); if (!L) return null; const p = SOL.at(c.caughtAt, L.lat, L.lon); return p ? (p.kind === 'major' ? 'Major period' : 'Minor period') : 'Outside periods'; } },
     moon: { label: 'Moon', needsWx: false, buckets: () => ['New moon', 'Waxing', 'Full moon', 'Waning'],
       of: (c) => { const m = moonPhase(c.caughtAt); const q = m.age / m.synodic; return ['New moon', 'Waxing', 'Full moon', 'Waning'][q < 0.125 || q >= 0.875 ? 0 : q < 0.375 ? 1 : q < 0.625 ? 2 : 3]; } },
   };
@@ -1863,6 +1869,73 @@
     const [sunrise, sunset] = at(-0.833); const [dawn, dusk] = at(-6);
     return { sunrise, sunset, dawn, dusk };
   }
+  // ---------------------------------------------------------------- solunar (bite times)
+  // Moon position from the low-precision formulas used by SunCalc (Meeus): good to a few minutes for rise, set and transit.
+  // Major periods: 2 hours centred on the moon overhead and underfoot. Minor periods: 1 hour centred on moonrise and moonset.
+  const SOL = (() => {
+    const rad = Math.PI / 180; const dayMs = 86400000; const J2000 = Date.UTC(2000, 0, 1, 12); const e = rad * 23.4397;
+    function moonState(ms, lat, lon) {
+      const d = (ms - J2000) / dayMs;
+      const L = rad * (218.316 + 13.176396 * d); const M = rad * (134.963 + 13.064993 * d); const F = rad * (93.272 + 13.229350 * d);
+      const l = L + rad * 6.289 * Math.sin(M); const b = rad * 5.128 * Math.sin(F);
+      const dec = Math.asin(Math.sin(b) * Math.cos(e) + Math.cos(b) * Math.sin(e) * Math.sin(l));
+      const ra = Math.atan2(Math.sin(l) * Math.cos(e) - Math.tan(b) * Math.sin(e), Math.cos(l));
+      const st = rad * (280.16 + 360.9856235 * d) + rad * lon;
+      let H = (st - ra) % (2 * Math.PI); if (H > Math.PI) H -= 2 * Math.PI; if (H < -Math.PI) H += 2 * Math.PI;
+      const phi = rad * lat; const alt = Math.asin(Math.sin(phi) * Math.sin(dec) + Math.cos(phi) * Math.cos(dec) * Math.cos(H));
+      return { alt: alt / rad, H };
+    }
+    // Finds the moments in [from, to) when f changes sign, refined by bisection to under a minute.
+    function crossings(from, to, step, f) {
+      const out = []; let t0 = from; let v0 = f(t0);
+      for (let t1 = from + step; t1 <= to; t1 += step) {
+        const v1 = f(t1);
+        if (v0 != null && v1 != null && (v0 < 0) !== (v1 < 0)) {
+          let a = t0; let b = t1; let va = v0;
+          for (let i = 0; i < 12; i++) { const m = (a + b) / 2; const vm = f(m); if ((vm < 0) === (va < 0)) { a = m; va = vm; } else b = m; }
+          out.push({ t: Math.round((a + b) / 2), rising: v1 > v0 });
+        }
+        t0 = t1; v0 = v1;
+      }
+      return out;
+    }
+    const memo = new Map();
+    // Everything for the local calendar day that contains dayMs.
+    function day(dayMs, lat, lon) {
+      const d0 = new Date(dayMs); d0.setHours(0, 0, 0, 0); const from = d0.getTime(); const d1 = new Date(from); d1.setDate(d1.getDate() + 1); const to = d1.getTime();
+      const key = `${from}|${lat.toFixed(2)}|${lon.toFixed(2)}`; if (memo.has(key)) return memo.get(key);
+      const step = 10 * 60000; const h0 = 0.133;   // the moon's centre at rise and set, allowing for refraction and its size
+      const rs = crossings(from, to, step, (t) => moonState(t, lat, lon).alt - h0);
+      // Overhead: hour angle passes 0. Underfoot: it passes ±180° (a jump from +π to −π, so test the cosine's sign instead).
+      const over = crossings(from, to, step, (t) => { const s = moonState(t, lat, lon); return Math.cos(s.H) > 0 ? s.H : null; }).map((x) => x.t);
+      const under = crossings(from, to, step, (t) => { const s = moonState(t, lat, lon); return Math.cos(s.H) < 0 ? -Math.sin(s.H) : null; }).map((x) => x.t);
+      const majors = [...over.map((t) => ({ t, what: 'Moon overhead' })), ...under.map((t) => ({ t, what: 'Moon underfoot' }))].map((x) => ({ ...x, kind: 'major', s: x.t - HOUR_MS, e: x.t + HOUR_MS }));
+      const minors = rs.map((x) => ({ t: x.t, what: x.rising ? 'Moonrise' : 'Moonset', kind: 'minor', s: x.t - HOUR_MS / 2, e: x.t + HOUR_MS / 2 }));
+      const periods = [...majors, ...minors].sort((a, b) => a.t - b.t);
+      // Day rating, the traditional way: best near new and full moon, better again when a period lines up with sunrise or sunset.
+      const ph = moonPhase(from + 12 * HOUR_MS); const q = ph.age / ph.synodic; const fromNF = Math.min(q, Math.abs(q - 0.5), 1 - q) * ph.synodic;
+      let score = fromNF <= 1.5 ? 3 : fromNF <= 4 ? 2 : fromNF <= 6 ? 1 : 0;
+      const sun = sunTimes(from + 12 * HOUR_MS, lat, lon);
+      const sunEdges = [sun.sunrise, sun.sunset].filter(Boolean);
+      const lined = periods.filter((p) => sunEdges.some((s) => s >= p.s - HOUR_MS && s <= p.e + HOUR_MS));
+      if (lined.length) score += 1;
+      const rating = Math.max(1, Math.min(4, score + (score === 0 ? 1 : 0)));
+      const out = { from, to, periods, majors, minors, rise: rs.find((x) => x.rising)?.t ?? null, set: rs.find((x) => !x.rising)?.t ?? null, rating, ratingText: ['', 'Fair', 'Good', 'Very good', 'Best'][rating], lined };
+      memo.set(key, out); if (memo.size > 400) memo.delete(memo.keys().next().value);
+      return out;
+    }
+    // Which period (if any) a moment falls in; looks at the neighbouring days for periods that cross midnight.
+    function at(ms, lat, lon) {
+      const ds = [ms - dayMs, ms, ms + dayMs].map((x) => day(x, lat, lon));
+      const ps = ds.flatMap((x) => x.periods).filter((p) => ms >= p.s && ms < p.e).sort((a, b) => (a.kind === 'major' ? -1 : 1) - (b.kind === 'major' ? -1 : 1));
+      return ps[0] || null;
+    }
+    function next(ms, lat, lon) {
+      return [ms, ms + dayMs].map((x) => day(x, lat, lon)).flatMap((x) => x.periods).filter((p) => p.s > ms).sort((a, b) => a.s - b.s)[0] || null;
+    }
+    return { day, at, next, moonState };
+  })();
+
 
   // Rough California outline, used only to pick the regulations link.
   const CA_POLY = [[42, -124.4], [42, -120], [39, -120], [35, -114.6], [34.3, -114.1], [32.7, -114.7], [32.5, -117.1], [34.4, -120.6], [37, -122.6], [40.4, -124.5]];
@@ -1916,7 +1989,7 @@
     return out;
   }
   function hourAsCatch(t, hr) {
-    const pc = { caughtAt: hr.t, weather: hr.noWx ? null : hr, spotId: t.spotId };
+    const pc = { caughtAt: hr.t, weather: hr.noWx ? null : hr, spotId: t.spotId, location: { lat: t.lat, lon: t.lon } };
     if (tripTideShown(t)) { const cur = tideAt(t.tide.ev, hr.t); if (cur) pc.tide = { stage: tideStage(cur, hr.t), rising: cur.rising, coef: t.tide.coef, distM: t.tide.distM }; }
     return pc;
   }
@@ -1951,7 +2024,7 @@
     const pool = t.species && t.species.length && hist.filter((c) => t.species.includes(c.species)).length >= 3 ? hist.filter((c) => t.species.includes(c.species)) : hist;
     const score = new Map(); const why = new Map();
     const bare = (b) => b.replace(/ \(.*\)/, '');
-    const phrase = { sky: (b) => ({ Clear: 'Clear sky', 'Partly cloudy': 'Partly cloudy', Overcast: 'Overcast' }[b] || b), pressure: (b) => `${b} pressure`, temp: (b) => `${b} air`, wind: (b) => `${bare(b)} wind`, time: (b) => bare(b), tide: (b) => `${b} tide`, coef: (b) => `${bare(b)} tides`, moon: (b) => b };
+    const phrase = { sky: (b) => ({ Clear: 'Clear sky', 'Partly cloudy': 'Partly cloudy', Overcast: 'Overcast' }[b] || b), pressure: (b) => `${b} pressure`, temp: (b) => `${b} air`, wind: (b) => `${bare(b)} wind`, time: (b) => bare(b), tide: (b) => `${b} tide`, coef: (b) => `${bare(b)} tides`, moon: (b) => b, solunar: (b) => (b === 'Outside periods' ? 'Outside solunar periods' : `Solunar ${b.toLowerCase()}`) };
     Object.entries(DIMENSIONS).forEach(([dk, d]) => {
       const bs = pcs.map((pc) => bucketOf(d, pc)).filter(Boolean); if (!bs.length) return;
       const b = ranked(countBy(bs, (x) => x))[0][0]; const p0 = (phrase[dk] || ((x) => x))(b); const key = p0.charAt(0).toUpperCase() + p0.slice(1).replace(/ (Sky|Pressure|Wind|Tide|Air)$/, (m) => m.toLowerCase());
@@ -2117,14 +2190,17 @@
       </div>
       ${summary}
       ${hourCard}
-      <div class="card" style="margin-bottom:12px"><h3>Sun and moon</h3>
+      <div class="card" style="margin-bottom:12px"><h3>Sun, moon and bite times</h3>
         <div class="sun-grid">
           <div class="cond-cell"><span>First light</span><b>${sun.dawn ? fmtTime(sun.dawn) : '–'}</b></div>
           <div class="cond-cell"><span>Sunrise</span><b>${sun.sunrise ? fmtTime(sun.sunrise) : '–'}</b></div>
           <div class="cond-cell"><span>Sunset</span><b>${sun.sunset ? fmtTime(sun.sunset) : '–'}</b></div>
           <div class="cond-cell"><span>Last light</span><b>${sun.dusk ? fmtTime(sun.dusk) : '–'}</b></div>
         </div>
-        <p style="margin:10px 0 0">${moon.icon} ${esc(moon.name)}, ${moon.illum}% lit</p></div>
+        <p style="margin:10px 0 0">${moon.icon} ${esc(moon.name)}, ${moon.illum}% lit</p>
+        ${(() => { const sd = SOL.day(t.start, t.lat, t.lon); const during = [t.start - 86400000, t.start, t.start + 86400000].flatMap((x) => SOL.day(x, t.lat, t.lon).periods).filter((p) => p.e > t.start && p.s < t.end);
+          return `<p class="sol-trip">Solunar rating <b>${sd.ratingText}</b> <span class="sol-dots">${'●'.repeat(sd.rating)}${'○'.repeat(4 - sd.rating)}</span></p>
+            ${during.length ? `<p class="sol-trip-h">During your trip:</p><ul class="sol-list">${during.map((p) => periodRow(p, 0)).join('')}</ul>` : `<p class="help small" style="margin:6px 0 0">No solunar period falls inside the trip. ${(() => { const n = sd.periods.filter((p) => p.kind === 'major').map((p) => fmtRange(p.s, p.e)); return n.length ? `Major periods that day: ${n.join(' and ')}.` : ''; })()}</p>`}`; })()}</div>
       ${tideCard}
       <div class="card" style="margin-bottom:12px"><h3>Lures to bring</h3>
         <p class="sub">${hist.list.length ? `From your catches ${hist.label}${forSpecies ? ' of your target species' : ''}, in conditions like this trip's.` : 'Log some catches and the app will suggest lures from your own history.'}</p>
@@ -2357,6 +2433,7 @@
       end = Math.min(now, Math.max(lastAct + 30 * 60000, s.start + HOUR_MS)); forgot = true;
     }
     s.end = end; await saveSession(s); paintSessionViews(); if ($('#view-stats').classList.contains('active')) renderStats();
+    setTimeout(() => autoBackup().catch(() => {}), 7000);
     const n = fishIn(cs); const h = (end - s.start) / HOUR_MS;
     toast(`${forgot ? `Ended at ${fmtTime(end)} (it ran over 12 h). ` : ''}${durText(end - s.start)} · ${plural(n, 'fish')}${h >= 0.25 ? ` · ${round(n / h, 1)} per hour` : ''}`,
       { label: 'Undo', fn: async () => { s.end = null; await saveSession(s); paintSessionViews(); } });
@@ -2567,9 +2644,33 @@
       ${next ? `<button type="button" class="next-trip" data-trip-open="${next.id}"><svg viewBox="0 0 24 24"><use href="#i-calendar"/></svg><span><b>${esc(next.name)}</b><small>${esc(relDay(next.start))} · ${fmtRange(next.start, next.end)}</small></span></button>` : ''}
       <div class="btn-row"><button type="button" class="btn" id="now-plan">+ Plan a trip</button><button type="button" class="btn" id="now-trips">All trips${trips.length ? ` (${trips.length})` : ''}</button></div></div>`;
   }
+  // Solunar periods for today where you are, on a 24-hour strip.
+  function solunarStrip(d, sun, now) {
+    const pos = (t) => Math.max(0, Math.min(100, ((t - d.from) / (d.to - d.from)) * 100));
+    const blocks = d.periods.map((p) => `<span class="sol-blk ${p.kind}" style="left:${pos(p.s)}%;width:${pos(p.e) - pos(p.s)}%"></span>`).join('');
+    const night = [sun.sunrise ? `<span class="sol-night" style="left:0;width:${pos(sun.sunrise)}%"></span>` : '', sun.sunset ? `<span class="sol-night" style="left:${pos(sun.sunset)}%;width:${100 - pos(sun.sunset)}%"></span>` : ''].join('');
+    const nowM = now >= d.from && now < d.to ? `<span class="sol-now-mark" style="left:${pos(now)}%"></span>` : '';
+    return `<div class="sol-strip" aria-hidden="true">${night}${blocks}${nowM}</div><div class="sol-ticks" aria-hidden="true"><span>12a</span><span>6a</span><span>12p</span><span>6p</span><span>12a</span></div>`;
+  }
+  function periodRow(p, now) {
+    const past = p.e <= now; const on = p.s <= now && now < p.e;
+    return `<li class="${past ? 'past' : ''}${on ? ' on' : ''}"><span class="sol-k ${p.kind}">${p.kind === 'major' ? 'Major' : 'Minor'}</span><b>${fmtRange(p.s, p.e)}</b><small>${esc(p.what)}</small></li>`;
+  }
+  function renderNowSolunar() {
+    const box = $('#now-sol'); const L = (nowState && nowState.loc) || lastLoc; if (!L) { box.innerHTML = ''; return; }
+    const now = Date.now(); const d = SOL.day(now, L.lat, L.lon); const sun = sunTimes(now, L.lat, L.lon);
+    const cur = SOL.at(now, L.lat, L.lon); const nx = SOL.next(now, L.lat, L.lon);
+    const status = cur ? `<p class="sol-status on"><b>${cur.kind === 'major' ? 'Major' : 'Minor'} period now</b> – until ${fmtTime(cur.e)} (${esc(cur.what.toLowerCase())})</p>`
+      : nx ? `<p class="sol-status">Next: <b>${nx.kind} period at ${fmtTime(nx.s)}</b> (${esc(nx.what.toLowerCase())}), in ${durText(nx.s - now)}</p>` : '';
+    box.innerHTML = `<div class="card sol-card"><h3>Bite times today</h3>
+      <p class="sub">Solunar periods from the moon's position. Today rates <b>${d.ratingText}</b> <span class="sol-dots" aria-label="${d.rating} of 4">${'●'.repeat(d.rating)}${'○'.repeat(4 - d.rating)}</span>${d.lined.length ? ' – a period lines up with sunrise or sunset' : ''}.</p>
+      ${status}${solunarStrip(d, sun, now)}
+      <ul class="sol-list">${d.periods.map((p) => periodRow(p, now)).join('')}</ul>
+      <p class="note">Major periods: the 2 hours around the moon overhead and underfoot. Minor: the hour around moonrise and moonset. Stats shows whether they work for you.</p></div>`;
+  }
   function renderNow() {
     if (!$('#view-now')) return;
-    renderNowSession(); renderNowCond(); renderNowRecs(); renderNowTrip();
+    renderNowSession(); renderNowCond(); renderNowSolunar(); renderNowRecs(); renderNowTrip();
   }
   $('#view-now').addEventListener('click', (e) => {
     if (e.target.closest('#ses-start')) return startSession();
@@ -2778,6 +2879,7 @@
     tide: (b) => `on a ${b.toLowerCase()} tide`,
     coef: (b) => `on ${b.replace(/ \(.*\)/, '').toLowerCase()} tides`,
     moon: (b) => (b === 'Waxing' || b === 'Waning' ? `while the moon was ${b.toLowerCase()}` : `around the ${b.toLowerCase()}`),
+    solunar: (b) => (b === 'Outside periods' ? 'outside the solunar periods' : `during a ${b.toLowerCase()}`),
   };
   function insightsCard(list) {
     if (fishIn(list) < 5) return '';
@@ -2798,11 +2900,14 @@
     const per = new Map(); sessions.filter((x) => x.end).forEach((x) => { lureTime(x).forEach((ms, l) => { const e = per.get(l) || { ms: 0, n: 0 }; e.ms += ms; per.set(l, e); }); sessionCatches(x).forEach((c) => { const e = per.get(c.bait) || { ms: 0, n: 0 }; e.n += nFish(c); per.set(c.bait, e); }); });
     const fr = [...per.entries()].filter(([, e]) => e.ms >= HOUR_MS && e.n > 0).map(([l, e]) => ({ l, r: e.n / (e.ms / HOUR_MS) })).sort((a, b) => b.r - a.r)[0];
     if (fr) out.push(`When you time it, <b>${esc(fr.l)}</b> is your fastest lure: ${round(fr.r, 1)} fish per hour.`);
-    // 4. Recent trend
+    // 4. Solunar periods: they cover about a quarter of the day
+    const located = list.filter((c) => DIMENSIONS.solunar.of(c) != null); const inP = located.filter((c) => DIMENSIONS.solunar.of(c) !== 'Outside periods');
+    if (fishIn(located) >= 10) { const sh = pct(fishIn(inP), fishIn(located)); out.push(`${sh}% of your fish came during solunar periods, which cover about a quarter of the day${sh >= 35 ? ' – more than chance would give' : sh <= 15 ? ' – fewer than chance would give' : ''}.`); }
+    // 5. Recent trend
     const now = Date.now(); const a = fishIn(catches.filter((c) => c.caughtAt >= now - 30 * 86400000)); const b2 = fishIn(catches.filter((c) => c.caughtAt < now - 30 * 86400000 && c.caughtAt >= now - 60 * 86400000));
     if (a + b2 >= 5 && a !== b2) out.push(`${plural(a, 'fish')} in the last 30 days, ${a > b2 ? 'up' : 'down'} from ${b2} the 30 days before.`);
     if (!out.length) return '';
-    return `<div class="card insights"><h3>What your log says</h3><ul>${out.slice(0, 4).map((x) => `<li>${x}</li>`).join('')}</ul><p class="note">From your own catches, so small numbers can mislead.</p></div>`;
+    return `<div class="card insights"><h3>What your log says</h3><ul>${out.slice(0, 5).map((x) => `<li>${x}</li>`).join('')}</ul><p class="note">From your own catches, so small numbers can mislead.</p></div>`;
   }
 
   // ---------------------------------------------------------------- sample data
@@ -2848,7 +2953,7 @@
   $('#seg-weight').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; settings.wtOz = b.dataset.wt === 'oz'; store('tl.wtOz', settings.wtOz ? '1' : '0'); paintUnits(); renderList(); renderSpots(); });
   $('#btn-menu').addEventListener('click', async () => {
     paintUnits(); paintDisplay(); $('#app-version').textContent = `Fishamongus! version ${APP_VERSION}`;
-    $('#storage-info').textContent = ''; paintBackupInfo();
+    $('#storage-info').textContent = ''; paintBackupInfo(); paintAutoBackup();
     if (navigator.storage && navigator.storage.estimate) {
       try { const e = await navigator.storage.estimate(); const p = navigator.storage.persisted ? await navigator.storage.persisted() : false;
         $('#storage-info').textContent = `${plural(catches.length, 'catch')} · ${round((e.usage || 0) / 1048576, 1)} MB used${p ? ' · protected from automatic cleanup' : ''}`; } catch { /* ignore */ }
@@ -2870,41 +2975,93 @@
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);
     return true;
   }
-  // Backup reminder: after 5 catches with no backup, 20 new catches, or 30 days with anything new.
+  // ---------------------------------------------------------------- automatic backup
+  // A web app can't put files in iCloud or Google Drive by itself. So:
+  //  - where the browser lets an app keep a file (Chrome on a computer, and some Android phones), you pick a backup file once
+  //    and the app rewrites it whenever a backup is due, with no taps;
+  //  - everywhere else (iPhone), the app tells you when a backup is due and one tap opens the share sheet.
+  const FS_OK = typeof window.showSaveFilePicker === 'function';
+  const abMode = () => store('tl.autoBackup') || 'weekly';
+  const realOnly = (a) => a.filter((x) => !x.demo);
   function backupState() {
     const last = Number(store('tl.lastBackup') || 0);
-    const since = catches.filter((c) => (c.createdAt || 0) > last).length;
-    return { last, since };
+    const since = realOnly(catches).filter((c) => (c.createdAt || 0) > last).length;
+    const changed = Math.max(0, ...[...realOnly(catches), ...realOnly(spots), ...realOnly(trips), ...realOnly(sessions), ...tackle].map((x) => x.updatedAt || x.createdAt || 0)) > last;
+    return { last, since, changed };
+  }
+  function backupDue() {
+    const mode = abMode(); const { last, changed } = backupState(); const now = Date.now();
+    if (!realOnly(catches).length || !changed) return false;
+    if (mode === 'off') return realOnly(catches).length >= 5 && (!last || now - last > 30 * 86400000);   // the old gentle reminder
+    if (!last) return true;
+    if (mode === 'session') return realOnly(sessions).some((x) => x.end && x.end > last) || now - last > 7 * 86400000;
+    return now - last >= (mode === 'daily' ? 20 * HOUR_MS : 7 * 86400000 - HOUR_MS);
+  }
+  async function backupHandle() { if (!FS_OK) return null; try { return (await DB.getMeta('backupHandle')) || null; } catch { return null; } }
+  async function writeBackupFile(h) { const w = await h.createWritable(); await w.write(await buildBackupBlob()); await w.close(); markBackedUp(); }
+  // Called when the app opens or comes back to the front, and when a fishing session ends.
+  async function autoBackup() {
+    if (!backupDue()) { updateBackupNudge(); return; }
+    const h = await backupHandle();
+    if (h) { try { if ((await h.queryPermission({ mode: 'readwrite' })) === 'granted') { await writeBackupFile(h); toastBg(`Backed up to ${h.name}`); return; } } catch { /* fall back to the reminder */ } }
+    updateBackupNudge();
+  }
+  // The one-tap "Back up now": rewrite the chosen file if there is one (the tap lets the browser ask for permission), else share sheet.
+  async function backupNow() {
+    const h = await backupHandle();
+    if (h) { try { if ((await h.requestPermission({ mode: 'readwrite' })) === 'granted') { toast('Backing up…'); await writeBackupFile(h); toast(`Backed up to ${h.name}`); return; } } catch { /* use the share sheet */ } }
+    await exportBackup();
   }
   function updateBackupNudge() {
     const el = $('#backup-nudge'); if (!el) return;
-    const { last, since } = backupState(); const now = Date.now();
+    const { last, since } = backupState(); const now = Date.now(); const mode = abMode();
     const snoozed = now < Number(store('tl.backupSnooze') || 0);
-    const due = catches.length >= 5 && (!last || since >= 20 || (now - last > 30 * 86400000 && since >= 1));
-    el.hidden = snoozed || !due;
-    if (!el.hidden) $('#backup-nudge-text').textContent = last
-      ? `${plural(since, 'catch')} since your last backup on ${fmtDate(last)}. Your log is only on this phone, so back it up now and then.`
-      : `Your ${plural(catches.length, 'catch')} are saved only on this phone. If the app is deleted they're gone, so back them up.`;
+    el.hidden = snoozed || !backupDue();
+    if (el.hidden) return;
+    const n = realOnly(catches).length;
+    $('#backup-nudge-text').textContent = !last ? `${n === 1 ? 'Your catch is' : `Your ${n} catches are`} saved only on this phone. Back ${n === 1 ? 'it' : 'them'} up to iCloud Drive, Google Drive or your computer so ${n === 1 ? "it's" : "they're"} safe.`
+      : mode === 'off' ? `${plural(since, 'catch')} since your last backup on ${fmtDate(last)}. Your log is only on this phone.`
+        : `Time for your ${mode === 'session' ? 'after-session' : mode} backup${since ? `: ${plural(since, 'new catch')} since ${fmtDate(last)}` : ` (last one ${fmtDate(last)})`}. One tap saves it.`;
   }
-  $('#backup-nudge-later').addEventListener('click', () => { store('tl.backupSnooze', String(Date.now() + 7 * 86400000)); updateBackupNudge(); });
-  $('#backup-nudge-go').addEventListener('click', () => exportBackup());
+  $('#backup-nudge-later').addEventListener('click', () => { store('tl.backupSnooze', String(Date.now() + (abMode() === 'weekly' || abMode() === 'off' ? 3 : 1) * 86400000)); updateBackupNudge(); });
+  $('#backup-nudge-go').addEventListener('click', () => backupNow());
+  async function paintAutoBackup() {
+    $('#ab-mode').value = abMode();
+    const h = await backupHandle(); $('#ab-file-row').hidden = !FS_OK || abMode() === 'off';
+    if (FS_OK) { $('#ab-file-text').textContent = h ? `Backing up to "${h.name}" automatically – no taps needed.` : 'This browser can keep one backup file up to date by itself. Choose where to keep it (a synced folder is best).'; $('#ab-file-btn').textContent = h ? 'Choose a different file' : 'Choose a backup file'; }
+    const mode = abMode(); const { last } = backupState();
+    $('#ab-status').textContent = mode === 'off' ? 'You\'ll still get a reminder if your log goes 30 days without a backup.'
+      : backupDue() ? 'A backup is due now.' : last ? `Next backup: ${mode === 'session' ? 'after your next fishing session' : fmtDate(last + (mode === 'daily' ? 86400000 : 7 * 86400000))}, if anything has changed.` : '';
+  }
+  $('#ab-mode').addEventListener('change', (e) => { store('tl.autoBackup', e.target.value); paintAutoBackup(); updateBackupNudge(); });
+  $('#ab-file-btn').addEventListener('click', async () => {
+    try {
+      const h = await window.showSaveFilePicker({ suggestedName: 'fishamongus-backup.json', types: [{ description: 'Fishamongus! backup', accept: { 'application/json': ['.json'] } }] });
+      await DB.putMeta('backupHandle', h); toast('Backing up…'); await writeBackupFile(h); toast(`Backed up to ${h.name}. Future backups update it automatically.`); paintAutoBackup();
+    } catch (err) { if (!err || err.name !== 'AbortError') toast('Could not use that file'); }
+  });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) autoBackup().catch(() => {}); });
   const blobToDataURL = (b) => new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(b); });
   const dataURLToBlob = async (d) => (await fetch(d)).blob();
-  const stamp = () => new Date().toISOString().slice(0, 10);
+  const stamp = () => toLocalInput(new Date()).slice(0, 10);
 
   $('#btn-export-json').addEventListener('click', () => exportBackup());
   async function exportBackup() {
     if (!catches.length && !spots.length && !trips.length && !sessions.length) return toast('Nothing to export yet');
     toast('Preparing backup…');
+    const ok = await deliverFile(await buildBackupBlob(), `fishamongus-backup-${stamp()}.json`);
+    if (ok) { markBackedUp(); toast('Backup saved'); }
+  }
+  async function buildBackupBlob() {
     const out = [];
     const tk = []; for (const t of tackle) tk.push({ ...t, thumb: t.thumb ? await blobToDataURL(t.thumb) : null });
     for (const c of catches.filter((x) => !x.demo)) {
       const extra = []; for (const p of c.extraPhotos || []) extra.push({ photo: await blobToDataURL(p.photo), thumb: p.thumb ? await blobToDataURL(p.thumb) : null });
       out.push({ ...c, photo: c.photo ? await blobToDataURL(c.photo) : null, thumb: c.thumb ? await blobToDataURL(c.thumb) : null, extraPhotos: extra });
     }
-    const ok = await deliverFile(new Blob([JSON.stringify({ app: 'fishamongus', version: 5, exportedAt: new Date().toISOString(), spots: spots.filter((x) => !x.demo), trips: trips.filter((x) => !x.demo), sessions: sessions.filter((x) => !x.demo), tackle: tk, limits: getLimits(), catches: out })], { type: 'application/json' }), `fishamongus-backup-${stamp()}.json`);
-    if (ok) { store('tl.lastBackup', String(Date.now())); store('tl.backupSnooze', '0'); updateBackupNudge(); paintBackupInfo(); toast('Backup saved'); }
+    return new Blob([JSON.stringify({ app: 'fishamongus', version: 6, exportedAt: new Date().toISOString(), spots: spots.filter((x) => !x.demo), trips: trips.filter((x) => !x.demo), sessions: sessions.filter((x) => !x.demo), tackle: tk, limits: getLimits(), catches: out })], { type: 'application/json' });
   }
+  function markBackedUp() { store('tl.lastBackup', String(Date.now())); store('tl.backupSnooze', '0'); updateBackupNudge(); paintBackupInfo(); }
   $('#btn-export-csv').addEventListener('click', async () => {
     if (!catches.length) return toast('Nothing to export yet');
     const q = (v) => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
@@ -2969,6 +3126,6 @@
   if (!store('tl.welcomed')) { store('tl.welcomed', '1'); setTimeout(() => openSheet($('#sheet-welcome')), 50); } else updateInstallNudge();
 
   setSpotsMode(spotsMode); paintOffline();
-  reload().then(() => { if (!firstRun) refreshNow(); }).then(backfillWeather).then(backfillTides).then(backfillMarine).catch((err) => { console.error(err); toast('Storage is unavailable in this browser mode'); });
+  reload().then(() => { if (!firstRun) refreshNow(); }).then(() => autoBackup()).then(backfillWeather).then(backfillTides).then(backfillMarine).catch((err) => { console.error(err); toast('Storage is unavailable in this browser mode'); });
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();

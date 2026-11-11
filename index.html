@@ -54,6 +54,7 @@
       </div>
       <div id="now-session"></div>
       <div id="now-cond"></div>
+      <div id="now-sol"></div>
       <div id="now-recs"></div>
       <div id="now-trip"></div>
     </section>
@@ -601,7 +602,21 @@
         </div>
         <div class="field">
           <label>Backup</label>
-          <p class="help">Your log is saved only on this phone. Export a backup now and then so you don't lose it.</p>
+          <p class="help">Your log is saved only on this phone. A backup file you keep somewhere else (iCloud Drive, Google Drive, your computer) is what saves it if the phone is lost or the app is deleted.</p>
+          <div class="ab-box">
+            <label for="ab-mode" class="ab-label">Back up automatically</label>
+            <div class="select-wrap"><select id="ab-mode">
+              <option value="session">After each fishing session</option>
+              <option value="daily">Once a day, when something's new</option>
+              <option value="weekly">Once a week, when something's new</option>
+              <option value="off">Off – I'll do it myself</option>
+            </select></div>
+            <div id="ab-file-row" hidden>
+              <p class="help small" id="ab-file-text"></p>
+              <button type="button" class="btn" id="ab-file-btn">Choose a backup file</button>
+            </div>
+            <p class="help small" id="ab-status"></p>
+          </div>
           <div class="stack">
             <button type="button" class="btn" id="btn-export-json">Export full backup (with photos)</button>
             <button type="button" class="btn" id="btn-export-csv">Export spreadsheet (CSV)</button>
@@ -619,6 +634,8 @@
           <details><summary>How are the best lures and best hours chosen?</summary><p>From your own catches: the app counts fish caught in each condition (sky, pressure, temperature, wind, time of day, tide, moon). Counts favour lures you use most; fishing sessions and planned trips record hours fished, which gives fish per hour.</p></details>
           <details><summary>Where does the estimated weight come from?</summary><p>For 12 common freshwater species (black bass, bluegill, crappie, walleye, perch, channel catfish, rainbow trout, wiper and carp), fisheries "standard weight" equations give the weight of a typical fish of that length. Your fish may be heavier or lighter, so it's saved as an estimate and doesn't count as a personal best.</p></details>
           <details><summary>How do bag limits work?</summary><p>Set a daily limit for any fish in Settings → Daily bag limits. Fish marked Kept today count towards it. The app warns you before you save one over the limit, but it doesn't know your local rules – always check them.</p></details>
+          <details><summary>What are bite times?</summary><p>Solunar theory says fish feed more when the moon is overhead or underfoot (major periods, about 2 hours) and around moonrise and moonset (minor periods, about 1 hour), and most on days near the new and full moon. The app works these out from the moon's position where you are. It's a popular idea rather than proven science, so Stats → Solunar shows whether it holds for your own catches.</p></details>
+          <details><summary>How does automatic backup work?</summary><p>Choose how often in Settings → Backup. On a computer's Chrome (and some Android phones) you can pick a backup file once, and the app keeps it up to date by itself. On iPhone, web apps can't save to iCloud on their own, so the app reminds you when a backup is due and one tap opens the share sheet – choose Save to Files, then iCloud Drive. To restore, use Restore from backup on any phone.</p></details>
           <details><summary>How do I log a fish I caught earlier?</summary><p>Add the photo you took: the app offers to use the time and place stored in it. Or change "Caught at" and the weather and tide are looked up for that time.</p></details>
           <details><summary>Does the map work with no signal?</summary><p>Map areas you've already looked at while online are kept on the phone and show without signal. Open the map at your spots once at home to keep them handy.</p></details>
         </div>

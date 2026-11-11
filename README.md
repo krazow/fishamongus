@@ -78,6 +78,13 @@ Tides show only where they apply:
 - **Saltwater spot:** always.
 - **Freshwater spot:** never. Use this for lakes and rivers near the coast.
 
+**New in 3.1:**
+- **Bite times (solunar):** the Now screen shows today's major periods (2 hours around the moon overhead and underfoot) and minor periods (1 hour around moonrise and moonset) on a 24-hour strip, with what's on now or next and a day rating (Fair to Best: best near new and full moon, better when a period lines up with sunrise or sunset). Trip plans show the periods that fall inside the trip. Stats has a **Solunar** condition, so you can see whether these periods actually work for you. Everything is calculated on the phone and works offline; moon times match published tables to within a couple of minutes.
+- **Automatic backup** (Settings → Backup): after each fishing session, once a day or once a week, whenever something has changed.
+  - **Chrome on a computer, and Android phones that support it:** choose a backup file once (a synced folder such as Google Drive is best) and the app rewrites it on schedule with no taps. If the browser has forgotten its permission, the reminder appears and one tap updates the file.
+  - **iPhone and other browsers:** web apps can't write to iCloud by themselves, so when a backup is due the Now screen shows a reminder. One tap opens the share sheet: choose **Save to Files → iCloud Drive**.
+  - Sample data is never backed up and never makes a backup due.
+
 **New in 3.0:**
 - **What your log says:** the top of Stats sums up your log in plain sentences, each with the number of fish behind it. For example: "Curly-tail grub caught 8 of your 13 fish around the new moon", your best time of day, your fastest lure per hour, and how the last 30 days compare with the 30 before.
 - **Personal-best moments:** when a catch beats your heaviest (or, without a weight, longest) fish of that species, a gold message says so and the phone buzzes. Estimated weights don't count.
@@ -95,19 +102,17 @@ Tides show only where they apply:
 
 Settings (units, pounds or pounds and ounces, backup, and Help) is the gear icon at the top right. The app also has a map of all your catch spots, search, an "Open spot in Maps" button for getting back to a spot, sharing, and imperial/metric units.
 
-## Get it on your phone (about 5 minutes)
+## Get it on your phone (about 2 minutes)
 
-The app has to be on a web address that starts with `https://`, because phones only allow GPS on secure sites. Netlify's free drag-and-drop host is the simplest way to do that.
+Fishamongus! is live at **https://krazow.github.io/fishamongus/**, published by GitHub Pages from the `main` branch of this repository.
 
-1. Unzip `fishamongus.zip` on your computer. You'll get a folder named `fishamongus`.
-2. Go to **https://app.netlify.com/drop** and sign up for a free account. Then drag the whole `fishamongus` folder onto the page.
-3. Netlify gives you a link such as `https://something-random.netlify.app`. You can rename it under *Site configuration → Change site name*.
-4. Open that link on your phone:
-   - **iPhone (Safari):** tap Share → **Add to Home Screen**.
-   - **Android (Chrome):** tap ⋮ → **Install app** (or **Add to Home screen**).
-5. Open Fishamongus! from your home screen. The first time you log a catch, allow **Location**, and allow **Camera** when you add a photo.
+1. Open that link on your phone:
+   - **iPhone (Safari, not Chrome):** tap Share → **Add to Home Screen**.
+   - **Android (Chrome):** tap **Install**, or ⋮ → **Install app**.
+2. Open Fishamongus! from your home screen, tap **Get started** and allow **Location**. Allow **Camera** when you add a photo.
+3. In Settings → Backup, choose how often to back up.
 
-Other free hosts work too, such as GitHub Pages or Cloudflare Pages. Upload the folder's contents as they are.
+**Updating:** push changes to `main` and GitHub Pages republishes in a minute or two. Bump `VERSION` in `sw.js` with every change so installed copies pick up the update the next time they open online. Keep the same web address: your log is stored on the phone and tied to it.
 
 ## How it works
 
