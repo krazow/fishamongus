@@ -159,7 +159,7 @@
   function store(key, val) { try { if (val === undefined) return localStorage.getItem(key); localStorage.setItem(key, val); } catch { return null; } }
 
   // ---------------------------------------------------------------- units
-  const APP_VERSION = '4.0 (Nov 11, 2026)';
+  const APP_VERSION = '4.1 (Nov 11, 2026)';
   // Night (dim red) mode and large text, applied before anything is drawn.
   function applyDisplay() {
     const night = store('tl.theme') === 'night'; const large = store('tl.text') === 'large';
@@ -788,8 +788,8 @@
       const before = keptToday(sp, editing && editing.id); const after = before + (draftReleased === false ? draftCount : 0);
       el.hidden = false; el.classList.toggle('over', after > lim); el.classList.toggle('full', after === lim);
       el.textContent = draftReleased === false
-        ? `Kept today: ${after} of ${lim} ${sp} with this one${after > lim ? ' – over your limit' : after === lim ? ' – that’s your limit' : ''}.`
-        : `Kept today: ${before} of ${lim} ${sp}.`;
+        ? `Kept today: ${after} of ${lim} ${limitLabel(sp)} with this one${after > lim ? ' – over your limit' : after === lim ? ' – that’s your limit' : ''}.`
+        : `Kept today: ${before} of ${lim} ${limitLabel(sp)}.`;
     }
 
     // How many fish
@@ -2257,7 +2257,9 @@
   const TRIP_TYPES = { fishing: 'Fishing', crabbing: 'Crabbing', clamming: 'Clamming & oysters', shrimping: 'Shrimping' };
   const tripKind = (t) => (t.type && t.type !== 'fishing' ? 'shellfish' : 'fish');
   function tripHistory(t) {
-    const pool = catches.filter((c) => kindOf(c) === tripKind(t));
+    const TYPE_OF_TRIP = { crabbing: (ty) => ty === 'Crab', clamming: (ty) => BIVALVE_TYPES.has(ty), shrimping: (ty) => ty === 'Shrimp & prawns' };
+    const want = TYPE_OF_TRIP[t.type];
+    const pool = catches.filter((c) => kindOf(c) === tripKind(t) && (!want || want(typeOf(c.species))));
     const at = tripPoint(t);
     const here = t.spotId ? pool.filter((c) => c.spotId === t.spotId) : pool.filter((c) => c.location && distM(c.location, at) <= 1000);
     if (here.length >= 5) return { list: here, label: t.spotId ? 'at this spot' : 'here' };
@@ -2291,7 +2293,7 @@
       const b = ranked(countBy(bs, (x) => x))[0][0]; const p0 = (phrase[dk] || ((x) => x))(b); const key = p0.charAt(0).toUpperCase() + p0.slice(1).replace(/ (Sky|Pressure|Wind|Tide|Air)$/, (m) => m.toLowerCase());
       pool.forEach((c) => { if (bucketOf(d, c) !== b) return; score.set(c.bait, (score.get(c.bait) || 0) + nFish(c)); const w = why.get(c.bait) || new Map(); w.set(key, (w.get(key) || 0) + nFish(c)); why.set(c.bait, w); });
     });
-    return { forSpecies: pool !== hist, recs: ranked(score).slice(0, 3).map(([lure]) => ({ lure, total: fishIn(pool.filter((c) => c.bait === lure)), reasons: ranked(why.get(lure)).slice(0, 3).map(([k, n]) => `${k} (${plural(n, 'fish')})`) })) };
+    return { forSpecies: pool !== hist, recs: ranked(score).slice(0, 3).map(([lure]) => ({ lure, total: fishIn(pool.filter((c) => c.bait === lure)), reasons: ranked(why.get(lure)).slice(0, 3).map(([k, n]) => `${k} (${tripKind(t) === 'shellfish' ? n : plural(n, 'fish')})`) })) };
   }
   function gearSuggestions(t, hours, recs, sun) {
     const have = new Set((t.gear || []).map((g) => g.text.toLowerCase()));
@@ -3048,7 +3050,14 @@
   const bagLimit = (sp) => { const o = limitOf(sp); return o ? o.n : null; };
   // Legal minimums keep their exact value (6.25 in, not 6.3).
   const minLen = (cm) => (imp() ? `${String(round(cm / 2.54, 2))} in` : `${round(cm, 1)} cm`);
-  function ruleText(o) { return [o.males ? 'males only' : '', o.hard ? 'hard shell' : '', o.minCm ? `at least ${minLen(o.minCm)} across` : ''].filter(Boolean).join(', '); }
+  const SHARED_NAME = { clams: 'clams', oysters: 'oysters' };
+  function ruleText(o) {
+    return [o.shared === 'clams' ? `${o.n} clams of all kinds combined, up to 10 lb in the shell` : '', o.males ? 'males only' : '', o.hard ? 'hard shell' : '',
+      o.minCm ? `at least ${minLen(o.minCm)} across` : '', o.firstDug ? `keep the first ${o.n === 1 ? 'one' : o.n} dug, any size or condition` : '', o.shuck ? 'shuck on the beach and leave the shells' : ''].filter(Boolean).join(', ');
+  }
+  // Species counted together under one limit (WDFW: 40 clams of all kinds combined).
+  function limitMates(sp) { const o = limitOf(sp); if (!o || !o.shared) return [sp]; const lim = getLimits(); return Object.keys(lim).filter((k) => { const x = limitOf(k); return x && x.shared === o.shared; }); }
+  const limitLabel = (sp) => { const o = limitOf(sp); return o && o.shared ? (SHARED_NAME[o.shared] || o.shared) : sp; };
   // Why a crab (or other catch) can't be kept under its rules.
   function keepProblems(c) {
     const o = limitOf(c.species); if (!o) return [];
@@ -3058,21 +3067,30 @@
     if (o.minCm && c.carapaceCm != null && c.carapaceCm < o.minCm - 0.05) out.push(`under the ${minLen(o.minCm)} minimum`);
     return out;
   }
-  function keptToday(sp, exceptId) { const from = dayStart(Date.now()); return fishIn(catches.filter((c) => c.species === sp && c.released === false && c.caughtAt >= from && c.id !== exceptId)); }
+  function keptToday(sp, exceptId) { const from = dayStart(Date.now()); const mates = limitMates(sp); return fishIn(catches.filter((c) => mates.includes(c.species) && c.released === false && c.caughtAt >= from && c.id !== exceptId)); }
   async function overLimitOk(sp, n, exceptId, fields) {
     const problems = keepProblems({ species: sp, ...(fields || {}) });
     if (problems.length && !(await askConfirm(`This ${sp} can't be kept under your limits: ${problems.join(', ')}. Save it as kept anyway?`, 'Save anyway'))) return false;
     const lim = bagLimit(sp); if (!lim) return true;
     const after = keptToday(sp, exceptId) + n; if (after <= lim) return true;
-    return askConfirm(`That makes ${after} ${sp} kept today. Your daily limit is ${lim}. Save it as kept anyway?`, 'Save anyway');
+    return askConfirm(`That makes ${after} ${limitLabel(sp)} kept today. Your daily limit is ${lim}. Save it as kept anyway?`, 'Save anyway');
   }
   function keptLine() {
     const lim = getLimits(); const from = dayStart(Date.now());
-    const parts = Object.keys(lim).map((sp) => ({ sp, n: fishIn(catches.filter((c) => c.species === sp && c.released === false && c.caughtAt >= from)), lim: bagLimit(sp) })).filter((x) => x.n > 0 && x.lim);
+    const seen = new Set();
+    const parts = Object.keys(lim).filter((sp) => { const k = limitLabel(sp); if (seen.has(k)) return false; seen.add(k); return true; })
+      .map((sp) => ({ sp: limitLabel(sp), n: keptToday(sp), lim: bagLimit(sp) })).filter((x) => x.n > 0 && x.lim);
     return parts.length ? `<p class="kept-line">Kept today: ${parts.map((x) => `<span class="${x.n > x.lim ? 'over' : x.n === x.lim ? 'full' : ''}">${esc(x.sp)} ${x.n} of ${x.lim}</span>`).join(' · ')}</p>` : '';
   }
   // WDFW Puget Sound sport crab limits (marine areas 4 east of Bonilla-Tatoosh through 13).
   const PUGET_SOUND_CRAB = { 'Dungeness Crab': { n: 5, males: true, hard: true, minCm: 6.25 * 2.54 }, 'Red Rock Crab': { n: 6, minCm: 5 * 2.54 } };
+  // WDFW statewide clam and oyster limits (WAC 220-330-010 as amended March 31, 2026). Beaches have their own seasons.
+  const WA_CLAMS = {
+    'Manila Clam': { n: 40, shared: 'clams', minCm: 1.5 * 2.54 }, 'Native Littleneck Clam': { n: 40, shared: 'clams', minCm: 1.5 * 2.54 },
+    'Butter Clam': { n: 40, shared: 'clams', minCm: 1.5 * 2.54 }, 'Cockle': { n: 40, shared: 'clams', minCm: 2.5 * 2.54 }, 'Softshell Clam': { n: 40, shared: 'clams' },
+    'Horse Clam (Gaper)': { n: 7, firstDug: true }, 'Geoduck': { n: 1, firstDug: true }, 'Razor Clam': { n: 15 },
+    'Pacific Oyster': { n: 18, shared: 'oysters', minCm: 2.5 * 2.54, shuck: true },
+  };
   const limitsSheet = (() => {
     function paint() {
       const lim = getLimits(); const names = Object.keys(lim).filter((sp) => limitOf(sp)).sort((a, b) => a.localeCompare(b));
@@ -3092,8 +3110,13 @@
       const lim = getLimits(); Object.assign(lim, JSON.parse(JSON.stringify(PUGET_SOUND_CRAB))); save(lim); paint();
       toast('Added: 5 male hard-shell Dungeness (6¼ in), 6 red rock crab (5 in)');
     });
+    $('#lim-wa-clam').addEventListener('click', () => {
+      const lim = getLimits(); Object.assign(lim, JSON.parse(JSON.stringify(WA_CLAMS))); save(lim); paint();
+      toast('Added: 40 clams combined, 7 horse clams, 1 geoduck, 15 razor clams, 18 oysters');
+    });
     $('#lim-list').addEventListener('change', (e) => { const i = e.target.closest('[data-lim]'); if (!i) return; const n = Math.round(num(i.value) || 0); const lim = getLimits(); const o = limitOf(i.dataset.lim);
-      if (n > 0) lim[i.dataset.lim] = o && Object.keys(o).length > 1 ? { ...o, n } : n; else delete lim[i.dataset.lim]; save(lim); paint(); });
+      const keys = o && o.shared ? limitMates(i.dataset.lim) : [i.dataset.lim];
+      keys.forEach((k) => { const x = limitOf(k); if (n > 0) lim[k] = x && Object.keys(x).length > 1 ? { ...x, n } : n; else delete lim[k]; }); save(lim); paint(); });
     $('#lim-list').addEventListener('click', (e) => { const b = e.target.closest('[data-lim-rm]'); if (!b) return; const lim = getLimits(); delete lim[b.dataset.limRm]; save(lim); paint(); });
     $('#btn-limits').addEventListener('click', () => { paint(); openSheet($('#sheet-limits')); });
     return { paint };

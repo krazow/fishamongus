@@ -1,6 +1,6 @@
 # Fishamongus! – Catch Log
 
-**[Watch the 2-minute video tour](https://krazow.github.io/fishamongus/demo/)**
+**[Watch the 2½-minute video tour](https://krazow.github.io/fishamongus/demo/)**
 
 A phone app (installable web app) for logging fish you catch. Each catch records:
 
@@ -16,6 +16,7 @@ A phone app (installable web app) for logging fish you catch. Each catch records
 - the lure menu becomes **gear** (crab pot, ring net, snare, shrimp pot, clam gun, shovel, rake and more), with an optional bait;
 - crab catches record **sex**, **hard or soft shell** and **carapace width**, and pots record **how many** and the **soak time**;
 - **Limits → Add Puget Sound crab limits (WDFW)** sets 5 Dungeness (males only, hard shell, at least 6¼ in) and 6 red rock crab (at least 5 in). The form warns before you keep a crab that breaks a rule;
+- **Limits → Add Washington clam & oyster limits (WDFW)** sets the 2026 statewide limits: 40 clams of all kinds combined (up to 10 lb; Manila, littleneck and butter at least 1½ in, cockles at least 2½ in), the first 7 horse clams and the first geoduck dug, 15 razor clams, and 18 Pacific oysters (at least 2½ in, shucked on the beach). Clams count together toward the 40;
 - clams, oysters, mussels and scallops show a reminder to check the Department of Health **Shellfish Safety Map** for biotoxin closures;
 - **Stats** gets a **Fish / Shellfish / All** bar, **catch per pot-hour** by gear and bait, and a **catch record card** count of kept Dungeness for the summer and winter cards;
 - **trips** have a type: fishing, crabbing, clamming & oysters, or shrimping. Each type gets its own gear checklist. Clamming trips list **daylight minus tides** for the next two weeks, and the **Tides** screen has a **Best clam tides** card. Trips in Washington link to WDFW rules and the Shellfish Safety Map.

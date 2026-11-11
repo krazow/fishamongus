@@ -87,22 +87,42 @@ Plan a trip: the hourly forecast, with your best hours marked from your own hist
 Trip plans add NOAA tides, sunrise and sunset, and the bite times during your trip.
 
 23
-00:01:41,000 --> 00:01:45,250
-Keep your real lures in a tackle box and pick them with one tap when you log a catch.
+00:01:41,000 --> 00:01:45,750
+Tap Shellfish to log crab, shrimp, clams, oysters and more. Freshwater and Saltwater shorten the list.
 
 24
-00:01:45,250 --> 00:01:49,250
-Set daily limits. The app counts what you keep and warns you before you go over.
+00:01:45,750 --> 00:01:50,250
+Record sex, shell and width, plus pots and soak time. A crab you can’t keep gets a warning before you save it.
 
 25
-00:01:49,250 --> 00:01:53,750
-Your log stays on your phone, and automatic backups keep a copy safe.
+00:01:50,250 --> 00:01:54,750
+One tap adds the WDFW crab, clam and oyster limits. Clams count together toward the 40-clam limit.
 
 26
-00:01:53,750 --> 00:01:58,000
-Fishing before dawn? Night mode turns the screen dim red to protect your night vision.
+00:01:54,750 --> 00:01:59,250
+Stats shows what each pot and bait catches per hour of soak, and tallies your catch record card.
 
 27
-00:01:58,000 --> 00:02:03,500
+00:01:59,250 --> 00:02:04,000
+Clamming trips list the daylight minus tides for the next two weeks, with the right gear list and safety links.
+
+28
+00:02:04,000 --> 00:02:08,250
+Keep your real lures in a tackle box and pick them with one tap when you log a catch.
+
+29
+00:02:08,250 --> 00:02:12,250
+Set daily limits. The app counts what you keep and warns you before you go over.
+
+30
+00:02:12,250 --> 00:02:16,750
+Your log stays on your phone, and automatic backups keep a copy safe.
+
+31
+00:02:16,750 --> 00:02:21,000
+Fishing before dawn? Night mode turns the screen dim red to protect your night vision.
+
+32
+00:02:21,000 --> 00:02:26,500
 Open the link in Safari or Chrome, then add it to your home screen.
 
