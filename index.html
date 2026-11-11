@@ -181,7 +181,18 @@
 
         <!-- Species -->
         <div class="field">
-          <label for="f-species-select">Fish type <span class="req">required</span></label>
+          <label for="f-species-select" id="lbl-species">What did you catch? <span class="req">required</span></label>
+          <div class="kind-row">
+            <div class="seg seg-kind" id="seg-kind" role="group" aria-label="Fish or shellfish">
+              <button type="button" data-kind="fish">Fish</button>
+              <button type="button" data-kind="shellfish">Shellfish</button>
+            </div>
+            <div class="seg seg-water" id="seg-water" role="group" aria-label="Water">
+              <button type="button" data-water="Freshwater">Freshwater</button>
+              <button type="button" data-water="Saltwater">Saltwater</button>
+              <button type="button" data-water="both">Both</button>
+            </div>
+          </div>
           <div class="chips" id="species-chips"></div>
           <div class="search-wrap find-fish"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg><input type="search" id="f-species-find" placeholder="Search 240+ fish by name" aria-label="Search fish by name" autocomplete="off" enterkeyhint="search"></div>
           <div class="chips find-results" id="species-find-results" hidden></div>
@@ -198,7 +209,7 @@
 
         <!-- Lure / bait -->
         <div class="field">
-          <label for="f-bait-select">Lure or bait <span class="req">required</span></label>
+          <label for="f-bait-select" id="lbl-bait">Lure or bait <span class="req">required</span></label>
           <div class="tk-chips" id="tackle-chips" hidden></div>
           <div class="chips" id="bait-chips"></div>
           <div class="select-wrap"><select id="f-bait-select"></select></div>
@@ -270,7 +281,7 @@
         </div>
 
         <!-- Optional -->
-        <div class="row2">
+        <div class="row2" id="size-row">
           <div class="field">
             <label for="f-length">Length <span class="unit" data-unit="len"></span></label>
             <input id="f-length" inputmode="decimal" placeholder="Optional">
@@ -284,6 +295,33 @@
           </div>
         </div>
         <div class="wt-est" id="wt-est" hidden><span id="wt-est-text"></span><button type="button" class="chip" id="wt-est-use">Use estimate</button></div>
+        <div id="shell-extras" hidden>
+          <div class="field" id="crab-fields" hidden>
+            <label id="lbl-crab">Crab details</label>
+            <div class="seg" id="seg-sex" role="group" aria-label="Male or female">
+              <button type="button" data-sex="male">Male</button>
+              <button type="button" data-sex="female">Female</button>
+            </div>
+            <div class="seg" id="seg-shell" role="group" aria-label="Shell condition" style="margin-top:8px">
+              <button type="button" data-shell="hard">Hard shell</button>
+              <button type="button" data-shell="soft">Soft shell</button>
+            </div>
+            <div class="row2" style="margin-top:8px">
+              <div><label for="f-carapace" class="sub-lbl">Carapace width <span class="unit" data-unit="len"></span></label><input id="f-carapace" inputmode="decimal" placeholder="Optional"></div>
+              <div class="carapace-help help small">Measure straight across the back, just in front of the points.</div>
+            </div>
+            <p class="crab-hint" id="crab-hint" hidden></p>
+          </div>
+          <div class="field" id="pot-fields" hidden>
+            <label>Pots</label>
+            <div class="row2">
+              <div><label for="f-pots" class="sub-lbl">Pots or rings fished</label><input id="f-pots" inputmode="numeric" placeholder="e.g. 2"></div>
+              <div><label for="f-soak" class="sub-lbl">Soak time (hours)</label><input id="f-soak" inputmode="decimal" placeholder="e.g. 1.5"></div>
+            </div>
+            <p class="help small" style="margin-top:6px">Gives crab per pot-hour in Stats.</p>
+          </div>
+          <p class="safety-note" id="shell-safety" hidden>Clams, oysters, mussels and scallops can carry biotoxins that cooking doesn't destroy. Before you harvest in Washington, check the <a href="https://fortress.wa.gov/doh/biotoxin/biotoxin.html" target="_blank" rel="noopener">Shellfish Safety Map</a> or call 1-800-562-5632.</p>
+        </div>
         <div class="field">
           <label id="lbl-count">How many fish?</label>
           <div class="stepper" role="group" aria-labelledby="lbl-count">
@@ -429,6 +467,15 @@
       </div>
       <div class="sheet-scroll">
         <div class="field">
+          <label for="tr-type">What for?</label>
+          <div class="select-wrap"><select id="tr-type">
+            <option value="fishing">Fishing</option>
+            <option value="crabbing">Crabbing</option>
+            <option value="clamming">Clamming &amp; oysters</option>
+            <option value="shrimping">Shrimping</option>
+          </select></div>
+        </div>
+        <div class="field">
           <label for="tr-where">Where</label>
           <div class="select-wrap"><select id="tr-where"></select></div>
           <div class="row2" id="tr-coords" hidden style="margin-top:8px">
@@ -536,8 +583,9 @@
         <button type="button" class="text-btn strong" data-close>Done</button>
       </div>
       <div class="sheet-scroll">
-        <p class="help">Enter the number of each fish you may keep per day where you fish. The app counts fish you mark <b>Kept</b> today, shows it on the Now screen, and warns you before you go over. Limits vary by place and season – check your state's rules.</p>
+        <p class="help">Enter the number of each fish or shellfish you may keep per day where you fish. The app counts fish you mark <b>Kept</b> today, shows it on the Now screen, and warns you before you go over. Limits vary by place and season – check your state's rules.</p>
         <div id="lim-list"></div>
+        <button type="button" class="btn" id="lim-wa-crab" style="margin:0 0 12px">Add Puget Sound crab limits (WDFW)</button>
         <div class="lim-add">
           <div class="select-wrap"><select id="lim-species" aria-label="Fish"></select></div>
           <input id="lim-n" inputmode="numeric" placeholder="Limit" aria-label="Daily limit">
@@ -635,6 +683,7 @@
           <label>Help</label>
           <details><summary>How do I install the app?</summary><p>iPhone: open the app's link in Safari, tap Share (the square with an arrow), then Add to Home Screen. Android: open the link in Chrome, then tap Install (or ⋮ → Install app). Installed, it opens full screen and works with no signal.</p></details>
           <details><summary>Where is my log kept?</summary><p>Only on this phone, in the app's own storage. Nothing is uploaded. On iPhone, deleting the app from the home screen deletes its data too, so export a backup first. A backup file includes photos, spots and trips, and Restore loads it on any phone.</p></details>
+          <details><summary>How do I log shellfish?</summary><p>Tap <b>Shellfish</b> above the species list, and pick <b>Saltwater</b> or <b>Freshwater</b> to shorten the list. Choose the gear (pot, ring net, clam gun…) and, for crab, the sex, shell and width. For Puget Sound crab limits, open Limits and tap <b>Add Puget Sound crab limits (WDFW)</b>. Before eating clams, oysters or mussels, check the Department of Health Shellfish Safety Map.</p></details>
           <details><summary>Why is there no tide on a catch?</summary><p>Tides come from NOAA and cover US coasts. They're recorded within about 15 mi of a NOAA tide station, or at spots set to Saltwater. Spots set to Freshwater never show tides. With no signal, the tide is added later when you're online.</p></details>
           <details><summary>What does Start fishing do?</summary><p>It times your session and keeps track of the lure on your line (tap it to change lures). Catches you log are added to the session. Stats then shows fish per hour for each lure, which is fairer than raw counts. A session left running over 12 hours ends 30 minutes after your last catch.</p></details>
           <details><summary>How are the best lures and best hours chosen?</summary><p>From your own catches: the app counts fish caught in each condition (sky, pressure, temperature, wind, time of day, tide, moon). Counts favour lures you use most; fishing sessions and planned trips record hours fished, which gives fish per hour.</p></details>
