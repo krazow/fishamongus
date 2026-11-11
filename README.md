@@ -11,6 +11,17 @@ A phone app (installable web app) for logging fish you catch. Each catch records
 - **Photo** (take one with the camera or choose from your photos)
 - Optional length, weight, released yes/no and notes
 
+**New in 4.0: shellfish.** Above the species list, **Fish / Shellfish** and **Freshwater / Saltwater / Both** buttons filter the list. Water is set from your spot or the distance to the nearest tide station. The shellfish list has crab, shrimp and prawns, clams, oysters, mussels, scallops, lobster, squid and octopus, plus crayfish for freshwater. For shellfish:
+
+- the lure menu becomes **gear** (crab pot, ring net, snare, shrimp pot, clam gun, shovel, rake and more), with an optional bait;
+- crab catches record **sex**, **hard or soft shell** and **carapace width**, and pots record **how many** and the **soak time**;
+- **Limits → Add Puget Sound crab limits (WDFW)** sets 5 Dungeness (males only, hard shell, at least 6¼ in) and 6 red rock crab (at least 5 in). The form warns before you keep a crab that breaks a rule;
+- clams, oysters, mussels and scallops show a reminder to check the Department of Health **Shellfish Safety Map** for biotoxin closures;
+- **Stats** gets a **Fish / Shellfish / All** bar, **catch per pot-hour** by gear and bait, and a **catch record card** count of kept Dungeness for the summer and winter cards;
+- **trips** have a type: fishing, crabbing, clamming & oysters, or shrimping. Each type gets its own gear checklist. Clamming trips list **daylight minus tides** for the next two weeks, and the **Tides** screen has a **Best clam tides** card. Trips in Washington link to WDFW rules and the Shellfish Safety Map.
+
+Rules change during the year and some areas close (South Puget Sound, Marine Area 13, is currently closed to crabbing). Always check WDFW before you go.
+
 The **Now** screen opens first. It shows:
 
 - **Start fishing / End session.** Tap when your line goes in and again when you're done. While a session runs, the screen shows the time, the fish so far, fish per hour, the spot, and the lure **on your line**. Tap the lure to change it whenever you switch. Logging a catch on a different lure also counts as a switch. A bar above the tabs keeps the session visible on every other screen. A session left running over 12 hours ends 30 minutes after your last catch, a session under 5 minutes with no fish is thrown away, and **Undo** reopens a session you ended by mistake.

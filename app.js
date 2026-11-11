@@ -64,19 +64,49 @@
       'Opaleye',
     ]],
   ];
-  // Lookups: a fish type ('Bass') → its kinds (with optional sections), and each kind → its type.
-  const FISH_TYPES = new Map(); const PARENT_SPECIES = new Map(); const SUBSPECIES = new Map();
-  SPECIES_TREE.forEach(([region, items]) => items.forEach((it) => {
-    if (!Array.isArray(it)) return;
+  // Shellfish, laid out the same way: a type ('Crab') and its kinds, by water.
+  const SHELLFISH_TREE = [
+    ['Saltwater', [
+      ['Crab', [['Pacific', ['Dungeness Crab', 'Red Rock Crab', 'Graceful Crab', 'Tanner Crab']], ['Atlantic & Gulf', ['Blue Crab', 'Stone Crab', 'Jonah Crab']], ['Alaska', ['King Crab', 'Snow Crab']]]],
+      ['Shrimp & prawns', [['Pacific', ['Spot Prawn', 'Coonstripe Shrimp', 'Sidestripe Shrimp', 'Pink Shrimp', 'Ghost Shrimp']], ['Atlantic & Gulf', ['Brown Shrimp', 'White Shrimp']]]],
+      ['Clams', ['Manila Clam', 'Native Littleneck Clam', 'Butter Clam', 'Horse Clam (Gaper)', 'Razor Clam', 'Geoduck', 'Softshell Clam', 'Cockle', 'Hard Clam (Quahog)']],
+      ['Oysters', ['Pacific Oyster', 'Olympia Oyster', 'Eastern Oyster']],
+      ['Mussels', ['Blue Mussel', 'California Mussel']],
+      ['Scallops', ['Pink Scallop', 'Rock Scallop', 'Bay Scallop', 'Weathervane Scallop']],
+      ['Lobster', ['American Lobster', 'Spiny Lobster']],
+      ['Squid & octopus', ['Market Squid', 'Octopus']],
+    ]],
+    ['Freshwater', [
+      ['Crayfish', ['Signal Crayfish', 'Red Swamp Crayfish', 'Rusty Crayfish', 'Virile Crayfish']],
+    ]],
+  ];
+  // Clams, oysters, mussels and scallops are the ones that carry marine biotoxins.
+  const BIVALVE_TYPES = new Set(['Clams', 'Oysters', 'Mussels', 'Scallops']);
+  // Lookups: a type ('Bass', 'Crab') → its kinds (with optional sections); each kind → its type, its water and fish or shellfish.
+  const FISH_TYPES = new Map(); const PARENT_SPECIES = new Map(); const SUBSPECIES = new Map(); const SPECIES_INFO = new Map();
+  [['fish', SPECIES_TREE], ['shellfish', SHELLFISH_TREE]].forEach(([kind, tree]) => tree.forEach(([region, items]) => items.forEach((it) => {
+    if (!Array.isArray(it)) { SPECIES_INFO.set(it, { kind, region, type: null }); return; }
     const sections = it[1].map((g) => (Array.isArray(g) ? g : [null, [g]]));
     const flat = sections.flatMap((g) => g[1]);
-    FISH_TYPES.set(it[0], { region, sections, flat }); SUBSPECIES.set(it[0], flat); flat.forEach((x) => PARENT_SPECIES.set(x, it[0]));
-  }));
-  // Every fish, flat, for the other species menus (filters, bag limits): one group per type.
-  const SPECIES_GROUPS = SPECIES_TREE.flatMap(([region, items]) => [
-    ...items.filter(Array.isArray).map((it) => [`${region} · ${it[0]}`, FISH_TYPES.get(it[0]).flat]),
-    [`${region} · Other`, items.filter((it) => !Array.isArray(it))],
-  ]);
+    FISH_TYPES.set(it[0], { region, kind, sections, flat }); SUBSPECIES.set(it[0], flat); SPECIES_INFO.set(it[0], { kind, region, type: it[0] });
+    flat.forEach((x) => { PARENT_SPECIES.set(x, it[0]); SPECIES_INFO.set(x, { kind, region, type: it[0] }); });
+  })));
+  // Fish or shellfish for any catch: saved on new catches, worked out from the name for older ones.
+  const kindOf = (c) => (c && (c.kind || (SPECIES_INFO.get(c.species) || {}).kind)) || 'fish';
+  const typeOf = (name) => (SPECIES_INFO.get(name) || {}).type || null;
+  // Every fish and shellfish, flat, for the other species menus (filters, bag limits): one group per type.
+  const SPECIES_GROUPS = [['', SPECIES_TREE], ['Shellfish · ', SHELLFISH_TREE]].flatMap(([pre, tree]) => tree.flatMap(([region, items]) => [
+    ...items.filter(Array.isArray).map((it) => [`${pre}${region} · ${it[0]}`, FISH_TYPES.get(it[0]).flat]),
+    ...(items.some((it) => !Array.isArray(it)) ? [[`${pre}${region} · Other`, items.filter((it) => !Array.isArray(it))]] : []),
+  ]));
+  // Gear for shellfish, in place of lures.
+  const GEAR_GROUPS = [
+    ['Pots & traps', ['Crab pot', 'Crab ring net', 'Crab snare', 'Shrimp pot', 'Crayfish trap']],
+    ['Digging & gathering', ['Clam gun', 'Shovel', 'Rake', 'By hand']],
+    ['Other', ['Dip net', 'Squid jig', 'Diving']],
+  ];
+  const KNOWN_GEAR = new Set(GEAR_GROUPS.flatMap((g) => g[1]));
+  const isPotGear = (g) => /pot|ring|trap|snare/i.test(g || '');
   const KNOWN_SPECIES = new Set(SPECIES_GROUPS.flatMap((g) => g[1]));
   const OTHER = '__other';
 
@@ -129,7 +159,7 @@
   function store(key, val) { try { if (val === undefined) return localStorage.getItem(key); localStorage.setItem(key, val); } catch { return null; } }
 
   // ---------------------------------------------------------------- units
-  const APP_VERSION = '3.3 (Nov 11, 2026)';
+  const APP_VERSION = '4.0 (Nov 11, 2026)';
   // Night (dim red) mode and large text, applied before anything is drawn.
   function applyDisplay() {
     const night = store('tl.theme') === 'night'; const large = store('tl.text') === 'large';
@@ -371,7 +401,7 @@
         ${t ? `<img class="thumb" src="${t}" alt="">` : `<span class="thumb"><svg viewBox="0 0 32 32"><use href="#i-fish"/></svg></span>`}
         <span class="min-w">
           <h3>${esc(c.species)}${nFish(c) > 1 ? `<span class="count-badge">×${nFish(c)}</span>` : ''}</h3>
-          <div class="meta">${esc(c.bait)}${c.lureColor ? ' · ' + esc(c.lureColor) : ''}${size ? ' · ' + esc(size) : ''}</div>
+          <div class="meta">${esc(c.bait)}${c.shellBait ? ' · ' + esc(c.shellBait) : ''}${c.lureColor ? ' · ' + esc(c.lureColor) : ''}${c.crabSex ? ' · ' + (c.crabSex === 'male' ? 'male' : 'female') : ''}${c.carapaceCm ? ' · ' + esc(U.len(c.carapaceCm)) : ''}${size ? ' · ' + esc(size) : ''}</div>
           <div class="meta">${fmtTime(c.caughtAt)}${c.spotId && spotById(c.spotId) ? ' · ' + esc(spotById(c.spotId).name) : ''}</div>
           <div class="wx">${c.weather ? esc(weatherLine(c.weather)) : (c.location ? 'Weather pending…' : 'No location')}</div>
         </span></button></li>`; }).join('');
@@ -553,29 +583,88 @@
       const all = [...new Set([...used, ...defaults])];
       return { chips: used.slice(0, 6), all };
     }
-    function fillChoices() {
-      // Lure / bait: grouped dropdown, like the fish type. Lures you've logged that aren't listed get their own group.
-      const b = topValues('bait', []);
-      const myLures = b.all.filter((v) => !KNOWN_LURES.has(v)).sort((x, y) => x.localeCompare(y));
+    // Fish or shellfish, and which water. Water sets itself from the spot or the coast until you choose it.
+    let draftKind = 'fish'; let draftWater = 'both'; let waterTouched = false;
+    function fillChoices() { fillBaitMenu(); fillSpeciesMenu(); }
+    function fillBaitMenu() {
+      // Lure / bait for fish, gear for shellfish: grouped dropdowns. Ones you've logged that aren't listed get their own group.
+      const shell = draftKind === 'shellfish'; const groups = shell ? GEAR_GROUPS : LURE_GROUPS; const known = shell ? KNOWN_GEAR : KNOWN_LURES;
+      const used = []; const cnt = new Map();
+      catches.forEach((c) => { if (kindOf(c) !== draftKind || !c.bait) return; cnt.set(c.bait, (cnt.get(c.bait) || 0) + 1); if (!used.includes(c.bait)) used.push(c.bait); });
+      const chips = [...cnt.entries()].sort((a, b) => b[1] - a[1] || used.indexOf(a[0]) - used.indexOf(b[0])).map((x) => x[0]).slice(0, 6);
+      const mine = used.filter((v) => !known.has(v)).sort((x, y) => x.localeCompare(y));
       const optL = (v) => `<option value="${esc(v)}">${esc(v)}</option>`;
-      $('#f-bait-select').innerHTML = '<option value="" disabled>Choose a lure or bait…</option>' +
-        (myLures.length ? `<optgroup label="Your other lures">${myLures.map(optL).join('')}</optgroup>` : '') +
-        LURE_GROUPS.map(([label, list]) => `<optgroup label="${esc(label)}">${list.map(optL).join('')}</optgroup>`).join('') +
+      $('#f-bait-select').innerHTML = `<option value="" disabled>${shell ? 'Choose your gear…' : 'Choose a lure or bait…'}</option>` +
+        (mine.length ? `<optgroup label="${shell ? 'Your other gear' : 'Your other lures'}">${mine.map(optL).join('')}</optgroup>` : '') +
+        groups.map(([label, list]) => `<optgroup label="${esc(label)}">${list.map(optL).join('')}</optgroup>`).join('') +
         `<optgroup label="Not listed"><option value="${OTHER}">Other – type it in…</option></optgroup>`;
-      $('#bait-chips').innerHTML = b.chips.map((v) => `<button type="button" class="chip" data-bait="${esc(v)}">${esc(v)}</button>`).join('');
+      $('#bait-chips').innerHTML = chips.map((v) => `<button type="button" class="chip" data-bait="${esc(v)}">${esc(v)}</button>`).join('');
       setBait($('#f-bait').value.trim());
-      // Species: grouped dropdown. Fish you've logged that aren't on the list get their own group.
+    }
+    function fillSpeciesMenu() {
+      // Main menu: types and one-of-a-kind fish for the chosen kind and water. Things you've logged that aren't listed get their own group.
+      const tree = draftKind === 'shellfish' ? SHELLFISH_TREE : SPECIES_TREE;
+      const regions = tree.filter(([r]) => draftWater === 'both' || r === draftWater);
       const sp = topValues('species', []);
-      const mine = sp.all.filter((v) => !KNOWN_SPECIES.has(v)).sort((x, y) => x.localeCompare(y));
+      const mine = sp.all.filter((v) => !KNOWN_SPECIES.has(v) && !FISH_TYPES.has(v)).sort((x, y) => x.localeCompare(y));
       const opt = (v) => `<option value="${esc(v)}">${esc(v)}</option>`;
       $('#f-species-select').innerHTML =
-        '<option value="" disabled>Choose a fish…</option>' +
-        (mine.length ? `<optgroup label="Your other species">${mine.map(opt).join('')}</optgroup>` : '') +
-        SPECIES_TREE.map(([label, items]) => `<optgroup label="${esc(label)}">${items.map((it) => (Array.isArray(it) ? `<option value="${esc(it[0])}">${esc(it[0])} ▸</option>` : opt(it))).join('')}</optgroup>`).join('') +
+        `<option value="" disabled>${draftKind === 'shellfish' ? 'Choose a shellfish…' : 'Choose a fish…'}</option>` +
+        (mine.length && draftKind === 'fish' ? `<optgroup label="Your other species">${mine.map(opt).join('')}</optgroup>` : '') +
+        regions.map(([label, items]) => `<optgroup label="${esc(label)}">${items.map((it) => (Array.isArray(it) ? `<option value="${esc(it[0])}">${esc(it[0])} ▸</option>` : opt(it))).join('')}</optgroup>`).join('') +
         `<optgroup label="Not listed"><option value="${OTHER}">Other – type it in…</option></optgroup>`;
-      $('#species-chips').innerHTML = sp.chips.map((v) => `<button type="button" class="chip" data-species="${esc(v)}">${esc(v)}</button>`).join('');
+      $('#species-chips').innerHTML = sp.chips.filter((v) => (SPECIES_INFO.get(v) || { kind: 'fish' }).kind === draftKind).map((v) => `<button type="button" class="chip" data-species="${esc(v)}">${esc(v)}</button>`).join('');
       setSpecies($('#f-species').value.trim());
     }
+    // Switches the form between fish and shellfish: gear instead of lures, count instead of size, crab and pot details.
+    function paintKind() {
+      const shell = draftKind === 'shellfish';
+      $$('#seg-kind button').forEach((b) => { const on = b.dataset.kind === draftKind; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+      $$('#seg-water button').forEach((b) => { const on = b.dataset.water === draftWater; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+      $('#lbl-bait').firstChild.textContent = shell ? 'Gear & bait ' : 'Lure or bait ';
+      $('#f-lure-color').placeholder = shell ? 'Bait used (optional)' : 'Colour (optional)'; $('#f-lure-color').setAttribute('aria-label', shell ? 'Bait used' : 'Lure colour');
+      $('#f-lure-size').hidden = shell; $('#size-row').hidden = shell; if (shell) $('#wt-est').hidden = true;
+      $('#tackle-chips').hidden = shell || !tackle.length;
+      $('#lbl-count').textContent = shell ? 'How many?' : 'How many fish?';
+      $('#f-species-find').placeholder = 'Search 280+ fish and shellfish';
+      paintShellExtras();
+    }
+    function setKind(k, keepSpecies) {
+      if (k === draftKind) return; draftKind = k;
+      if (!keepSpecies) { $('#f-species').value = ''; $('#f-bait').value = ''; $('#f-lure-color').value = ''; draft.tackleId = null; }
+      fillChoices(); paintKind(); paintCombos();
+    }
+    function setWater(w) { if (w === draftWater) return; draftWater = w; fillSpeciesMenu(); paintKind(); }
+    // Water from the place: a spot set to Freshwater or Saltwater decides; far from any tide station means freshwater;
+    // near the coast it could be either (a lake on an island), so both are shown.
+    function autoWater() {
+      if (waterTouched || $('#f-species').value.trim()) return;
+      const sp = draft.spotId && spotById(draft.spotId);
+      let w = 'both';
+      if (sp && sp.water === 'fresh') w = 'Freshwater'; else if (sp && sp.water === 'salt') w = 'Saltwater';
+      else if (draft.tide && (draft.tide.none || draft.tide.distM > TIDE_MAX / 2)) w = 'Freshwater';
+      setWater(w);
+    }
+    $('#seg-kind').addEventListener('click', (e) => { const b = e.target.closest('[data-kind]'); if (!b) return; dirty = true; setKind(b.dataset.kind); store('tl.lastKind', draftKind); });
+    $('#seg-water').addEventListener('click', (e) => { const b = e.target.closest('[data-water]'); if (!b) return; waterTouched = true; setWater(b.dataset.water); });
+
+    // Crab sex, shell and width; pots and soak time; a biotoxin note for clams, oysters, mussels and scallops.
+    let draftSex = null; let draftShell = null;
+    function paintShellExtras() {
+      const shell = draftKind === 'shellfish'; const sp = $('#f-species').value.trim(); const type = typeOf(sp) || (FISH_TYPES.has($('#f-species-select').value) ? $('#f-species-select').value : null);
+      $('#shell-extras').hidden = !shell;
+      const crab = shell && (type === 'Crab' || sp === 'Crab'); $('#crab-fields').hidden = !crab;
+      $('#pot-fields').hidden = !shell || !isPotGear($('#f-bait').value);
+      $('#shell-safety').hidden = !shell || !BIVALVE_TYPES.has(type || sp);
+      $$('#seg-sex button').forEach((b) => b.classList.toggle('on', b.dataset.sex === draftSex));
+      $$('#seg-shell button').forEach((b) => b.classList.toggle('on', b.dataset.shell === draftShell));
+      const h = $('#crab-hint'); const problems = crab ? keepProblems({ species: sp, crabSex: draftSex, shellHard: draftShell ? draftShell === 'hard' : null, carapaceCm: U.lenIn(num($('#f-carapace').value)) }) : [];
+      h.hidden = !problems.length || draftReleased === true;
+      if (!h.hidden) h.textContent = `This crab can't be kept under your limits (${problems.join('; ')}). Release it.`;
+    }
+    $('#seg-sex').addEventListener('click', (e) => { const b = e.target.closest('[data-sex]'); if (!b) return; dirty = true; draftSex = draftSex === b.dataset.sex ? null : b.dataset.sex; paintShellExtras(); });
+    $('#seg-shell').addEventListener('click', (e) => { const b = e.target.closest('[data-shell]'); if (!b) return; dirty = true; draftShell = draftShell === b.dataset.shell ? null : b.dataset.shell; paintShellExtras(); });
+    $('#f-carapace').addEventListener('input', paintShellExtras);
     // Keeps the dropdown, the "other" text box and the quick-pick chips in step.
     // Second dropdown for a primary species' subspecies and variants. Its first choice records just the primary species.
     // Second menu: every kind of the chosen fish type, in sections for big types. "Not sure which" records just the type.
@@ -592,6 +681,11 @@
       sub.classList.toggle('placeholder', !sub.value); sub.classList.remove('invalid');
     }
     function setSpecies(v, fromOther) {
+      const info = v && SPECIES_INFO.get(v);
+      if (info && !fromOther && (info.kind !== draftKind || (draftWater !== 'both' && info.region !== draftWater))) {
+        draftKind = info.kind; if (draftWater !== 'both' && info.region !== draftWater) draftWater = info.region;
+        $('#f-species').value = v; fillBaitMenu(); fillSpeciesMenu(); paintKind(); return;
+      }
       const sel = $('#f-species-select'); const input = $('#f-species');
       const parent = v && (PARENT_SPECIES.get(v) || (FISH_TYPES.has(v) ? v : null));
       const listed = v && (parent || [...sel.options].some((o) => o.value === v && o.value !== OTHER));
@@ -603,7 +697,7 @@
       }
       sel.classList.toggle('placeholder', !sel.value);
       sel.classList.remove('invalid'); input.classList.remove('invalid'); if (v || input.value.trim()) $('#err-species').hidden = true;
-      if (draft) { paintWtEst(); paintKept(); }
+      if (draft) { paintWtEst(); paintKept(); paintShellExtras(); }
       $$('#species-chips .chip').forEach((x) => x.classList.toggle('on', x.dataset.species === input.value.trim()));
     }
     $('#f-species-select').addEventListener('change', (e) => {
@@ -643,6 +737,7 @@
       }
       sel.classList.toggle('placeholder', !sel.value);
       sel.classList.remove('invalid'); input.classList.remove('invalid'); if (v || input.value.trim()) $('#err-bait').hidden = true;
+      if (draft) paintShellExtras();
       if (draft && draft.tackleId) { const t = tackle.find((y) => y.id === draft.tackleId); if (!t || t.bait !== input.value.trim()) { draft.tackleId = null; paintTackleChips(); } }
       $$('#bait-chips .chip').forEach((x) => x.classList.toggle('on', x.dataset.bait === input.value.trim()));
     }
@@ -656,7 +751,7 @@
 
     // Tackle box: one tap picks the exact lure (type, colour and size).
     function fillTackleChips() {
-      $('#tackle-chips').hidden = !tackle.length;
+      $('#tackle-chips').hidden = !tackle.length || draftKind === 'shellfish';
       $('#tackle-chips').innerHTML = tackle.length ? `<span class="tk-chips-label">From your tackle box</span><div class="tk-chip-row">${tackle.map((t) => { const u = tackleThumb(t);
         return `<button type="button" class="tk-chip" data-tk="${t.id}">${u ? `<img src="${u}" alt="">` : '<span class="tk-dot" aria-hidden="true">🎣</span>'}<span><b>${esc(t.name || t.bait)}</b><small>${esc([t.name ? t.bait : '', t.color, t.size].filter(Boolean).join(' · '))}</small></span></button>`; }).join('')}</div>` : '';
       paintTackleChips();
@@ -673,7 +768,7 @@
       const box = $('#wt-est'); const sp = $('#f-species').value.trim(); const cm = U.lenIn(num($('#f-length').value));
       const hasWt = $('#f-weight').value.trim() || (!$('#f-weight-oz').hidden && $('#f-weight-oz').value.trim());
       const kg = cm ? typicalWeightKg(sp, cm) : null;
-      box.hidden = !kg || !!hasWt; if (box.hidden) return;
+      box.hidden = !kg || !!hasWt || draftKind === 'shellfish'; if (box.hidden) return;
       $('#wt-est-text').textContent = `A typical ${U.len(cm)} ${sp} weighs about ${U.wt(kg)}.`;
       box.dataset.kg = String(kg);
     }
@@ -745,7 +840,7 @@
     function paintReleased() { $$('#seg-released button').forEach((b) => { const on = (b.dataset.rel === 'released' && draftReleased === true) || (b.dataset.rel === 'kept' && draftReleased === false); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }); }
     $('#seg-released').addEventListener('click', (e) => {
       const b = e.target.closest('button'); if (!b) return; dirty = true;
-      const v = b.dataset.rel === 'released'; draftReleased = draftReleased === v ? null : v; paintReleased(); paintKept();
+      const v = b.dataset.rel === 'released'; draftReleased = draftReleased === v ? null : v; paintReleased(); paintKept(); paintShellExtras();
     });
 
     // A photo taken earlier: offer to use the time and place stored in it.
@@ -786,10 +881,10 @@
       spotHint();
     }
     function autoSpot() {
-      if (spotTouched) return fillSpots();
+      if (spotTouched) { fillSpots(); autoWater(); return; }
       const m = matchSpot(draft.location);
       draft.spotId = m ? m.spot.id : null; draft.autoMatched = !!m;
-      fillSpots(); showTide();
+      fillSpots(); showTide(); autoWater();
     }
     function spotHint() {
       const v = $('#f-spot').value; const h = $('#spot-hint');
@@ -803,7 +898,7 @@
     $('#f-spot').addEventListener('change', (e) => {
       spotTouched = true; dirty = true; const v = e.target.value;
       draft.newSpot = v === NEW_SPOT; draft.spotId = v && v !== NEW_SPOT ? v : null;
-      spotHint(); showTide(); if (draft.newSpot) $('#f-spot-name').focus();
+      spotHint(); showTide(); autoWater(); if (draft.newSpot) $('#f-spot-name').focus();
     });
 
     // location & weather UI
@@ -893,7 +988,7 @@
       const near = likelyTidal(); if (near) draft.tideStatus = 'busy'; showTide();
       try {
         const t = await tideFor(draft.location, caughtAtValue()); if (token !== tideToken) return;
-        draft.tide = t; draft.tideStatus = null; draft.marine = undefined; showTide();
+        draft.tide = t; draft.tideStatus = null; draft.marine = undefined; showTide(); autoWater();
         if (tideShown({ tide: t }, formWater())) { try { const m = await marineFor(draft.location, caughtAtValue()); if (token === tideToken) { draft.marine = m; showTide(); } } catch { /* added later */ } }
       }
       catch { if (token === tideToken) { draft.tideStatus = near ? 'offline' : null; showTide(); } }
@@ -958,7 +1053,14 @@
       $('#f-notes').value = c ? c.notes || '' : '';
       $('#f-lat').value = ''; $('#f-lon').value = ''; $('.manual-loc').open = false;
       $('#f-spot-name').value = '';
-      fillChoices(); fillTackleChips(); fillCombos(); showPhoto(); showLoc(); showWx(); fillSpots(); showTide(); paintCombos(); paintWtEst(); paintKept();
+      const kindSrc = c || (src.species ? { species: src.species } : null);
+      draftKind = kindSrc ? kindOf(kindSrc) : (store('tl.lastKind') === 'shellfish' ? 'shellfish' : 'fish');
+      waterTouched = false; draftWater = 'both';
+      draftSex = c ? c.crabSex || null : null; draftShell = c ? (c.shellHard === true ? 'hard' : c.shellHard === false ? 'soft' : null) : null;
+      $('#f-carapace').value = c ? U.lenOut(c.carapaceCm) : ''; $('#f-pots').value = c && c.pots ? String(c.pots) : (pre && pre.pots ? String(pre.pots) : '');
+      $('#f-soak').value = c && c.soakH ? String(c.soakH) : (pre && pre.soakH ? String(pre.soakH) : '');
+      if (kindOf(kindSrc || {}) === 'shellfish' || draftKind === 'shellfish') $('#f-lure-color').value = (c ? c.shellBait : src.shellBait) || '';
+      fillChoices(); paintKind(); fillTackleChips(); fillCombos(); showPhoto(); showLoc(); showWx(); fillSpots(); showTide(); paintCombos(); paintWtEst(); paintKept();
       openSheet($('#sheet-form'));
       if (!c) locate();
       else { if (c.location && !c.weather) loadWeather(); if (c.location && c.tide === undefined) loadTide(); }
@@ -982,7 +1084,8 @@
         formError(`${typeOpen ? 'Choose' : 'Add'} ${missing} to save.`, !species ? spField : ($('#f-bait').hidden ? $('#f-bait-select') : $('#f-bait')));
         return;
       }
-      if (draftReleased === false && !(await overLimitOk(species, draftCount, editing && editing.id))) return;
+      const shellFields = draftKind === 'shellfish' ? { crabSex: $('#crab-fields').hidden ? null : draftSex, shellHard: $('#crab-fields').hidden || !draftShell ? null : draftShell === 'hard', carapaceCm: $('#crab-fields').hidden ? null : U.lenIn(num($('#f-carapace').value)) } : {};
+      if (draftReleased === false && !(await overLimitOk(species, draftCount, editing && editing.id, shellFields))) return;
       let spotId = draft.newSpot ? null : (draft.spotId || null);
       let createdSpot = null;
       if (draft.newSpot) {
@@ -1016,7 +1119,12 @@
         spotId,
         tackleId: draft.tackleId && tackle.some((t) => t.id === draft.tackleId && t.bait === bait) ? draft.tackleId : null,
         weightEst: !!draft.weightEst && $('#f-weight').value.trim() !== '',
+        kind: draftKind,
       };
+      if (draftKind === 'shellfish') {
+        Object.assign(rec, shellFields, { shellBait: $('#f-lure-color').value.trim(), lureColor: '', lureSize: '', lengthCm: null, weightKg: null, weightEst: false, tackleId: null,
+          pots: $('#pot-fields').hidden ? null : Math.round(num($('#f-pots').value) || 0) || null, soakH: $('#pot-fields').hidden ? null : num($('#f-soak').value) });
+      } else { ['crabSex', 'shellHard', 'carapaceCm', 'shellBait', 'pots', 'soakH'].forEach((k) => { delete rec[k]; }); }
       const pb = personalBest(rec);
       const ses = !editing && sessionFor(rec.caughtAt);
       if (ses) rec.sessionId = ses.id;
@@ -1024,7 +1132,7 @@
         if (createdSpot) { await DB.putSpot(createdSpot); spots.push(createdSpot); await linkCatchesToSpot(createdSpot); }
         await DB.put(rec);
       } catch (err) { formError('Could not save: ' + ((err && err.message) || 'storage error')); return; }
-      store('tl.lastReleased', draftReleased === true ? 'released' : draftReleased === false ? 'kept' : '');
+      store('tl.lastReleased', draftReleased === true ? 'released' : draftReleased === false ? 'kept' : ''); store('tl.lastKind', draftKind);
       if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
       if (ses) await sessionCaught(ses, rec);
       const wasEditing = !!editing; dirty = false;
@@ -1039,7 +1147,7 @@
     return { open, cancel, onClosed };
   })();
   // What "Log another" and "Same again" carry over to the next catch.
-  const sameAs = (c) => ({ species: c.species, bait: c.bait, lureColor: c.lureColor, lureSize: c.lureSize, tackleId: c.tackleId || null, spotId: c.spotId && spotById(c.spotId) ? c.spotId : null, released: c.released });
+  const sameAs = (c) => ({ species: c.species, bait: c.bait, lureColor: c.lureColor, lureSize: c.lureSize, tackleId: c.tackleId || null, shellBait: c.shellBait || '', pots: c.pots || null, soakH: c.soakH || null, spotId: c.spotId && spotById(c.spotId) ? c.spotId : null, released: c.released });
 
   $('#btn-new').addEventListener('click', () => form.open());
 
@@ -1086,8 +1194,9 @@
       <h3 class="detail-title">${nFish(c) > 1 ? `${nFish(c)} × ` : ''}${esc(c.species)}</h3>
       <p class="detail-sub">${esc(fmtFull(c.caughtAt))}${c.released === true ? ' · Released' : c.released === false ? ' · Kept' : ''}</p>
       <div class="kv"><h4>Catch</h4><dl>
-        ${row('Lure / bait', c.bait)}${c.tackleId && tackle.find((t) => t.id === c.tackleId && t.name) ? row('From tackle box', tackle.find((t) => t.id === c.tackleId).name) : ''}${row('Colour', c.lureColor)}${row('Size', c.lureSize)}${nFish(c) > 1 ? row('Number of fish', String(nFish(c))) : ''}${row('Length', U.len(c.lengthCm))}${row(c.weightEst ? 'Weight (estimated)' : 'Weight', c.weightEst && c.weightKg != null ? '≈ ' + U.wt(c.weightKg) : U.wt(c.weightKg))}${row('Released', c.released === true ? 'Yes' : c.released === false ? 'No – kept' : null)}
+        ${kindOf(c) === 'shellfish' ? `${row('Gear', c.bait)}${row('Bait', c.shellBait)}${nFish(c) > 1 ? row('Number caught', String(nFish(c))) : ''}${row('Sex', c.crabSex === 'male' ? 'Male' : c.crabSex === 'female' ? 'Female' : null)}${row('Shell', c.shellHard === true ? 'Hard' : c.shellHard === false ? 'Soft' : null)}${row('Carapace width', U.len(c.carapaceCm))}${row('Pots or rings', c.pots ? String(c.pots) : null)}${row('Soak time', c.soakH ? `${round(c.soakH, 1)} h` : null)}${row('Released', c.released === true ? 'Yes' : c.released === false ? 'No – kept' : null)}` : `${row('Lure / bait', c.bait)}${c.tackleId && tackle.find((t) => t.id === c.tackleId && t.name) ? row('From tackle box', tackle.find((t) => t.id === c.tackleId).name) : ''}${row('Colour', c.lureColor)}${row('Size', c.lureSize)}${nFish(c) > 1 ? row('Number of fish', String(nFish(c))) : ''}${row('Length', U.len(c.lengthCm))}${row(c.weightEst ? 'Weight (estimated)' : 'Weight', c.weightEst && c.weightKg != null ? '≈ ' + U.wt(c.weightKg) : U.wt(c.weightKg))}${row('Released', c.released === true ? 'Yes' : c.released === false ? 'No – kept' : null)}`}
       </dl></div>
+      ${kindOf(c) === 'shellfish' && BIVALVE_TYPES.has(typeOf(c.species)) ? '<p class="safety-note">Before eating clams, oysters, mussels or scallops from Washington beaches, check the <a href="https://fortress.wa.gov/doh/biotoxin/biotoxin.html" target="_blank" rel="noopener">Shellfish Safety Map</a> for biotoxin closures (hotline 1-800-562-5632).</p>' : ''}
       <div class="kv"><h4>Conditions</h4><dl>
         ${w ? `${row('Weather', `${wl.icon} ${wl.text}`)}${row('Air temp', U.temp(w.tempC))}${row('Feels like', U.temp(w.feelsC))}
           ${row('Wind', `${U.wind(w.windKmh)} ${compass(w.windDir)}`)}${row('Gusts', U.wind(w.gustKmh))}
@@ -1509,6 +1618,8 @@
           ${upcoming.map((e) => `<tr class="${e.t < now ? 'past' : ''}"><td>${dayName(dayStart(e.t))}</td><td>${e.type === 'H' ? 'High' : 'Low'}</td><td>${fmtTime(e.t)}</td><td>${tideH(e.h)}</td></tr>`).join('')}
         </tbody></table>
       </div>
+      ${!far ? `<div class="card" style="margin-bottom:12px"><h3>Best clam tides</h3><p class="sub">Daylight low tides below 0, next two weeks. Dig 1–2 hours either side of the low.</p>
+        ${clamTideList(minusLows(ev, st.lat, st.lon, today, 14).slice(0, 10))}</div>` : ''}
       ${week.length ? `<div class="card" style="margin-bottom:12px"><h3>Coefficient, next 7 days</h3><p class="sub">Bigger numbers mean stronger tidal movement.</p>
         <div class="week">${week.map((x) => `<div class="d${x.day === today ? ' today' : ''}"><span>${dayName(x.day)}</span><span class="track"><span class="fill" style="display:block;width:${(x.coef / 120) * 100}%"></span></span><span class="v">${x.coef}</span></div>`).join('')}</div></div>` : ''}
       <p class="help small">Predictions from NOAA CO-OPS station ${esc(st.id)} (${esc(st.name)}). Predicted tides don't include wind or storm effects. <a href="https://tidesandcurrents.noaa.gov/noaatidepredictions.html?id=${encodeURIComponent(st.id)}" target="_blank" rel="noopener">View on NOAA</a></p>`;
@@ -1724,9 +1835,13 @@
     if (range === 'year') return new Date(now.getFullYear(), 0, 1).getTime();
     return range === 'all' ? 0 : now.getTime() - Number(range) * 86400000;
   }
+  // Fish, shellfish or both. Shown only once you've logged shellfish; fish is the default so lures and gear don't mix.
+  let statsKind = store('tl.statsKind') || 'fish';
+  const hasShellfish = () => catches.some((c) => kindOf(c) === 'shellfish');
+  const kindPass = (c) => !hasShellfish() || statsKind === 'all' || kindOf(c) === statsKind;
   function statsFiltered() {
     const sp = $('#st-species').value; const spot = $('#st-spot').value; const from = statsFrom();
-    return catches.filter((c) => c.caughtAt >= from && (!sp || c.species === sp) &&
+    return catches.filter((c) => c.caughtAt >= from && kindPass(c) && (!sp || c.species === sp) &&
       (!spot || (spot === '__none' ? !(c.spotId && spotById(c.spotId)) : c.spotId === spot)));
   }
   const countBy = (list, fn) => { const m = new Map(); list.forEach((c) => { const k = fn(c); if (k != null && k !== '') m.set(k, (m.get(k) || 0) + weightOf(c)); }); return m; };
@@ -1792,10 +1907,36 @@
       ${best ? `<p class="note">Best session: ${esc(fmtDate(best.x.start))}${best.x.spotId && spotById(best.x.spotId) ? ` at ${esc(spotById(best.x.spotId).name)}` : ''} – ${round(best.r, 1)} fish per hour.</p>` : ''}</div>`;
   }
 
+  // Crab (or shrimp) per pot-hour: how many you caught for each pot fished for an hour.
+  function potHourCard(list) {
+    const rows = new Map();
+    list.filter((c) => kindOf(c) === 'shellfish' && c.pots > 0 && c.soakH > 0).forEach((c) => {
+      const k = `${c.bait}${c.shellBait ? ' · ' + c.shellBait : ''}`; const e = rows.get(k) || { n: 0, ph: 0 }; e.n += nFish(c); e.ph += c.pots * c.soakH; rows.set(k, e);
+    });
+    if (!rows.size) return '';
+    const r = [...rows.entries()].map(([k, e]) => ({ k, n: e.n, ph: e.ph, rate: e.n / e.ph })).sort((a, b) => b.rate - a.rate);
+    const max = Math.max(...r.map((x) => x.rate)); const tn = r.reduce((a, x) => a + x.n, 0); const tph = r.reduce((a, x) => a + x.ph, 0);
+    return `<div class="card"><h3>Catch per pot-hour</h3><p class="sub">Shellfish caught for each pot or ring fished for an hour, by gear and bait. Overall: ${round(tn / tph, 2)} per pot-hour.</p>
+      <div class="fph-rows">${r.slice(0, 8).map((x) => `<div class="fph-row"><span class="lbl">${esc(x.k)}</span><span class="v">${round(x.rate, 2)}</span><span class="track"><span class="fill" style="width:${Math.max(2, (x.rate / max) * 100)}%"></span></span><small>${x.n} caught in ${round(x.ph, 1)} pot-hours</small></div>`).join('')}</div></div>`;
+  }
+  // Puget Sound Dungeness crab must go on a catch record card: summer (June through Labor Day) and winter (after Labor Day to Dec 31).
+  function laborDay(y) { const d = new Date(y, 8, 1); while (d.getDay() !== 1) d.setDate(d.getDate() + 1); return d; }
+  function crcCard() {
+    const kept = catches.filter((c) => c.species === 'Dungeness Crab' && c.released === false);
+    if (!kept.length) return '';
+    const y = new Date().getFullYear(); const ld = laborDay(y); const endSummer = new Date(y, ld.getMonth(), ld.getDate() + 1).getTime();
+    const summer = fishIn(kept.filter((c) => c.caughtAt >= new Date(y, 5, 1).getTime() && c.caughtAt < endSummer));
+    const winter = fishIn(kept.filter((c) => c.caughtAt >= endSummer && c.caughtAt < new Date(y + 1, 0, 1).getTime()));
+    return `<div class="card"><h3>Catch record card</h3><p class="sub">Dungeness crab you kept in ${y}, for your Puget Sound catch record cards. Record each crab in ink right away; this is only a check.</p>
+      <div class="tiles"><div class="stat"><b>${summer}</b><span>Summer card</span><small>June 1 – ${ld.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</small></div>
+      <div class="stat"><b>${winter}</b><span>Winter card</span><small>After Labor Day – Dec 31</small></div></div>
+      <p class="note">Report your cards to WDFW even if you caught nothing. <a href="https://wdfw.wa.gov/fishing/shellfishing-regulations/crab" target="_blank" rel="noopener">WDFW crab seasons and rules</a></p></div>`;
+  }
+
   function renderStats() {
     // species filter options (keep the current choice if it still exists)
     const spSel = $('#st-species'); const cur = spSel.value;
-    const spAll = [...new Set(catches.map((c) => c.species))].sort((a, b) => a.localeCompare(b));
+    const spAll = [...new Set(catches.filter(kindPass).map((c) => c.species))].sort((a, b) => a.localeCompare(b));
     spSel.innerHTML = '<option value="">All species</option>' + spAll.map((v) => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
     spSel.value = spAll.includes(cur) ? cur : '';
     const stSpot = $('#st-spot'); const curSpot = stSpot.dataset.want || stSpot.value; delete stSpot.dataset.want;
@@ -1806,6 +1947,9 @@
 
     const body = $('#stats-body');
     const list = statsFiltered();
+    const kindBar = hasShellfish() ? `<div class="seg seg-sm stats-kind" id="stats-kind" role="group" aria-label="Fish or shellfish">${[['fish', 'Fish'], ['shellfish', 'Shellfish'], ['all', 'All']].map(([k, l]) => `<button type="button" data-skind="${k}" class="${statsKind === k ? 'on' : ''}" aria-pressed="${statsKind === k}">${l}</button>`).join('')}</div>` : '';
+    const shellView = hasShellfish() && statsKind === 'shellfish';
+    if (catches.length && !list.length && kindBar) { body.innerHTML = kindBar + `<div class="stats-empty"><p>No ${statsKind === 'shellfish' ? 'shellfish' : 'catches'} match these filters.</p></div>`; return; }
     if (!catches.length) { body.innerHTML = '<div class="stats-empty"><h2>No stats yet</h2><p>Log a few catches and this screen shows which lures work best in which conditions.</p></div>'; return; }
     if (!list.length) { body.innerHTML = '<div class="stats-empty"><p>No catches match these filters.</p></div>'; return; }
 
@@ -1885,25 +2029,29 @@
     const lrRank = ranked(lures); const lrRows = lrRank.slice(0, 8);
     if (lrRank.length > 8) lrRows.push(['Other lures', lrRank.slice(8).reduce((a, x) => a + x[1], 0)]);
 
-    body.innerHTML = `
+    body.innerHTML = `${kindBar}
       <div class="tiles">
-        <div class="stat"><b>${fishIn(list)}</b><span>Fish</span></div>
-        <div class="stat"><b>${oneSpecies ? lures.size : species.size}</b><span>${oneSpecies ? 'Lures that worked' : 'Species'}</span></div>
+        <div class="stat"><b>${fishIn(list)}</b><span>${shellView ? 'Caught' : 'Fish'}</span></div>
+        <div class="stat"><b>${oneSpecies ? lures.size : species.size}</b><span>${oneSpecies ? (shellView ? 'Gear that worked' : 'Lures that worked') : (shellView ? 'Kinds' : 'Species')}</span></div>
         <div class="stat"><b>${relKnown ? pct(released, relKnown) + '%' : '–'}</b><span>Released</span>${relKnown && relKnown < list.length ? `<small>of ${relKnown} recorded</small>` : ''}</div>
-        <div class="stat"><b>${big ? esc(big[0]) : '–'}</b><span>Biggest</span>${big ? `<small>${esc(big[1].species)}</small>` : ''}</div>
+        ${shellView ? (() => { const wide = list.filter((c) => c.carapaceCm != null).sort((a, b) => b.carapaceCm - a.carapaceCm)[0];
+          return `<div class="stat"><b>${wide ? esc(U.len(wide.carapaceCm)) : '–'}</b><span>Widest crab</span>${wide ? `<small>${esc(wide.species)}</small>` : ''}</div>`; })()
+          : `<div class="stat"><b>${big ? esc(big[0]) : '–'}</b><span>Biggest</span>${big ? `<small>${esc(big[1].species)}</small>` : ''}</div>`}
       </div>
 
       ${insightsCard(list)}
+      ${potHourCard(list)}
+      ${crcCard()}
 
       <div class="card">
-        <h3>Best lure by conditions</h3>
-        <p class="sub">Which lures caught fish in each condition${[oneSpecies && esc(spSel.value), $('#st-spot').value && $('#st-spot').value !== '__none' && spotById($('#st-spot').value) && 'at ' + esc(spotById($('#st-spot').value).name)].filter(Boolean).map((x) => ` (${x})`).join('')}.</p>
+        <h3>${shellView ? 'Best gear by conditions' : 'Best lure by conditions'}</h3>
+        <p class="sub">Which ${shellView ? 'gear caught the most' : 'lures caught fish'} in each condition${[oneSpecies && esc(spSel.value), $('#st-spot').value && $('#st-spot').value !== '__none' && spotById($('#st-spot').value) && 'at ' + esc(spotById($('#st-spot').value).name)].filter(Boolean).map((x) => ` (${x})`).join('')}.</p>
         <div class="dims" role="tablist">${Object.entries(DIMENSIONS).filter(([, d]) => anyTide || !d.needsTide).map(([k, d]) => `<button type="button" role="tab" class="chip${k === statsDim ? ' on' : ''}" data-dim="${k}" aria-selected="${k === statsDim}">${esc(d.label)}</button>`).join('')}</div>
         ${lureBlock}
-        <p class="note">${skipped && D.needsWx ? `${plural(skipped, 'catch')} without weather data not included. ` : ''}${skipped && D.needsTide ? `${plural(skipped, 'catch')} without tide data (freshwater, inland or not looked up yet) not included. ` : ''}These are counts of fish caught, so a lure you use most will tend to show up most. ${sessions.length ? 'For a fairer comparison, see <b>Fish per hour</b> just below.' : 'Use <b>Start fishing</b> on the Now screen to get fish per hour.'}</p>
+        <p class="note">${skipped && D.needsWx ? `${plural(skipped, 'catch')} without weather data not included. ` : ''}${skipped && D.needsTide ? `${plural(skipped, 'catch')} without tide data (freshwater, inland or not looked up yet) not included. ` : ''}${shellView ? 'These are counts, so gear you use most will tend to show up most. Catch per pot-hour above is the fairer comparison for pots.' : `These are counts of fish caught, so a lure you use most will tend to show up most. ${sessions.length ? 'For a fairer comparison, see <b>Fish per hour</b> just below.' : 'Use <b>Start fishing</b> on the Now screen to get fish per hour.'}`}</p>
       </div>
 
-      ${sessionsStatsCard()}
+      ${shellView ? '' : sessionsStatsCard()}
 
       ${!condCells ? `<div class="card"><h3>When you catch the most</h3><p class="sub" style="margin:0">Shows up once you've logged ${MIN_POOL} catches. You have ${list.length} so far.</p></div>` : ''}
       ${condCells ? `<div class="card"><h3>When you catch the most</h3><p class="sub">The most common condition across your catches.</p><div class="cond-grid">${condCells}</div></div>` : ''}
@@ -1912,13 +2060,14 @@
 
       ${oneSpecies ? '' : `<div class="card"><h3>Catches by species</h3><p class="sub">&nbsp;</p>${barsHtml(spRows, Math.max(...spRows.map((x) => x[1])))}</div>`}
 
-      <div class="card"><h3>Top lures</h3><p class="sub">Catches per lure or bait.</p>${barsHtml(lrRows, Math.max(...lrRows.map((x) => x[1])))}</div>
+      <div class="card"><h3>${shellView ? 'Top gear' : 'Top lures'}</h3><p class="sub">${shellView ? 'Catches per kind of gear.' : 'Catches per lure or bait.'}</p>${barsHtml(lrRows, Math.max(...lrRows.map((x) => x[1])))}</div>
       ${tackleStatsCard(list)}
       ${tripsStatsCard()}`;
     body.querySelectorAll('.card .sub').forEach((el) => { if (el.innerHTML === '&nbsp;') el.remove(); });
   }
 
   $('#stats-body').addEventListener('click', (e) => {
+    const sk = e.target.closest('[data-skind]'); if (sk) { statsKind = sk.dataset.skind; store('tl.statsKind', statsKind); statsSel = null; renderStats(); return; }
     const d = e.target.closest('[data-dim]');
     if (d) { statsDim = d.dataset.dim; store('tl.statsDim', statsDim); statsSel = null; renderStats(); return; }
     const k = e.target.closest('.heat button');
@@ -1936,6 +2085,25 @@
   const tripById = (id) => trips.find((t) => t.id === id) || null;
   const HOUR_MS = 3600000;
   const BASE_GEAR = ['Fishing license', 'Rods and reels', 'Tackle box', 'Pliers and line cutter', 'Landing net', 'Water and snacks', 'Sunscreen and hat'];
+  const TYPE_GEAR = {
+    fishing: BASE_GEAR,
+    crabbing: ['Shellfish license with crab endorsement', 'Catch record card', 'Crab pots or ring nets', 'Bait (chicken or fish carcass) and bait cages', 'Crab gauge', 'Buoys marked with your name and address', 'Line and weights', 'Gloves', 'Cooler with ice'],
+    clamming: ['Shellfish license', 'Shovel or clam gun', 'Bucket or mesh bag', 'Measuring gauge', 'Rubber boots and gloves', 'Headlamp for evening low tides', 'Check the Shellfish Safety Map before you go'],
+    shrimping: ['Shellfish license', 'Shrimp pots', 'Shrimp bait (pellets or fish)', 'Long line and buoys', 'Gloves', 'Cooler with ice'],
+  };
+  // Washington, roughly: for the WDFW and Department of Health links.
+  const inWA = (lat, lon) => lat > 45.5 && lat < 49.05 && lon > -124.9 && lon < -116.9;
+  // Clam tides: low tides below 0 ft (MLLW) in daylight, give or take 45 minutes.
+  function minusLows(ev, lat, lon, from, days) {
+    return ev.filter((e) => e.type === 'L' && e.h < 0 && e.t >= from && e.t < from + days * 86400000).filter((e) => {
+      const s2 = sunTimes(e.t, lat, lon); return s2.sunrise && s2.sunset && e.t >= s2.sunrise - 45 * 60000 && e.t <= s2.sunset + 45 * 60000;
+    }).map((e) => ({ t: e.t, h: e.h }));
+  }
+  function clamTideList(list, opt = {}) {
+    if (!list.length) return `<p class="help small" style="margin:6px 0 0">${opt.none || 'No daylight minus tides in the next two weeks.'}</p>`;
+    const best = Math.min(...list.map((x) => x.h));
+    return `<ul class="clam-list">${list.map((x) => `<li class="${x.h === best ? 'best' : ''}"><b>${esc(fmtDay(x.t))}</b><span>${fmtTime(x.t)}</span><span class="h">${tideH(x.h)}</span>${x.h === best ? '<em>lowest</em>' : ''}</li>`).join('')}</ul>`;
+  }
 
   // Sunrise, sunset and civil dawn/dusk from the standard sunrise equation (no network needed).
   function sunTimes(ms, lat, lon) {
@@ -2066,9 +2234,9 @@
     const day = dailyCoefs(ev).find((x) => x.day === dayStart(t.start));
     const lo = dayStart(t.start) - 86400000; const hi = dayStart(t.end) + 2 * 86400000;
     return { stationId: st.id, stationName: st.name + (st.state ? ', ' + st.state : ''), state: st.state || '', distM: Math.round(st.d),
-      coef: day ? day.coef : null, ev: ev.filter((e) => e.t >= lo && e.t <= hi), fetchedAt: Date.now() };
+      coef: day ? day.coef : null, ev: ev.filter((e) => e.t >= lo && e.t <= hi), clam: minusLows(ev, t.lat, t.lon, dayStart(t.start), 14).slice(0, 10), fetchedAt: Date.now() };
   }
-  const tripTideShown = (t) => t.tide && !t.tide.none && tideShown({ tide: t.tide, spotId: t.spotId });
+  const tripTideShown = (t) => t.tide && !t.tide.none && tideShown({ tide: t.tide, spotId: t.spotId }, ['crabbing', 'clamming', 'shrimping'].includes(t.type) && !(t.spotId && spotById(t.spotId) && spotById(t.spotId).water === 'fresh') ? 'salt' : undefined);
 
   // ----- turning the plan into catch-like hours, so the Stats conditions can score them
   function windowHours(t) {
@@ -2085,13 +2253,17 @@
   const bucketOf = (d, c) => (d.needsWx && !c.weather) ? null : d.of(c);
 
   // Past catches to learn from: this spot first, then nearby, then everything.
+  // Shellfish trips learn from shellfish catches, fishing trips (and the Now screen) from fish.
+  const TRIP_TYPES = { fishing: 'Fishing', crabbing: 'Crabbing', clamming: 'Clamming & oysters', shrimping: 'Shrimping' };
+  const tripKind = (t) => (t.type && t.type !== 'fishing' ? 'shellfish' : 'fish');
   function tripHistory(t) {
+    const pool = catches.filter((c) => kindOf(c) === tripKind(t));
     const at = tripPoint(t);
-    const here = t.spotId ? catches.filter((c) => c.spotId === t.spotId) : catches.filter((c) => c.location && distM(c.location, at) <= 1000);
+    const here = t.spotId ? pool.filter((c) => c.spotId === t.spotId) : pool.filter((c) => c.location && distM(c.location, at) <= 1000);
     if (here.length >= 5) return { list: here, label: t.spotId ? 'at this spot' : 'here' };
-    const near = catches.filter((c) => c.location && distM(c.location, at) <= 25000);
+    const near = pool.filter((c) => c.location && distM(c.location, at) <= 25000);
     if (near.length >= 5) return { list: near, label: `within ${fmtDist(25000)}` };
-    return { list: catches, label: 'everywhere you fish' };
+    return { list: pool, label: 'everywhere you fish' };
   }
   // Each hour scores higher when its conditions are ones you've caught more fish in than chance would suggest.
   function hourScores(t, hours, hist) {
@@ -2157,7 +2329,7 @@
       }
       return `<button type="button" class="trip-card${isPast ? ' past' : ''}" data-trip="${t.id}">
         <span class="when"><span><small>${d.toLocaleDateString(undefined, { month: 'short' })}</small><b>${d.getDate()}</b></span></span>
-        <span style="min-width:0"><h3>${esc(t.name)}</h3><div class="meta">${esc(new Date(t.start).toLocaleDateString(undefined, { weekday: 'short' }))} · ${fmtRange(t.start, t.end)}${isPast ? '' : ' · ' + relDay(t.start)}</div><div class="meta">${esc(line2)}</div></span>
+        <span style="min-width:0"><h3>${esc(t.name)}</h3><div class="meta">${t.type && t.type !== 'fishing' && !t.name.startsWith(TRIP_TYPES[t.type]) ? esc(TRIP_TYPES[t.type]) + ' · ' : ''}${esc(new Date(t.start).toLocaleDateString(undefined, { weekday: 'short' }))} · ${fmtRange(t.start, t.end)}${isPast ? '' : ' · ' + relDay(t.start)}</div><div class="meta">${esc(line2)}</div></span>
       </button>`;
     };
     el.innerHTML = (up.length ? `<p class="trips-h">Upcoming</p>${up.map(card).join('')}` : '<p class="help" style="padding:8px 2px">No upcoming trips. Tap <strong>+ Plan a trip</strong>.</p>') +
@@ -2243,7 +2415,10 @@
         ${t.marine && t.marine.vals && t.marine.vals.length ? (() => { const v = t.marine.vals; const st = v.map((x) => x.seaTempC).filter((x) => x != null); const wv = v.map((x) => x.waveM).filter((x) => x != null); const pr = v.map((x) => x.periodS).filter((x) => x != null);
           const ft = (m) => imp() ? `${round(m * 3.28084, 1)} ft` : `${round(m, 1)} m`;
           return `<p style="margin:6px 0 0">${st.length ? `Water ${U.temp(Math.min(...st))}${Math.round(Math.min(...st)) !== Math.round(Math.max(...st)) ? `–${U.temp(Math.max(...st))}` : ''}` : ''}${st.length && wv.length ? ' · ' : ''}${wv.length ? `waves ${ft(Math.min(...wv))}${Math.min(...wv) !== Math.max(...wv) ? `–${ft(Math.max(...wv))}` : ''}${pr.length ? `, ${round(Math.max(...pr))} s apart` : ''}` : ''}</p>`; })() : ''}
-        <table class="tide-table" style="margin-top:8px"><tbody>${turns.map((e) => `<tr><td>${e.type === 'H' ? 'High' : 'Low'}</td><td>${fmtTime(e.t)}</td><td>${tideH(e.h)}</td></tr>`).join('')}</tbody></table></div>`;
+        <table class="tide-table" style="margin-top:8px"><tbody>${turns.map((e) => `<tr><td>${e.type === 'H' ? 'High' : 'Low'}</td><td>${fmtTime(e.t)}</td><td>${tideH(e.h)}</td></tr>`).join('')}</tbody></table>
+        ${t.type === 'clamming' ? (() => { const lows = turns.filter((e) => e.type === 'L'); const minus = lows.filter((e) => e.h < 0);
+          return `<div class="clam-box"><h4>Clam tides</h4><p class="help small" style="margin:0 0 6px">${minus.length ? `This day has a minus tide: ${minus.map((e) => `${fmtTime(e.t)} (${tideH(e.h)})`).join(', ')}. Dig in the 1–2 hours either side.` : `No minus tide this day${lows.length ? ` – the lowest is ${tideH(Math.min(...lows.map((e) => e.h)))}` : ''}. Clamming is best on tides below 0 ft.`}</p>
+            ${t.tide.clam ? `<p class="help small" style="margin:6px 0 2px">Daylight minus tides from this date, next two weeks:</p>${clamTideList(t.tide.clam)}` : ''}</div>`; })() : ''}</div>`;
     }
 
     // target species
@@ -2291,15 +2466,21 @@
           return `<p class="sol-trip">Solunar rating <b>${sd.ratingText}</b> <span class="sol-dots">${'●'.repeat(sd.rating)}${'○'.repeat(4 - sd.rating)}</span></p>
             ${during.length ? `<p class="sol-trip-h">During your trip:</p><ul class="sol-list">${during.map((p) => periodRow(p, 0)).join('')}</ul>` : `<p class="help small" style="margin:6px 0 0">No solunar period falls inside the trip. ${(() => { const n = sd.periods.filter((p) => p.kind === 'major').map((p) => fmtRange(p.s, p.e)); return n.length ? `Major periods that day: ${n.join(' and ')}.` : ''; })()}</p>`}`; })()}</div>
       ${tideCard}
-      <div class="card" style="margin-bottom:12px"><h3>Lures to bring</h3>
-        <p class="sub">${hist.list.length ? `From your catches ${hist.label}${forSpecies ? ' of your target species' : ''}, in conditions like this trip's.` : 'Log some catches and the app will suggest lures from your own history.'}</p>
+      <div class="card" style="margin-bottom:12px"><h3>${tripKind(t) === 'shellfish' ? 'Gear that has worked' : 'Lures to bring'}</h3>
+        <p class="sub">${hist.list.length ? `From your ${tripKind(t) === 'shellfish' ? 'shellfish' : 'catches'} ${hist.label}${forSpecies ? ' of your target species' : ''}, in conditions like this trip's.` : `Log some ${tripKind(t) === 'shellfish' ? 'shellfish' : 'catches'} and the app will suggest ${tripKind(t) === 'shellfish' ? 'gear' : 'lures'} from your own history.`}</p>
         ${recs.length ? recs.map((r) => `<div class="rec"><b>${esc(r.lure)}</b><small>${esc(r.reasons.join('; '))}</small></div>`).join('') : (hist.list.length ? '<p class="sub" style="margin:0">Not enough matching catches yet.</p>' : '')}</div>
       ${speciesCard}
       ${gearCard}
       <div class="card" style="margin-bottom:12px"><h3>Regulations</h3>
-        <p style="margin:0 0 8px">Carry your fishing license, and check size limits, bag limits, seasons and closures${species.length ? ` for ${esc(species.join(', '))}` : ''} before you go. Rules change during the year.</p>
+        <p style="margin:0 0 8px">${t.type === 'crabbing' ? 'Carry your license with its crab endorsement and, in Puget Sound, your catch record card. Check seasons and open days – they change every year and some areas are closed.'
+          : t.type === 'clamming' ? 'Carry your shellfish license, check the beach is open for the species you want, and check for biotoxin closures on the day – they can start without warning.'
+            : `Carry your fishing license, and check size limits, bag limits, seasons and closures${species.length ? ` for ${esc(species.join(', '))}` : ''} before you go. Rules change during the year.`}</p>
         <div class="stack">
           ${state === 'CA' ? '<a class="btn" href="https://wildlife.ca.gov/regulations" target="_blank" rel="noopener">California regulations (CDFW)</a>' : ''}
+          ${inWA(t.lat, t.lon) ? (t.type === 'crabbing' ? '<a class="btn" href="https://wdfw.wa.gov/fishing/shellfishing-regulations/crab" target="_blank" rel="noopener">Washington crab seasons and rules (WDFW)</a>'
+            : t.type === 'clamming' || t.type === 'shrimping' ? '<a class="btn" href="https://wdfw.wa.gov/fishing/shellfishing-regulations" target="_blank" rel="noopener">Washington shellfish seasons and rules (WDFW)</a>'
+              : '<a class="btn" href="https://wdfw.wa.gov/fishing/regulations" target="_blank" rel="noopener">Washington fishing rules (WDFW)</a>') : ''}
+          ${inWA(t.lat, t.lon) && (t.type === 'clamming' || t.type === 'shrimping') ? '<a class="btn" href="https://fortress.wa.gov/doh/biotoxin/biotoxin.html" target="_blank" rel="noopener">Shellfish Safety Map (biotoxin closures)</a>' : ''}
           <a class="btn" href="https://www.takemefishing.org/select-a-state/" target="_blank" rel="noopener">Licenses and regulations by state</a>
         </div></div>
       ${t.notes ? `<div class="card notes-card" style="margin-bottom:12px"><h3 style="margin-bottom:6px">Notes</h3><p>${esc(t.notes)}</p></div>` : ''}
@@ -2421,6 +2602,7 @@
       const end = t ? new Date(t.end) : new Date(start.getTime() + 5 * HOUR_MS);
       $('#tr-date').value = toLocalInput(start).slice(0, 10); $('#tr-start').value = toLocalInput(start).slice(11); $('#tr-end').value = toLocalInput(end).slice(11);
       $('#tr-notes').value = t ? t.notes || '' : '';
+      $('#tr-type').value = t ? t.type || 'fishing' : (pre && pre.type) || 'fishing';
       picked = t ? [...(t.species || [])] : [];
       speciesChips(); whereHint();
       openSheet($('#sheet-trip-form'));
@@ -2441,9 +2623,11 @@
       if (end <= start) end += 86400000;
       if (end - start > 24 * HOUR_MS) { err.textContent = 'Keep a trip to 24 hours or less.'; return; }
       const now = Date.now();
-      const base = editing || { id: uid(), createdAt: now, gear: BASE_GEAR.map((text) => ({ text, done: false })) };
+      const type = $('#tr-type').value || 'fishing';
+      const base = editing || { id: uid(), createdAt: now, gear: (TYPE_GEAR[type] || BASE_GEAR).map((text) => ({ text, done: false })) };
+      if (name === 'Fishing trip') name = `${TRIP_TYPES[type]} trip`;
       const moved = !editing || editing.lat !== lat || editing.lon !== lon || editing.start !== start || editing.end !== end;
-      const t = { ...base, name, spotId, lat, lon, start, end, species: [...picked], notes: $('#tr-notes').value.trim(), ...(moved ? { forecast: null, tide: null, actual: null } : {}) };
+      const t = { ...base, type, name, spotId, lat, lon, start, end, species: [...picked], notes: $('#tr-notes').value.trim(), ...(moved ? { forecast: null, tide: null, actual: null } : {}) };
       await saveTrip(t);
       const wasNew = !editing; closeSheet();
       renderTrips(); toast(wasNew ? 'Trip planned' : 'Trip updated');
@@ -2607,7 +2791,7 @@
       const rec = { id: uid(), createdAt: now, updatedAt: now, caughtAt: now, species: combo.species, bait: combo.bait, lureColor: combo.lureColor || '', lureSize: combo.lureSize || '',
         lengthCm: null, weightKg: null, released: rel, notes: '', photo: null, thumb: null, extraPhotos: [], count: 1,
         location: loc, weather, weatherTries: 0, tide: undefined, marine: undefined, tideTries: 0,
-        spotId: m ? m.spot.id : (ses && ses.spotId) || null, quick: true };
+        spotId: m ? m.spot.id : (ses && ses.spotId) || null, quick: true, kind: (SPECIES_INFO.get(combo.species) || {}).kind || 'fish' };
       if (ses) rec.sessionId = ses.id;
       await DB.put(rec);
       if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
@@ -2858,35 +3042,58 @@
   }
 
   // ---------------------------------------------------------------- daily bag limits
+  // A limit is a daily number, optionally with rules: { n: 5, males: true, hard: true, minCm: 15.9 }. Older saves are just numbers.
   const getLimits = () => { try { return JSON.parse(store('tl.limits') || '{}') || {}; } catch { return {}; } };
-  const bagLimit = (sp) => { const n = getLimits()[sp]; return Number.isFinite(n) && n > 0 ? n : null; };
+  function limitOf(sp) { const v = getLimits()[sp]; if (v == null) return null; const o = typeof v === 'number' ? { n: v } : v; return Number.isFinite(o.n) && o.n > 0 ? o : null; }
+  const bagLimit = (sp) => { const o = limitOf(sp); return o ? o.n : null; };
+  // Legal minimums keep their exact value (6.25 in, not 6.3).
+  const minLen = (cm) => (imp() ? `${String(round(cm / 2.54, 2))} in` : `${round(cm, 1)} cm`);
+  function ruleText(o) { return [o.males ? 'males only' : '', o.hard ? 'hard shell' : '', o.minCm ? `at least ${minLen(o.minCm)} across` : ''].filter(Boolean).join(', '); }
+  // Why a crab (or other catch) can't be kept under its rules.
+  function keepProblems(c) {
+    const o = limitOf(c.species); if (!o) return [];
+    const out = [];
+    if (o.males && c.crabSex === 'female') out.push('females must go back');
+    if (o.hard && c.shellHard === false) out.push('soft-shell crab must go back');
+    if (o.minCm && c.carapaceCm != null && c.carapaceCm < o.minCm - 0.05) out.push(`under the ${minLen(o.minCm)} minimum`);
+    return out;
+  }
   function keptToday(sp, exceptId) { const from = dayStart(Date.now()); return fishIn(catches.filter((c) => c.species === sp && c.released === false && c.caughtAt >= from && c.id !== exceptId)); }
-  async function overLimitOk(sp, n, exceptId) {
+  async function overLimitOk(sp, n, exceptId, fields) {
+    const problems = keepProblems({ species: sp, ...(fields || {}) });
+    if (problems.length && !(await askConfirm(`This ${sp} can't be kept under your limits: ${problems.join(', ')}. Save it as kept anyway?`, 'Save anyway'))) return false;
     const lim = bagLimit(sp); if (!lim) return true;
     const after = keptToday(sp, exceptId) + n; if (after <= lim) return true;
     return askConfirm(`That makes ${after} ${sp} kept today. Your daily limit is ${lim}. Save it as kept anyway?`, 'Save anyway');
   }
   function keptLine() {
     const lim = getLimits(); const from = dayStart(Date.now());
-    const parts = Object.keys(lim).map((sp) => ({ sp, n: fishIn(catches.filter((c) => c.species === sp && c.released === false && c.caughtAt >= from)), lim: lim[sp] })).filter((x) => x.n > 0);
+    const parts = Object.keys(lim).map((sp) => ({ sp, n: fishIn(catches.filter((c) => c.species === sp && c.released === false && c.caughtAt >= from)), lim: bagLimit(sp) })).filter((x) => x.n > 0 && x.lim);
     return parts.length ? `<p class="kept-line">Kept today: ${parts.map((x) => `<span class="${x.n > x.lim ? 'over' : x.n === x.lim ? 'full' : ''}">${esc(x.sp)} ${x.n} of ${x.lim}</span>`).join(' · ')}</p>` : '';
   }
+  // WDFW Puget Sound sport crab limits (marine areas 4 east of Bonilla-Tatoosh through 13).
+  const PUGET_SOUND_CRAB = { 'Dungeness Crab': { n: 5, males: true, hard: true, minCm: 6.25 * 2.54 }, 'Red Rock Crab': { n: 6, minCm: 5 * 2.54 } };
   const limitsSheet = (() => {
     function paint() {
-      const lim = getLimits(); const names = Object.keys(lim).sort((a, b) => a.localeCompare(b));
-      $('#lim-list').innerHTML = names.length ? `<ul class="lim-list">${names.map((sp) => `<li><span><b>${esc(sp)}</b><small>Kept today: ${keptToday(sp)}</small></span><input inputmode="numeric" value="${lim[sp]}" data-lim="${esc(sp)}" aria-label="Daily limit for ${esc(sp)}"><button type="button" class="icon-x" data-lim-rm="${esc(sp)}" aria-label="Remove limit for ${esc(sp)}">×</button></li>`).join('')}</ul>`
+      const lim = getLimits(); const names = Object.keys(lim).filter((sp) => limitOf(sp)).sort((a, b) => a.localeCompare(b));
+      $('#lim-list').innerHTML = names.length ? `<ul class="lim-list">${names.map((sp) => { const o = limitOf(sp); return `<li><span><b>${esc(sp)}</b><small>${o && ruleText(o) ? esc(ruleText(o)) + ' · ' : ''}Kept today: ${keptToday(sp)}</small></span><input inputmode="numeric" value="${o.n}" data-lim="${esc(sp)}" aria-label="Daily limit for ${esc(sp)}"><button type="button" class="icon-x" data-lim-rm="${esc(sp)}" aria-label="Remove limit for ${esc(sp)}">×</button></li>`; }).join('')}</ul>`
         : '<p class="help small">No limits yet.</p>';
       const used = [...new Set(catches.map((c) => c.species))].sort((a, b) => a.localeCompare(b));
       const opt = (v) => `<option value="${esc(v)}">${esc(v)}</option>`;
-      $('#lim-species').innerHTML = '<option value="">Choose a fish…</option>' + (used.length ? `<optgroup label="Fish you've caught">${used.map(opt).join('')}</optgroup>` : '') + SPECIES_GROUPS.map(([g, l]) => `<optgroup label="${esc(g)}">${l.map(opt).join('')}</optgroup>`).join('');
+      $('#lim-species').innerHTML = '<option value="">Choose a fish or shellfish…</option>' + (used.length ? `<optgroup label="What you've caught">${used.map(opt).join('')}</optgroup>` : '') + SPECIES_GROUPS.map(([g, l]) => `<optgroup label="${esc(g)}">${l.map(opt).join('')}</optgroup>`).join('');
     }
     function save(lim) { store('tl.limits', JSON.stringify(lim)); renderNow(); }
     $('#lim-add').addEventListener('click', () => {
       const sp = $('#lim-species').value; const n = Math.round(num($('#lim-n').value) || 0);
       if (!sp || n < 1) { toast('Choose a fish and enter a limit of 1 or more'); return; }
-      const lim = getLimits(); lim[sp] = n; save(lim); $('#lim-n').value = ''; paint();
+      const lim = getLimits(); const o = limitOf(sp); lim[sp] = o ? { ...o, n } : n; save(lim); $('#lim-n').value = ''; paint();
     });
-    $('#lim-list').addEventListener('change', (e) => { const i = e.target.closest('[data-lim]'); if (!i) return; const n = Math.round(num(i.value) || 0); const lim = getLimits(); if (n > 0) lim[i.dataset.lim] = n; else delete lim[i.dataset.lim]; save(lim); paint(); });
+    $('#lim-wa-crab').addEventListener('click', () => {
+      const lim = getLimits(); Object.assign(lim, JSON.parse(JSON.stringify(PUGET_SOUND_CRAB))); save(lim); paint();
+      toast('Added: 5 male hard-shell Dungeness (6¼ in), 6 red rock crab (5 in)');
+    });
+    $('#lim-list').addEventListener('change', (e) => { const i = e.target.closest('[data-lim]'); if (!i) return; const n = Math.round(num(i.value) || 0); const lim = getLimits(); const o = limitOf(i.dataset.lim);
+      if (n > 0) lim[i.dataset.lim] = o && Object.keys(o).length > 1 ? { ...o, n } : n; else delete lim[i.dataset.lim]; save(lim); paint(); });
     $('#lim-list').addEventListener('click', (e) => { const b = e.target.closest('[data-lim-rm]'); if (!b) return; const lim = getLimits(); delete lim[b.dataset.limRm]; save(lim); paint(); });
     $('#btn-limits').addEventListener('click', () => { paint(); openSheet($('#sheet-limits')); });
     return { paint };
@@ -3154,7 +3361,7 @@
   $('#btn-export-csv').addEventListener('click', async () => {
     if (!catches.length) return toast('Nothing to export yet');
     const q = (v) => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-    const head = ['Date', 'Time', 'Spot', 'Species', 'Count', 'Lure/Bait', 'Lure colour', 'Lure size', `Length ${U.lenLabel()}`, `Weight ${U.wtLabel()}`, 'Released', 'Latitude', 'Longitude', 'GPS accuracy (m)', 'Weather', `Temp ${imp() ? '(°F)' : '(°C)'}`, `Wind ${imp() ? '(mph)' : '(km/h)'}`, 'Wind dir', `Pressure ${imp() ? '(inHg)' : '(hPa)'}`, 'Pressure trend', 'Humidity (%)', 'Moon', 'Tide stage', `Tide height ${imp() ? '(ft)' : '(m)'}`, 'Tidal coefficient', 'Tide station', `Water temp ${imp() ? '(°F)' : '(°C)'}`, `Waves ${imp() ? '(ft)' : '(m)'}`, 'Wave period (s)', 'Session', 'Notes'];
+    const head = ['Date', 'Time', 'Spot', 'Species', 'Count', 'Lure/Bait', 'Lure colour', 'Lure size', `Length ${U.lenLabel()}`, `Weight ${U.wtLabel()}`, 'Released', 'Latitude', 'Longitude', 'GPS accuracy (m)', 'Weather', `Temp ${imp() ? '(°F)' : '(°C)'}`, `Wind ${imp() ? '(mph)' : '(km/h)'}`, 'Wind dir', `Pressure ${imp() ? '(inHg)' : '(hPa)'}`, 'Pressure trend', 'Humidity (%)', 'Moon', 'Tide stage', `Tide height ${imp() ? '(ft)' : '(m)'}`, 'Tidal coefficient', 'Tide station', `Water temp ${imp() ? '(°F)' : '(°C)'}`, `Waves ${imp() ? '(ft)' : '(m)'}`, 'Wave period (s)', 'Session', 'Fish or shellfish', 'Bait (shellfish)', 'Crab sex', 'Shell', `Carapace ${U.lenLabel()}`, 'Pots', 'Soak (h)', 'Notes'];
     const rows = catches.map((c) => { const w = c.weather; const L = c.location; const d = new Date(c.caughtAt);
       return [toLocalInput(d).slice(0, 10), toLocalInput(d).slice(11), (c.spotId && spotById(c.spotId) ? spotById(c.spotId).name : ''), c.species, nFish(c), c.bait, c.lureColor || '', c.lureSize || '', U.lenOut(c.lengthCm), U.wtOut(c.weightKg), c.released === true ? 'yes' : c.released === false ? 'no' : '',
         L ? L.lat.toFixed(6) : '', L ? L.lon.toFixed(6) : '', L && L.accuracy != null ? Math.round(L.accuracy) : '',
@@ -3166,6 +3373,7 @@
         c.marine && !c.marine.none && c.marine.waveM != null ? round(c.marine.waveM * (imp() ? 3.28084 : 1), 1) : '',
         c.marine && !c.marine.none && c.marine.periodS != null ? round(c.marine.periodS, 1) : '',
         (() => { const x = c.sessionId && sessions.find((y) => y.id === c.sessionId); return x ? `${toLocalInput(new Date(x.start)).replace('T', ' ')} (${durText(sessionEnd(x) - x.start)})` : ''; })(),
+        kindOf(c), c.shellBait || '', c.crabSex || '', c.shellHard === true ? 'hard' : c.shellHard === false ? 'soft' : '', U.lenOut(c.carapaceCm), c.pots || '', c.soakH || '',
         c.notes].map(q).join(','); });
     await deliverFile(new Blob(['﻿' + [head.map(q).join(','), ...rows].join('\n')], { type: 'text/csv' }), `fishamongus-${stamp()}.csv`);
   });

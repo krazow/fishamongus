@@ -834,3 +834,27 @@ html.night .map-legend i { filter: grayscale(1) sepia(1) hue-rotate(-50deg) satu
 .sub-species { margin-top: 8px; padding: 10px 10px 10px 14px; border-left: 3px solid var(--lake-2); border-radius: 0 12px 12px 0; background: var(--surface-2); }
 .sub-label { display: block; font-size: 13.5px; font-weight: 650; color: var(--ink-2); margin-bottom: 6px; }
 .find-fish input { padding-left: 40px !important; }
+
+/* ---------- fish or shellfish, and water ---------- */
+.kind-row { display: grid; gap: 6px; margin-bottom: 10px; }
+.seg-kind button { min-height: 46px; font-size: 16px; }
+.seg-water { padding: 3px; }
+.seg-water button { min-height: 34px; font-size: 13.5px; padding: 4px 6px; }
+.sub-lbl { display: block; font-size: 13px; font-weight: 600; color: var(--ink-2); margin-bottom: 4px; }
+.carapace-help { align-self: end; margin: 0 0 6px; }
+.crab-hint { margin: 10px 0 0; padding: 9px 12px; border-radius: 10px; background: color-mix(in srgb, var(--danger) 12%, var(--surface)); color: var(--danger); font-weight: 600; font-size: 14px; }
+.safety-note { margin: 0 0 16px; padding: 10px 12px; border-radius: 12px; border-left: 4px solid #c58a00; background: color-mix(in srgb, #f6c453 18%, var(--surface)); font-size: 14px; color: var(--ink); }
+.safety-note a { font-weight: 650; }
+#shell-extras .field { margin-bottom: 14px; }
+html.night .safety-note { background: #2a0505; border-left-color: var(--ink); }
+.stats-kind { margin: 0 0 2px; }
+
+/* Clam tides */
+.clam-box { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.clam-box h4 { margin: 0 0 4px; font-size: .95rem; }
+.clam-list { list-style: none; margin: 6px 0 0; padding: 0; }
+.clam-list li { display: grid; grid-template-columns: 1fr auto auto auto; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.clam-list li:last-child { border-bottom: 0; }
+.clam-list .h { font-weight: 600; }
+.clam-list em { font-style: normal; font-size: .75rem; padding: 2px 6px; border-radius: 999px; background: var(--accent-soft, rgba(0,120,140,.12)); color: var(--accent); }
+.clam-list li:not(.best) { grid-template-columns: 1fr auto auto; }
