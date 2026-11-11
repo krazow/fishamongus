@@ -159,7 +159,8 @@
   function store(key, val) { try { if (val === undefined) return localStorage.getItem(key); localStorage.setItem(key, val); } catch { return null; } }
 
   // ---------------------------------------------------------------- units
-  const APP_VERSION = '4.2 (Nov 11, 2026)';
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition; // speech recognition, where the browser has it
+  const APP_VERSION = '4.3 (Nov 11, 2026)';
   // Night (dim red) mode and large text, applied before anything is drawn.
   function applyDisplay() {
     const night = store('tl.theme') === 'night'; const large = store('tl.text') === 'large';
@@ -385,7 +386,7 @@
     const filtering = !!q || when !== 'all' || !!spF || !!fiF;
     const shown = catches.filter((c) => c.caughtAt >= from && (!fiF || c.species === fiF) &&
       (!spF || (spF === '__none' ? !(c.spotId && spotById(c.spotId)) : c.spotId === spF)) &&
-      (!q || [c.species, c.bait, c.lureColor, c.notes, c.weather && wxLabel(c.weather).text, c.spotId && spotById(c.spotId) && spotById(c.spotId).name].join(' ').toLowerCase().includes(q)));
+      (!q || [c.species, c.bait, c.lureColor, c.notes, c.from, c.shellBait, c.weather && wxLabel(c.weather).text, c.spotId && spotById(c.spotId) && spotById(c.spotId).name].join(' ').toLowerCase().includes(q)));
     $('#empty-log').hidden = catches.length > 0;
     $('#search').parentElement.hidden = catches.length < 2;
     $('#log-filters').hidden = catches.length < 2;
@@ -403,7 +404,7 @@
         ${t ? `<img class="thumb" src="${t}" alt="">` : `<span class="thumb"><svg viewBox="0 0 32 32"><use href="#i-fish"/></svg></span>`}
         <span class="min-w">
           <h3>${esc(c.species)}${nFish(c) > 1 ? `<span class="count-badge">×${nFish(c)}</span>` : ''}</h3>
-          <div class="meta">${esc(c.bait)}${c.shellBait ? ' · ' + esc(c.shellBait) : ''}${c.lureColor ? ' · ' + esc(c.lureColor) : ''}${c.crabSex ? ' · ' + (c.crabSex === 'male' ? 'male' : 'female') : ''}${c.carapaceCm ? ' · ' + esc(U.len(c.carapaceCm)) : ''}${size ? ' · ' + esc(size) : ''}</div>
+          <div class="meta">${esc(c.bait)}${c.shellBait ? ' · ' + esc(c.shellBait) : ''}${c.lureColor ? ' · ' + esc(c.lureColor) : ''}${c.crabSex ? ' · ' + (c.crabSex === 'male' ? 'male' : 'female') : ''}${c.carapaceCm ? ' · ' + esc(U.len(c.carapaceCm)) : ''}${size ? ' · ' + esc(size) : ''}${c.from ? ' · from ' + esc(c.from) : ''}</div>
           <div class="meta">${fmtTime(c.caughtAt)}${c.spotId && spotById(c.spotId) ? ' · ' + esc(spotById(c.spotId).name) : ''}</div>
           <div class="wx">${c.weather ? esc(weatherLine(c.weather)) : (c.location ? 'Weather pending…' : 'No location')}</div>
         </span></button></li>`; }).join('');
@@ -839,6 +840,19 @@
       draft.photoBusy = false; showPhoto(); if (firstMeta) offerPhotoMeta(firstMeta);
     });
 
+    // Say it: fills the fish, lure or gear, count and kept/released from speech.
+    $('#f-say').hidden = !SR;
+    $('#f-say').addEventListener('click', async () => {
+      toast('Listening…');
+      let alts; try { alts = await listen(); } catch (e) { toast(e.message); return; }
+      const p = bestSpoken(alts); if (!p.species && !p.bait) { toast(`Heard “${alts[0]}” – nothing to fill in.`); return; }
+      dirty = true;
+      if (p.species) setSpecies(p.species);
+      if (p.bait) setBait(p.bait);
+      if (p.count > 1) { draftCount = p.count; paintCount(); }
+      if (p.released !== undefined) { draftReleased = p.released; paintReleased(); paintKept(); paintShellExtras(); }
+      toast(`Heard “${p.text}”`);
+    });
     let draftReleased = null;
     function paintReleased() { $$('#seg-released button').forEach((b) => { const on = (b.dataset.rel === 'released' && draftReleased === true) || (b.dataset.rel === 'kept' && draftReleased === false); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }); }
     $('#seg-released').addEventListener('click', (e) => {
@@ -1156,10 +1170,10 @@
       if (ses) await sessionCaught(ses, rec);
       const wasEditing = !!editing; dirty = false;
       closeSheet();
-      await reload();
+      await reload(); backfillFlow().catch(() => {});
       if (pb) celebrate(pb, rec, wasEditing ? null : { label: 'Log another', fn: () => open(null, sameAs(rec)) });
       else if (wasEditing) toast('Catch updated');
-      else toast(`${draftCount > 1 ? draftCount + ' × ' : ''}${species} logged 🎣`, { label: 'Log another', fn: () => open(null, sameAs(rec)) });
+      else toast(`${draftCount > 1 ? draftCount + ' × ' : ''}${species} logged 🎣${needsCrc(rec) ? ' · now record it on your catch record card' : ''}`, { label: 'Log another', fn: () => open(null, sameAs(rec)) });
       if (wasEditing && !$('#sheet-detail').hidden) renderDetail(rec.id);
     }
 
@@ -1211,7 +1225,7 @@
       ${detailUrl ? `<img class="detail-photo" src="${detailUrl}" alt="Photo of ${esc(c.species)} – tap to enlarge" data-view-photo="0">` : ''}
       ${thumbsHtml}
       <h3 class="detail-title">${nFish(c) > 1 ? `${nFish(c)} × ` : ''}${esc(c.species)}</h3>
-      <p class="detail-sub">${esc(fmtFull(c.caughtAt))}${c.released === true ? ' · Released' : c.released === false ? ' · Kept' : ''}</p>
+      <p class="detail-sub">${c.from ? `Caught by ${esc(c.from)} · ` : ''}${esc(fmtFull(c.caughtAt))}${c.released === true ? ' · Released' : c.released === false ? ' · Kept' : ''}</p>
       <div class="kv"><h4>Catch</h4><dl>
         ${kindOf(c) === 'shellfish' ? `${row('Gear', c.bait)}${row('Bait', c.shellBait)}${nFish(c) > 1 ? row('Number caught', String(nFish(c))) : ''}${row('Sex', c.crabSex === 'male' ? 'Male' : c.crabSex === 'female' ? 'Female' : null)}${row('Shell', c.shellHard === true ? 'Hard' : c.shellHard === false ? 'Soft' : null)}${row('Carapace width', U.len(c.carapaceCm))}${row('Pots or rings', c.pots ? String(c.pots) : null)}${row('Soak time', c.soakH ? `${round(c.soakH, 1)} h` : null)}${row('Released', c.released === true ? 'Yes' : c.released === false ? 'No – kept' : null)}` : `${row('Lure / bait', c.bait)}${c.tackleId && tackle.find((t) => t.id === c.tackleId && t.name) ? row('From tackle box', tackle.find((t) => t.id === c.tackleId).name) : ''}${row('Colour', c.lureColor)}${row('Size', c.lureSize)}${nFish(c) > 1 ? row('Number of fish', String(nFish(c))) : ''}${row('Length', U.len(c.lengthCm))}${row(c.weightEst ? 'Weight (estimated)' : 'Weight', c.weightEst && c.weightKg != null ? '≈ ' + U.wt(c.weightKg) : U.wt(c.weightKg))}${row('Released', c.released === true ? 'Yes' : c.released === false ? 'No – kept' : null)}`}
       </dl></div>
@@ -1224,6 +1238,7 @@
           : row('Weather', L ? 'Pending – needs a connection' : 'Not recorded')}
         ${row('Moon', `${moon.icon} ${moon.name} (${moon.illum}%)`)}
       </dl></div>
+      ${c.flow ? `<div class="kv"><h4>River</h4><dl>${row('Flow', `${trendSym(c.flow.trend)} ${cfsText(c.flow.cfs)}${c.flow.trend ? ' · ' + c.flow.trend.toLowerCase() : ''}`)}${row('Gauge', `${c.flow.name || c.flow.site} (${fmtDist(c.flow.distM)})`)}</dl></div>` : ''}
       ${tideShown(c) ? `<div class="kv"><h4>Tide</h4><dl>
         ${row('Stage', `${c.tide.rising ? '↑' : '↓'} ${c.tide.stage}`)}${row('Height', tideH(c.tide.heightM))}
         ${row(`Since last ${c.tide.lastType === 'H' ? 'high' : 'low'}`, durText(c.caughtAt - c.tide.lastT))}
@@ -1347,6 +1362,7 @@
     $('#spot-body').innerHTML = `
       <div class="spot-head"><h3>${esc(sp.name)}</h3><p>${sp.water === 'salt' ? 'Saltwater · ' : sp.water === 'fresh' ? 'Freshwater · ' : ''}${sp.lat.toFixed(5)}, ${sp.lon.toFixed(5)} · within ${fmtDist(sp.radiusM)}${d != null ? ` · ${fromYou(d)}` : ''}</p></div>
       ${sp.notes ? `<div class="card notes-card" style="margin-bottom:12px"><h3 style="margin-bottom:6px">Notes</h3><p>${esc(sp.notes)}</p></div>` : ''}
+      ${sp.water !== 'salt' && !list.some((c) => tideShown(c)) ? '<div id="spot-flow"></div>' : ''}
       ${list.length ? `
         <div class="tiles" style="margin-bottom:12px">
           <div class="stat"><b>${fishIn(list)}</b><span>Fish</span></div>
@@ -1365,6 +1381,9 @@
         <a class="btn" href="${mapsLink(sp)}" target="_blank" rel="noopener">Directions in Maps</a>
       </div>`;
     $$('#spot-body .card .sub').forEach((el) => { if (el.innerHTML === '&nbsp;') el.remove(); });
+    if ($('#spot-flow') && navigator.onLine) {
+      flowNear(sp).then((f) => { const box = $('#spot-flow'); if (box && f && spotDetailId === id) box.innerHTML = `<div class="card" style="margin-bottom:12px"><div class="now-grid">${flowCell(f)}</div></div>`; }).catch(() => {});
+    }
   }
   function showSpot(id) { renderSpotDetail(id); openSheet($('#sheet-spot')); }
   $('#spot-body').addEventListener('click', (e) => {
@@ -1852,6 +1871,7 @@
       of: (c) => { if (!tideShown(c) || c.tide.coef == null) return null; const k = c.tide.coef; return DIMENSIONS.coef.buckets()[k < 45 ? 0 : k < 70 ? 1 : k < 95 ? 2 : 3]; } },
     solunar: { label: 'Solunar', needsWx: false, buckets: () => ['Major period', 'Minor period', 'Outside periods'],
       of: (c) => { const L = c.location || (c.spotId && spotById(c.spotId)); if (!L) return null; const p = SOL.at(c.caughtAt, L.lat, L.lon); return p ? (p.kind === 'major' ? 'Major period' : 'Minor period') : 'Outside periods'; } },
+    flow: { label: 'River flow', needsFlow: true, buckets: () => ['Rising', 'Steady', 'Falling'], of: (c) => (c.flow && c.flow.trend) || null },
     moon: { label: 'Moon', needsWx: false, buckets: () => ['New moon', 'Waxing', 'Full moon', 'Waning'],
       of: (c) => { const m = moonPhase(c.caughtAt); const q = m.age / m.synodic; return ['New moon', 'Waxing', 'Full moon', 'Waning'][q < 0.125 || q >= 0.875 ? 0 : q < 0.375 ? 1 : q < 0.625 ? 2 : 3]; } },
   };
@@ -1950,6 +1970,52 @@
   }
   // Puget Sound Dungeness crab must go on a catch record card: summer (June through Labor Day) and winter (after Labor Day to Dec 31).
   function laborDay(y) { const d = new Date(y, 8, 1); while (d.getDay() !== 1) d.setDate(d.getDate() + 1); return d; }
+  // Washington catch record cards (WAC 220-310): salmon, steelhead, sturgeon and halibut on the fish card (license year April 1 – March 31,
+  // due April 30), Puget Sound Dungeness crab on the summer card (due Oct 1) and winter card (due Feb 1).
+  const CRC_FISH = {
+    Salmon: ['Chinook (King) Salmon', 'Coho (Silver) Salmon', 'Sockeye Salmon', 'Pink Salmon', 'Chum Salmon'],
+    Steelhead: ['Steelhead'], Sturgeon: ['White Sturgeon', 'Green Sturgeon'], Halibut: ['Pacific Halibut'],
+  };
+  const crcGroup = (sp) => Object.keys(CRC_FISH).find((g) => CRC_FISH[g].includes(sp)) || (/\b(chinook|coho|sockeye|chum|pink) salmon\b|king salmon|silver salmon/i.test(sp || '') ? 'Salmon' : null);
+  const HALIBUT_YEAR_LIMIT = 6; // WDFW 2026: six halibut per angler per year
+  const catchWA = (c) => { const L = c.location || (c.spotId && spotById(c.spotId)); return !L || inWA(L.lat, L.lon); };
+  const needsCrc = (c) => c.released === false && catchWA(c) && (crcGroup(c.species) || (c.species === 'Dungeness Crab' && (() => { const L = c.location || (c.spotId && spotById(c.spotId)); return !L || L.lon > -124.4; })()));
+  function licenseYear(ms) { const d = new Date(ms); const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return { start: new Date(y, 3, 1).getTime(), end: new Date(y + 1, 3, 1).getTime(), due: new Date(y + 1, 3, 30), label: `${y}–${String(y + 1).slice(2)}` }; }
+  function crcFishCard() {
+    const ly = licenseYear(Date.now());
+    const kept = catches.filter((c) => c.released === false && crcGroup(c.species) && catchWA(c) && c.caughtAt >= ly.start && c.caughtAt < ly.end);
+    if (!kept.length) return '';
+    const n = (g) => fishIn(kept.filter((c) => crcGroup(c.species) === g));
+    const groups = Object.keys(CRC_FISH).filter((g) => n(g));
+    return `<div class="card"><h3>Fish catch record card</h3><p class="sub">Salmon, steelhead, sturgeon and halibut you kept in the ${ly.label} license year (April 1 – March 31). Record each one in ink, or in the eCRC, before you keep fishing; this is only a check.</p>
+      <div class="tiles">${groups.map((g) => `<div class="stat"><b>${n(g)}</b><span>${g}</span>${g === 'Halibut' ? `<small>of ${HALIBUT_YEAR_LIMIT} a year</small>` : g === 'Sturgeon' ? '<small>record each length</small>' : ''}</div>`).join('')}</div>
+      <p class="note">Report by ${ly.due.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}, even if you kept nothing. <a href="https://wdfw.wa.gov/licenses/fishing/catch-reporting" target="_blank" rel="noopener">WDFW catch reporting</a></p></div>`;
+  }
+  // Reminders on the Now screen in the month before a card is due.
+  function crcReminders() {
+    const now = Date.now(); const out = [];
+    const done = (() => { try { return JSON.parse(store('tl.crcDone') || '{}'); } catch { return {}; } })();
+    const add = (key, title, due, list, what) => { if (done[key] || !list.length) return; const days = Math.ceil((due.getTime() + 86400000 - now) / 86400000); if (days < 0 || days > 31) return;
+      out.push({ key, title, due, days, text: `${what}. Report it by ${due.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}${days <= 1 ? ' – that’s ' + (days === 1 ? 'tomorrow' : 'today') : ` (${days} days)`}, even if you kept nothing.` }); };
+    // fish card for the license year that just ended
+    const prev = licenseYear(now - 31 * 86400000);
+    if (now >= prev.end) { const k = catches.filter((c) => crcGroup(c.species) && catchWA(c) && c.caughtAt >= prev.start && c.caughtAt < prev.end);
+      add('fish' + prev.label, 'Fish catch record card due', prev.due, k, `You logged ${fishIn(k)} salmon, steelhead, sturgeon or halibut in the ${prev.label} license year (${fishIn(k.filter((c) => c.released === false))} kept)`); }
+    const y = new Date(now).getFullYear();
+    const crab = (a, b) => catches.filter((c) => c.species === 'Dungeness Crab' && catchWA(c) && c.caughtAt >= a && c.caughtAt < b);
+    const ld = laborDay(y); const summerEnd = new Date(y, ld.getMonth(), ld.getDate() + 1).getTime();
+    const sc = crab(new Date(y, 5, 1).getTime(), summerEnd); add('crabS' + y, 'Summer crab card due', new Date(y, 9, 1), sc, `You logged ${fishIn(sc)} Dungeness crab this summer (${fishIn(sc.filter((c) => c.released === false))} kept)`);
+    const ldp = laborDay(y - 1); const wc = crab(new Date(y - 1, ldp.getMonth(), ldp.getDate() + 1).getTime(), new Date(y, 0, 1).getTime());
+    add('crabW' + (y - 1), 'Winter crab card due', new Date(y, 1, 1), wc, `You logged ${fishIn(wc)} Dungeness crab last winter (${fishIn(wc.filter((c) => c.released === false))} kept)`);
+    return out;
+  }
+  function renderNowCrc() {
+    const box = $('#now-crc'); if (!box) return;
+    const r = crcReminders();
+    box.innerHTML = r.map((x) => `<div class="card crc-due"><h3>${esc(x.title)}</h3><p class="sub" style="margin:0 0 10px">${esc(x.text)}</p>
+      <div class="btn-row"><a class="btn sm" href="https://wdfw.wa.gov/licenses/fishing/catch-reporting" target="_blank" rel="noopener">Report to WDFW</a><button type="button" class="btn sm" data-crc-done="${esc(x.key)}">I've reported it</button></div></div>`).join('');
+  }
+
   function crcCard() {
     const kept = catches.filter((c) => c.species === 'Dungeness Crab' && c.released === false);
     if (!kept.length) return '';
@@ -1993,7 +2059,8 @@
 
     // ----- best lure by conditions
     const anyTide = list.some((c) => tideShown(c));
-    if (DIMENSIONS[statsDim].needsTide && !anyTide) statsDim = 'sky';
+    const anyFlow = list.filter((c) => c.flow && c.flow.trend).length >= 3;
+    if ((DIMENSIONS[statsDim].needsTide && !anyTide) || (DIMENSIONS[statsDim].needsFlow && !anyFlow)) statsDim = 'sky';
     const D = DIMENSIONS[statsDim];
     const usable = D.needsWx ? list.filter((c) => c.weather) : list;
     const tagged = usable.map((c) => ({ c, b: D.of(c) })).filter((x) => x.b);
@@ -2071,11 +2138,12 @@
       ${insightsCard(list)}
       ${potHourCard(list)}
       ${crcCard()}
+      ${shellView ? '' : crcFishCard()}
 
       <div class="card">
         <h3>${shellView ? 'Best gear by conditions' : 'Best lure by conditions'}</h3>
         <p class="sub">Which ${shellView ? 'gear caught the most' : 'lures caught fish'} in each condition${[oneSpecies && esc(spSel.value), $('#st-spot').value && $('#st-spot').value !== '__none' && spotById($('#st-spot').value) && 'at ' + esc(spotById($('#st-spot').value).name)].filter(Boolean).map((x) => ` (${x})`).join('')}.</p>
-        <div class="dims" role="tablist">${Object.entries(DIMENSIONS).filter(([, d]) => anyTide || !d.needsTide).map(([k, d]) => `<button type="button" role="tab" class="chip${k === statsDim ? ' on' : ''}" data-dim="${k}" aria-selected="${k === statsDim}">${esc(d.label)}</button>`).join('')}</div>
+        <div class="dims" role="tablist">${Object.entries(DIMENSIONS).filter(([, d]) => (anyTide || !d.needsTide) && (anyFlow || !d.needsFlow)).map(([k, d]) => `<button type="button" role="tab" class="chip${k === statsDim ? ' on' : ''}" data-dim="${k}" aria-selected="${k === statsDim}">${esc(d.label)}</button>`).join('')}</div>
         ${lureBlock}
         <p class="note">${skipped && D.needsWx ? `${plural(skipped, 'catch')} without weather data not included. ` : ''}${skipped && D.needsTide ? `${plural(skipped, 'catch')} without tide data (freshwater, inland or not looked up yet) not included. ` : ''}${shellView ? 'These are counts, so gear you use most will tend to show up most. Catch per pot-hour above is the fairer comparison for pots.' : `These are counts of fish caught, so a lure you use most will tend to show up most. ${sessions.length ? 'For a fairer comparison, see <b>Fish per hour</b> just below.' : 'Use <b>Start fishing</b> on the Now screen to get fish per hour.'}`}</p>
       </div>
@@ -2807,6 +2875,68 @@
   }
   const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
   let quickBusy = false;
+  // ---------------------------------------------------------------- river flows (USGS Water Data API)
+  // Nearest stream gauge with discharge (parameter 00060, cubic feet per second) within about 10 km.
+  // Uses api.waterdata.usgs.gov (the old waterservices.usgs.gov shuts down in February 2027). 50 requests an hour without a key, so results are cached.
+  const USGS = 'https://api.waterdata.usgs.gov/ogcapi/v1/collections';
+  const FLOW_MAX = 10000;
+  const flowCache = new Map();
+  const ftNum = (v) => { const n = Number(v); return Number.isFinite(n) && n > -999999 ? n : null; };
+  function flowTrend(vals) { // vals: [{t, v}] oldest first
+    if (vals.length < 2) return null; const last = vals[vals.length - 1]; const ref = vals.find((x) => x.t >= last.t - 3 * HOUR_MS) || vals[0];
+    if (!ref || ref === last || !ref.v) return 'Steady'; const ch = (last.v - ref.v) / ref.v;
+    return ch > 0.05 ? 'Rising' : ch < -0.05 ? 'Falling' : 'Steady';
+  }
+  // "NISQUALLY RIVER AT MCKENNA, WA" -> "Nisqually River at McKenna, WA"
+  function gaugeName(n) {
+    const small = new Set(['at', 'near', 'nr', 'of', 'the', 'and', 'below', 'above', 'blw', 'abv', 'in', 'on']);
+    return String(n).toLowerCase().replace(/\b(nr)\b/g, 'near').replace(/\b(blw)\b/g, 'below').replace(/\b(abv)\b/g, 'above').replace(/\b(r)\b/g, 'river').replace(/\b(cr)\b/g, 'creek')
+      .split(' ').map((w, i) => (/^[a-z]{2}$/.test(w) && i > 0 && /,$/.test(String(n).split(' ')[i - 1] || '') ? w.toUpperCase() : small.has(w) && i ? w : w.replace(/^(mc)?([a-z])/, (m, mc, ch) => (mc ? 'Mc' : '') + ch.toUpperCase()))).join(' ');
+  }
+  async function usgsJSON(url) { const r = await fetch(url, { headers: { Accept: 'application/geo+json, application/json' } }); if (!r.ok) throw new Error('USGS ' + r.status); return r.json(); }
+  async function nearestGauges(loc) {
+    const key = `${loc.lat.toFixed(2)},${loc.lon.toFixed(2)}`; const memo = (() => { try { return JSON.parse(store('tl.gauges') || '{}'); } catch { return {}; } })();
+    if (memo[key] && Date.now() - memo[key].at < 30 * 86400000) return memo[key].list;
+    const dLat = 0.1; const dLon = 0.14;
+    const j = await usgsJSON(`${USGS}/monitoring-locations/items?f=json&bbox=${(loc.lon - dLon).toFixed(4)},${(loc.lat - dLat).toFixed(4)},${(loc.lon + dLon).toFixed(4)},${(loc.lat + dLat).toFixed(4)}&site_type_code=ST&limit=100`);
+    const list = (j.features || []).map((f) => { const c = f.geometry && f.geometry.coordinates; const p = f.properties || {};
+      return c ? { id: String(f.id || p.id || p.monitoring_location_id), name: gaugeName(p.monitoring_location_name || p.name || ''), lat: c[1], lon: c[0], d: distM(loc, { lat: c[1], lon: c[0] }) } : null; })
+      .filter((x) => x && x.d <= FLOW_MAX).sort((a, b) => a.d - b.d).slice(0, 6);
+    memo[key] = { at: Date.now(), list }; const keys = Object.keys(memo); if (keys.length > 40) delete memo[keys[0]]; store('tl.gauges', JSON.stringify(memo));
+    return list;
+  }
+  // Discharge at a gauge around a time (default now): value, trend over the past 3 hours.
+  async function gaugeFlow(g, atMs) {
+    const at = atMs || Date.now(); const ck = g.id + ':' + Math.floor(at / (30 * 60000)); if (flowCache.has(ck)) return flowCache.get(ck);
+    const from = new Date(at - 4 * HOUR_MS).toISOString(); const to = new Date(at + 30 * 60000).toISOString();
+    const j = await usgsJSON(`${USGS}/continuous/items?f=json&monitoring_location_id=${encodeURIComponent(g.id)}&parameter_code=00060&time=${from}/${to}&limit=200`);
+    const vals = (j.features || []).map((f) => { const p = f.properties || {}; return { t: Date.parse(p.time || p.datetime || p.phenomenon_time), v: ftNum(p.value ?? p.result) }; })
+      .filter((x) => Number.isFinite(x.t) && x.v != null && x.t <= at + 30 * 60000).sort((a, b) => a.t - b.t);
+    const out = vals.length ? { site: g.id, name: g.name, distM: Math.round(g.d), cfs: vals[vals.length - 1].v, time: vals[vals.length - 1].t, trend: flowTrend(vals) } : null;
+    flowCache.set(ck, out); return out;
+  }
+  async function flowNear(loc, atMs) {
+    const gs = await nearestGauges(loc);
+    for (const g of gs.slice(0, 3)) { try { const f = await gaugeFlow(g, atMs); if (f) return f; } catch (e) { if (/USGS 429/.test(e.message)) throw e; } }
+    return null;
+  }
+  const gaugeUrl = (site) => `https://waterdata.usgs.gov/monitoring-location/${encodeURIComponent(String(site).replace(/^USGS-/, ''))}/`;
+  const cfsText = (v) => (imp() ? `${Math.round(v).toLocaleString()} cfs` : `${round(v * 0.0283168, v * 0.0283168 < 10 ? 1 : 0).toLocaleString()} m³/s`);
+  const trendSym = (t) => (t === 'Rising' ? '↑' : t === 'Falling' ? '↓' : '→');
+  function flowCell(f, cls = 'now-cell wide') {
+    if (!f) return '';
+    return `<div class="${cls}"><span>River flow</span><b>${trendSym(f.trend)} ${esc(cfsText(f.cfs))}</b><small>${f.trend ? esc(f.trend) + ' · ' : ''}<a href="${gaugeUrl(f.site)}" target="_blank" rel="noopener">${esc(f.name || 'USGS gauge')}</a> · ${esc(fmtDist(f.distM))}</small></div>`;
+  }
+  // Add the river flow to recent freshwater catches near a gauge (within a day of the catch).
+  async function backfillFlow() {
+    if (!navigator.onLine) return;
+    const todo = catches.filter((c) => c.location && c.flow === undefined && (c.flowTries || 0) < 2 && Date.now() - c.caughtAt < 86400000 && kindOf(c) === 'fish' && !(c.tide && tideShown(c))).slice(0, 3);
+    for (const c of todo) {
+      let f = null; try { f = await flowNear(c.location, c.caughtAt); } catch { c.flowTries = (c.flowTries || 0) + 1; await DB.put(c); continue; }
+      c.flow = f || null; await DB.put(c);
+    }
+  }
+
   async function quickSave(combo) {
     if (quickBusy) return; quickBusy = true;
     toast(`Saving ${combo.species}…`);
@@ -2817,20 +2947,96 @@
       let weather = null;
       if (loc) { try { weather = await withTimeout(fetchWeather(loc.lat, loc.lon, now), 8000); } catch { /* added later */ } }
       const m = loc ? matchSpot(loc) : null; const ses = sessionFor(now);
-      const rel = { released: true, kept: false }[store('tl.lastReleased')] ?? null;
-      if (rel === false && !(await overLimitOk(combo.species, 1))) { toast('Not saved'); return; }
+      const rel = combo.released !== undefined ? combo.released : ({ released: true, kept: false }[store('tl.lastReleased')] ?? null);
+      const n = Math.max(1, Math.min(999, Math.round(combo.count || 1)));
+      if (rel === false && !(await overLimitOk(combo.species, n))) { toast('Not saved'); return; }
       const rec = { id: uid(), createdAt: now, updatedAt: now, caughtAt: now, species: combo.species, bait: combo.bait, lureColor: combo.lureColor || '', lureSize: combo.lureSize || '',
         lengthCm: null, weightKg: null, released: rel, notes: '', photo: null, thumb: null, extraPhotos: [], count: 1,
         location: loc, weather, weatherTries: 0, tide: undefined, marine: undefined, tideTries: 0,
         spotId: m ? m.spot.id : (ses && ses.spotId) || null, quick: true, kind: (SPECIES_INFO.get(combo.species) || {}).kind || 'fish' };
+      rec.count = n; if (combo.shellBait) rec.shellBait = combo.shellBait; if (combo.via) rec.via = combo.via;
       if (ses) rec.sessionId = ses.id;
       await DB.put(rec);
       if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
       await reload(); if (ses) await sessionCaught(ses, rec);
-      toast(`${combo.species} logged 🎣${loc ? '' : ' (no location)'}`, { label: 'Add details', fn: () => { const c = catches.find((x) => x.id === rec.id); if (c) form.open(c); } });
-      backfillWeather().then(backfillTides).then(backfillMarine).catch(() => {});
+      const said = `${n > 1 ? n + ' × ' : ''}${combo.species}${combo.via ? ` · ${combo.bait}${rel === false ? ' · kept' : rel === true ? ' · released' : ''}` : ''} logged 🎣${loc ? '' : ' (no location)'}${needsCrc(rec) ? ' · record it on your catch record card' : ''}`;
+      if (combo.via) toast(said, { label: 'Undo', fn: async () => { await DB.del(rec.id); await reload(); toast('Removed'); } });
+      else toast(said, { label: 'Add details', fn: () => { const c = catches.find((x) => x.id === rec.id); if (c) form.open(c); } });
+      backfillWeather().then(backfillTides).then(backfillMarine).then(backfillFlow).catch(() => {});
     } catch (err) { toast('Could not save: ' + ((err && err.message) || 'storage error')); }
     finally { quickBusy = false; }
+  }
+
+  // ---------------------------------------------------------------- hands-free logging
+  // Spoken catches ("two Dungeness, kept, crab pot") and quick-log links (?log=Dungeness%20Crab&gear=Crab%20pot&n=2&kept=1).
+  const NUMWORDS = { a: 1, an: 1, one: 1, two: 2, to: 2, too: 2, three: 3, four: 4, for: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, couple: 2, pair: 2, dozen: 12 };
+  const sing = (w) => (w.length > 3 && w.endsWith('s') && !w.endsWith('ss') ? w.slice(0, -1) : w);
+  const norm = (t) => ' ' + String(t).toLowerCase().replace(/[()]/g, ' ').replace(/[^a-z0-9'’ -]/g, ' ').replace(/-/g, ' ').split(/\s+/).filter(Boolean).map(sing).join(' ') + ' ';
+  const GENERIC = new Set(['bass', 'trout', 'salmon', 'crab', 'clam', 'oyster', 'shrimp', 'perch', 'catfish', 'sunfish', 'rockfish', 'flounder', 'sole', 'common', 'pacific', 'atlantic', 'eastern', 'western', 'northern', 'southern', 'lake', 'river', 'sea', 'bay', 'native', 'american']);
+  function speechPhrases(name) {
+    const out = new Set([norm(name).trim(), norm(name.replace(/\(.*?\)/g, '')).trim()]);
+    const par = (name.match(/\(([^)]+)\)/) || [])[1]; const words = name.replace(/\(.*?\)/g, '').trim().split(/\s+/);
+    if (par) { out.add(norm(par + ' ' + words[words.length - 1]).trim()); out.add(norm(par).trim()); }
+    if (words.length > 1 && !GENERIC.has(words[0].toLowerCase())) out.add(norm(words[0]).trim());
+    return [...out].filter((x) => x.length > 2);
+  }
+  let speechIndex = null;
+  function bestMatch(text, names) {
+    const t = norm(text); let best = null;
+    for (const n of names) for (const ph of speechPhrases(n)) { if (t.includes(' ' + ph + ' ') && (!best || ph.length > best.len)) best = { name: n, len: ph.length }; }
+    return best ? best.name : null;
+  }
+  function parseSpoken(text) {
+    if (!speechIndex || speechIndex.n !== catches.length) speechIndex = { n: catches.length, sp: [...new Set([...catches.map((c) => c.species), ...KNOWN_SPECIES])], bait: [...new Set([...catches.map((c) => c.bait), ...KNOWN_GEAR, ...KNOWN_LURES])] };
+    const t = norm(text);
+    const species = bestMatch(text, speechIndex.sp);
+    let bait = bestMatch(text, speechIndex.bait); if (bait && species && norm(bait).trim() === norm(species).trim()) bait = null;
+    let count = 1; const num = t.match(/ (\d{1,3}) /); if (num) count = Number(num[1]); else for (const w of t.trim().split(' ')) if (NUMWORDS[w] && w !== 'a' && w !== 'an' && w !== 'to' && w !== 'too' && w !== 'for') { count = NUMWORDS[w]; break; }
+    const released = / (kept|keep|keeper|keeping) /.test(t) ? false : / (released|release|releasing|let (it|them) go|threw (it|them) back|throw back|let go) /.test(t) ? true : undefined;
+    return { species, bait, count, released };
+  }
+  function listen() {
+    return new Promise((resolve, reject) => {
+      if (!SR) { reject(new Error('Speech isn’t available in this browser')); return; }
+      const r = new SR(); r.lang = navigator.language || 'en-US'; r.interimResults = false; r.maxAlternatives = 4;
+      let done = false;
+      r.onresult = (e) => { done = true; resolve([...e.results[0]].map((a) => a.transcript)); };
+      r.onerror = (e) => { if (!done) { done = true; reject(new Error(e.error === 'not-allowed' ? 'Microphone access is off for this app' : e.error === 'no-speech' ? 'Didn’t hear anything' : 'Couldn’t listen: ' + e.error)); } };
+      r.onend = () => { if (!done) { done = true; reject(new Error('Didn’t hear anything')); } };
+      try { r.start(); } catch (err) { reject(err); }
+    });
+  }
+  // Pick the alternative that names a fish; fill the gaps from your history.
+  function bestSpoken(alts) {
+    const parsed = alts.map((a) => ({ text: a, ...parseSpoken(a) }));
+    return parsed.find((p) => p.species && p.bait) || parsed.find((p) => p.species) || parsed[0];
+  }
+  const lastBaitFor = (sp) => (catches.find((c) => c.species === sp) || {}).bait || null;
+  async function sayCatch() {
+    toast('Listening… say what you caught, e.g. “two Dungeness, kept, crab pot”');
+    let alts; try { alts = await listen(); } catch (e) { toast(e.message); return; }
+    const p = bestSpoken(alts);
+    if (!p.species) { toast(`Heard “${alts[0]}” – no fish in that. Try again, or tap +.`); return; }
+    const bait = p.bait || lastBaitFor(p.species);
+    if (!bait) { form.open(null, { species: p.species }); toast(`Heard “${p.text}” – add the ${(SPECIES_INFO.get(p.species) || {}).kind === 'shellfish' ? 'gear' : 'lure'} to save.`); return; }
+    await quickSave({ species: p.species, bait, count: p.count, released: p.released, via: 'voice' });
+  }
+  function quickLink(c) {
+    const u = new URL(location.href.split('?')[0].split('#')[0]);
+    u.searchParams.set('log', c.species); u.searchParams.set('gear', c.bait); if (c.count > 1) u.searchParams.set('n', c.count); if (c.released === false) u.searchParams.set('kept', '1'); if (c.released === true) u.searchParams.set('kept', '0');
+    return u.toString();
+  }
+  // Links and home-screen shortcuts: ?new=1, ?start=1, ?voice=1, ?log=…
+  async function runLinkAction() {
+    const q = new URLSearchParams(location.search); if (![...q.keys()].length) return;
+    try { history.replaceState(null, '', location.pathname); } catch { /* ignore */ }
+    if (q.get('log')) {
+      const species = q.get('log').trim().slice(0, 80); const bait = (q.get('gear') || q.get('bait') || lastBaitFor(species) || '').trim().slice(0, 80);
+      if (!species) return; if (!bait) { form.open(null, { species }); return; }
+      const k = q.get('kept'); await quickSave({ species, bait, count: Number(q.get('n')) || 1, released: k === '1' ? false : k === '0' ? true : undefined, via: 'link' });
+    } else if (q.get('new')) form.open();
+    else if (q.get('start')) startSession();
+    else if (q.get('voice')) sayCatch();
   }
 
   // ---------------------------------------------------------------- Now (home screen)
@@ -2858,6 +3064,7 @@
         const [mar, tt] = await Promise.allSettled([marineFor(loc, at), fetchTripTide(pt)]);
         st.marine = mar.status === 'fulfilled' ? mar.value : null; st.tripTide = tt.status === 'fulfilled' ? tt.value : null;
       }
+      if (!(st.tide && tideShown({ tide: st.tide, spotId: m ? m.spot.id : null }))) { try { st.flow = await withTimeout(flowNear(loc), 8000); } catch { st.flow = null; } }
       nowState = st; store('tl.now', JSON.stringify(st));
     } catch (e) { nowErr = e && e.message === 'offline' ? 'offline' : (e && e.message) || 'error'; }
     finally { nowBusy = false; renderNow(); }
@@ -2871,8 +3078,9 @@
   function renderNowSession() {
     const s = activeSession(); const combos = quickCombos();
     const today = catches.filter((c) => c.caughtAt >= dayStart(Date.now()));
-    const quick = combos.length ? `<div class="quick"><h4>Quick catch <small>– one tap saves it, add details later</small></h4><div class="quick-grid">${combos.map((c, i) =>
-      `<button type="button" class="quick-btn" data-quick="${i}"><span class="plus" aria-hidden="true">+</span><span><b>${esc(c.species)}</b><small>${esc(c.bait)}${c.lureColor || c.lureSize ? ' · ' + esc([c.lureColor, c.lureSize].filter(Boolean).join(', ')) : ''}</small></span></button>`).join('')}</div></div>` : '';
+    const say = SR ? '<button type="button" class="btn sm say-btn" id="now-say" aria-label="Say a catch out loud"><span aria-hidden="true">🎤</span> Say it</button>' : '';
+    const quick = combos.length ? `<div class="quick"><h4>Quick catch <small>– one tap saves it, add details later</small>${say}</h4><div class="quick-grid">${combos.map((c, i) =>
+      `<button type="button" class="quick-btn" data-quick="${i}"><span class="plus" aria-hidden="true">+</span><span><b>${esc(c.species)}</b><small>${esc(c.bait)}${c.lureColor || c.lureSize ? ' · ' + esc([c.lureColor, c.lureSize].filter(Boolean).join(', ')) : ''}</small></span></button>`).join('')}</div></div>` : (say ? `<div class="quick"><h4>Log by voice <small>– tap and say what you caught</small>${say}</h4></div>` : '');
     if (!s) {
       const last = sessions.find((x) => x.end);
       $('#now-session').innerHTML = `<div class="card session-card">
@@ -2920,6 +3128,7 @@
     cells.push(`<div class="now-cell"><span>${nextSun[0]}</span><b>${nextSun[1] ? fmtTime(nextSun[1]) : '–'}</b><small>${nextSun[1] ? durText(nextSun[1] - Date.now()) + ' from now' : ''}</small></div>`);
     if (tidal && st.marine && !st.marine.none) { const mr = st.marine; const wv = mr.waveM != null ? `${imp() ? `${round(mr.waveM * 3.28084, 1)} ft` : `${round(mr.waveM, 1)} m`}${mr.periodS != null ? `, ${round(mr.periodS)} s apart` : ''}` : '';
       cells.push(`<div class="now-cell wide"><span>Water</span><b>${mr.seaTempC != null ? esc(U.temp(mr.seaTempC)) : '–'}</b>${wv ? `<small>Waves ${esc(wv)}</small>` : ''}</div>`); }
+    if (!tidal && st.flow) cells.push(flowCell(st.flow));
     const msg = nowErr === 'offline' ? `No signal – showing conditions from ${fmtTime(st.at)}.` : nowErr ? `Couldn't update: ${nowErr}` : age > 60 * 60000 ? `From ${fmtTime(st.at)}. Tap ↻ to update.` : '';
     box.innerHTML = `<div class="card">
       <div class="now-place"><svg viewBox="0 0 24 24"><use href="#i-pin"/></svg><span><b>${esc(pl.name)}</b><small>${esc(pl.sub)}${st.loc.source === 'last' ? ' · last known location' : ''}</small></span>
@@ -2974,15 +3183,17 @@
   }
   function renderNow() {
     if (!$('#view-now')) return;
-    renderNowSession(); renderNowCond(); renderNowSolunar(); renderNowRecs(); renderNowTrip();
+    renderNowSession(); renderNowCrc(); renderNowCond(); renderNowSolunar(); renderNowRecs(); renderNowTrip();
   }
   $('#view-now').addEventListener('click', (e) => {
     if (e.target.closest('#ses-start')) return startSession();
     if (e.target.closest('#ses-end')) return endSession();
     if (e.target.closest('#ses-lure')) return lurePicker.open();
     if (e.target.closest('#now-refresh')) return refreshNow(true);
+    const cd = e.target.closest('[data-crc-done]'); if (cd) { const d = (() => { try { return JSON.parse(store('tl.crcDone') || '{}'); } catch { return {}; } })(); d[cd.dataset.crcDone] = Date.now(); store('tl.crcDone', JSON.stringify(d)); renderNowCrc(); toast('Marked as reported'); return; }
     if (e.target.closest('#now-plan')) return tripForm.open();
     if (e.target.closest('#now-trips')) return showView('trips');
+    if (e.target.closest('#now-say')) return sayCatch();
     const q = e.target.closest('[data-quick]'); if (q) { const c = quickCombos()[Number(q.dataset.quick)]; if (c) quickSave(c); return; }
     const u = e.target.closest('[data-use-lure]'); if (u) { setSessionLure({ bait: u.dataset.useLure }).then(() => { paintSessionViews(); toast(`Now fishing ${u.dataset.useLure}`); }); return; }
     const tp = e.target.closest('[data-trip-open]'); if (tp) showTrip(tp.dataset.tripOpen);
@@ -3299,8 +3510,15 @@
     $('#seg-weight').hidden = !imp(); $$('#seg-weight button').forEach((b) => b.classList.toggle('on', (b.dataset.wt === 'oz') === settings.wtOz));
   }
   $('#seg-weight').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; settings.wtOz = b.dataset.wt === 'oz'; store('tl.wtOz', settings.wtOz ? '1' : '0'); paintUnits(); renderList(); renderSpots(); });
+  $('#quick-links').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-qlink]'); if (!b) return; const c = quickCombos()[Number(b.dataset.qlink)]; if (!c) return;
+    const url = quickLink(c);
+    try { await navigator.clipboard.writeText(url); toast('Link copied'); } catch { toast(url); }
+  });
   $('#btn-menu').addEventListener('click', async () => {
     paintUnits(); paintDisplay(); $('#app-version').textContent = `Fishamongus! version ${APP_VERSION}`;
+    const qc = quickCombos().slice(0, 3);
+    $('#quick-links').innerHTML = qc.length ? `<p class="help small" style="margin:8px 0 6px">One-tap links for your usual catches:</p><ul class="qlinks">${qc.map((c, i) => `<li><span>${esc(c.species)} · ${esc(c.bait)}</span><button type="button" class="btn sm" data-qlink="${i}">Copy link</button></li>`).join('')}</ul>` : '';
     $('#storage-info').textContent = ''; paintBackupInfo(); paintAutoBackup();
     if (navigator.storage && navigator.storage.estimate) {
       try { const e = await navigator.storage.estimate(); const p = navigator.storage.persisted ? await navigator.storage.persisted() : false;
@@ -3413,7 +3631,7 @@
   $('#btn-export-csv').addEventListener('click', async () => {
     if (!catches.length) return toast('Nothing to export yet');
     const q = (v) => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-    const head = ['Date', 'Time', 'Spot', 'Species', 'Count', 'Lure/Bait', 'Lure colour', 'Lure size', `Length ${U.lenLabel()}`, `Weight ${U.wtLabel()}`, 'Released', 'Latitude', 'Longitude', 'GPS accuracy (m)', 'Weather', `Temp ${imp() ? '(°F)' : '(°C)'}`, `Wind ${imp() ? '(mph)' : '(km/h)'}`, 'Wind dir', `Pressure ${imp() ? '(inHg)' : '(hPa)'}`, 'Pressure trend', 'Humidity (%)', 'Moon', 'Tide stage', `Tide height ${imp() ? '(ft)' : '(m)'}`, 'Tidal coefficient', 'Tide station', `Water temp ${imp() ? '(°F)' : '(°C)'}`, `Waves ${imp() ? '(ft)' : '(m)'}`, 'Wave period (s)', 'Session', 'Fish or shellfish', 'Bait (shellfish)', 'Crab sex', 'Shell', `Carapace ${U.lenLabel()}`, 'Pots', 'Soak (h)', 'Notes'];
+    const head = ['Date', 'Time', 'Spot', 'Species', 'Count', 'Lure/Bait', 'Lure colour', 'Lure size', `Length ${U.lenLabel()}`, `Weight ${U.wtLabel()}`, 'Released', 'Latitude', 'Longitude', 'GPS accuracy (m)', 'Weather', `Temp ${imp() ? '(°F)' : '(°C)'}`, `Wind ${imp() ? '(mph)' : '(km/h)'}`, 'Wind dir', `Pressure ${imp() ? '(inHg)' : '(hPa)'}`, 'Pressure trend', 'Humidity (%)', 'Moon', 'Tide stage', `Tide height ${imp() ? '(ft)' : '(m)'}`, 'Tidal coefficient', 'Tide station', `Water temp ${imp() ? '(°F)' : '(°C)'}`, `Waves ${imp() ? '(ft)' : '(m)'}`, 'Wave period (s)', 'Session', 'Fish or shellfish', 'Bait (shellfish)', 'Crab sex', 'Shell', `Carapace ${U.lenLabel()}`, 'Pots', 'Soak (h)', 'River flow (cfs)', 'Flow trend', 'From', 'Notes'];
     const rows = catches.map((c) => { const w = c.weather; const L = c.location; const d = new Date(c.caughtAt);
       return [toLocalInput(d).slice(0, 10), toLocalInput(d).slice(11), (c.spotId && spotById(c.spotId) ? spotById(c.spotId).name : ''), c.species, nFish(c), c.bait, c.lureColor || '', c.lureSize || '', U.lenOut(c.lengthCm), U.wtOut(c.weightKg), c.released === true ? 'yes' : c.released === false ? 'no' : '',
         L ? L.lat.toFixed(6) : '', L ? L.lon.toFixed(6) : '', L && L.accuracy != null ? Math.round(L.accuracy) : '',
@@ -3426,8 +3644,46 @@
         c.marine && !c.marine.none && c.marine.periodS != null ? round(c.marine.periodS, 1) : '',
         (() => { const x = c.sessionId && sessions.find((y) => y.id === c.sessionId); return x ? `${toLocalInput(new Date(x.start)).replace('T', ' ')} (${durText(sessionEnd(x) - x.start)})` : ''; })(),
         kindOf(c), c.shellBait || '', c.crabSex || '', c.shellHard === true ? 'hard' : c.shellHard === false ? 'soft' : '', U.lenOut(c.carapaceCm), c.pots || '', c.soakH || '',
+        c.flow ? Math.round(c.flow.cfs) : '', c.flow ? c.flow.trend || '' : '', c.from || '',
         c.notes].map(q).join(','); });
     await deliverFile(new Blob(['﻿' + [head.map(q).join(','), ...rows].join('\n')], { type: 'text/csv' }), `fishamongus-${stamp()}.csv`);
+  });
+  // Add someone else's log (a fishing partner, or an old phone) without overwriting yours.
+  // Their spots join yours when within 100 m; catches already in your log (same fish, same minute, same place) are skipped.
+  async function mergeBackup(j, from) {
+    const out = { catches: 0, dup: 0, spots: 0, trips: 0 };
+    const spotMap = new Map();
+    for (const x of (Array.isArray(j.spots) ? j.spots : [])) {
+      if (!x || !x.id || !x.name || !Number.isFinite(x.lat) || !Number.isFinite(x.lon)) continue;
+      const mine = spots.find((sp) => sp.id === x.id) || spots.map((sp) => ({ sp, d: distM(sp, x) })).filter((o) => o.d <= 100).sort((a, b) => a.d - b.d).map((o) => o.sp)[0];
+      if (mine) { spotMap.set(x.id, mine.id); continue; }
+      const sp = { ...x, id: uid(), updatedAt: Date.now() }; await DB.putSpot(sp); spots.push(sp); spotMap.set(x.id, sp.id); out.spots++;
+    }
+    const mapSpot = (id) => (id ? spotMap.get(id) || (spotById(id) ? id : null) : null);
+    const ids = new Set(catches.map((c) => c.id));
+    const same = (a, b) => a.species === b.species && Math.abs(a.caughtAt - b.caughtAt) < 60000 && (!a.location || !b.location || distM(a.location, b.location) < 200);
+    for (const c of (Array.isArray(j.catches) ? j.catches : [])) {
+      if (!c || !c.id || !c.species || !Number.isFinite(c.caughtAt)) continue;
+      if (ids.has(c.id) || catches.some((m) => same(m, c))) { out.dup++; continue; }
+      const extra = []; for (const p of c.extraPhotos || []) if (p && p.photo) extra.push({ photo: await dataURLToBlob(p.photo), thumb: p.thumb ? await dataURLToBlob(p.thumb) : null });
+      const rec = { ...c, spotId: mapSpot(c.spotId), sessionId: null, photo: c.photo ? await dataURLToBlob(c.photo) : null, thumb: c.thumb ? await dataURLToBlob(c.thumb) : null, extraPhotos: extra };
+      if (from) rec.from = from; delete rec.sample;
+      await DB.put(rec); ids.add(rec.id); out.catches++;
+    }
+    const tripIds = new Set(trips.map((t) => t.id));
+    for (const x of (Array.isArray(j.trips) ? j.trips : [])) { if (x && x.id && !tripIds.has(x.id) && Number.isFinite(x.start) && Number.isFinite(x.lat)) { await DB.putTrip({ ...x, spotId: mapSpot(x.spotId) }); out.trips++; } }
+    return out;
+  }
+  $('#f-merge').addEventListener('change', async (e) => {
+    const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+    try {
+      const j = JSON.parse(await f.text());
+      if (!j || !['fishamongus', 'tightlines'].includes(j.app) || !Array.isArray(j.catches)) throw new Error('not a Fishamongus! backup');
+      const from = $('#merge-from').value.trim().slice(0, 40);
+      const r = await mergeBackup(j, from);
+      await reload();
+      toast(`Added ${plural(r.catches, 'catch')}${r.spots ? `, ${plural(r.spots, 'spot')}` : ''}${r.trips ? `, ${plural(r.trips, 'trip')}` : ''}${r.dup ? ` · ${r.dup} already in your log` : ''}`);
+    } catch (err) { toast('Could not add: ' + err.message); }
   });
   $('#f-import').addEventListener('change', async (e) => {
     const f = e.target.files[0]; e.target.value = ''; if (!f) return;
@@ -3475,6 +3731,6 @@
   if (!store('tl.welcomed')) { store('tl.welcomed', '1'); setTimeout(() => openSheet($('#sheet-welcome')), 50); } else updateInstallNudge();
 
   setSpotsMode(spotsMode); paintOffline();
-  reload().then(() => { if (!firstRun) refreshNow(); }).then(() => autoBackup()).then(backfillWeather).then(backfillTides).then(backfillMarine).catch((err) => { console.error(err); toast('Storage is unavailable in this browser mode'); });
+  reload().then(() => { if (!firstRun) { refreshNow(); return runLinkAction(); } }).then(() => autoBackup()).then(backfillWeather).then(backfillTides).then(backfillMarine).then(backfillFlow).catch((err) => { console.error(err); toast('Storage is unavailable in this browser mode'); });
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();

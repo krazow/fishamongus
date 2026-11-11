@@ -53,6 +53,7 @@
         </div>
       </div>
       <div id="now-session"></div>
+      <div id="now-crc"></div>
       <div id="now-cond"></div>
       <div id="now-sol"></div>
       <div id="now-recs"></div>
@@ -194,7 +195,7 @@
             </div>
           </div>
           <div class="chips" id="species-chips"></div>
-          <div class="search-wrap find-fish"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg><input type="search" id="f-species-find" placeholder="Search 240+ fish by name" aria-label="Search fish by name" autocomplete="off" enterkeyhint="search"></div>
+          <div class="search-wrap find-fish"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg><input type="search" id="f-species-find" placeholder="Search 240+ fish by name" aria-label="Search fish by name" autocomplete="off" enterkeyhint="search"><button type="button" class="say-mini" id="f-say" aria-label="Say what you caught" hidden>🎤</button></div>
           <div class="chips find-results" id="species-find-results" hidden></div>
           <div class="select-wrap">
             <select id="f-species-select" required aria-label="Fish type"></select>
@@ -659,6 +660,11 @@
           </div>
         </div>
         <div class="field">
+          <label>Hands-free logging</label>
+          <p class="help">Tap <b>🎤 Say it</b> on the Now screen and say what you caught – for example “two Dungeness, kept, crab pot” or “largemouth on a Senko, released”. On Android, press and hold the app icon for <b>Say a catch</b>, <b>Log a catch</b> and <b>Start fishing</b>.</p>
+          <div id="quick-links"></div>
+        </div>
+        <div class="field">
           <label>Backup</label>
           <p class="help">Your log is saved only on this phone. A backup file you keep somewhere else (iCloud Drive, Google Drive, your computer) is what saves it if the phone is lost or the app is deleted.</p>
           <div class="ab-box">
@@ -681,6 +687,12 @@
             <label class="btn">Restore from backup<input type="file" id="f-import" accept=".json,application/json" hidden></label>
           </div>
         </div>
+        <div class="merge-box">
+          <h4>Add someone else's log</h4>
+          <p class="help small">Add a fishing partner's backup, or your old phone's, to this log. Nothing of yours is replaced: catches already here are skipped, and their spots join yours when they're within 100 m.</p>
+          <div class="field"><label for="merge-from">Whose log is it? (optional)</label><input id="merge-from" type="text" maxlength="40" placeholder="e.g. Sam" autocomplete="off"></div>
+          <label class="btn">Choose their backup file<input type="file" id="f-merge" accept=".json,application/json" hidden></label>
+        </div>
         <p class="help small" id="backup-info"></p>
         <p class="help small" id="storage-info"></p>
         <div class="field help-section">
@@ -688,6 +700,10 @@
           <details><summary>How do I install the app?</summary><p>iPhone: open the app's link in Safari, tap Share (the square with an arrow), then Add to Home Screen. Android: open the link in Chrome, then tap Install (or ⋮ → Install app). Installed, it opens full screen and works with no signal.</p></details>
           <details><summary>Where is my log kept?</summary><p>Only on this phone, in the app's own storage. Nothing is uploaded. On iPhone, deleting the app from the home screen deletes its data too, so export a backup first. A backup file includes photos, spots and trips, and Restore loads it on any phone.</p></details>
           <details><summary>How do I log shellfish?</summary><p>Tap <b>Shellfish</b> above the species list, and pick <b>Saltwater</b> or <b>Freshwater</b> to shorten the list. Choose the gear (pot, ring net, clam gun…) and, for crab, the sex, shell and width. For Washington limits, open Limits and tap <b>Add Puget Sound crab limits</b> or <b>Add Washington clam &amp; oyster limits</b>. Before eating clams, oysters or mussels, check the Department of Health Shellfish Safety Map.</p></details>
+          <details><summary>Can I log a catch without touching the screen much?</summary><p>Yes. On the Now screen tap <b>🎤 Say it</b> and say the fish, the lure or gear, how many and whether you kept them. The catch is saved with GPS, weather and tide, and <b>Undo</b> takes it back if it heard you wrong. Settings → Hands-free logging also gives you a one-tap link for each of your usual catches: on Android, put it on the home screen or in a Google Assistant routine. On iPhone, links opened from the Shortcuts app open in Safari, which keeps a separate log from the home-screen app, so use the 🎤 button in the app instead.</p></details>
+          <details><summary>What are the catch record card reminders?</summary><p>In Washington, kept salmon, steelhead, sturgeon, halibut and Puget Sound Dungeness crab go on a catch record card. Stats counts what you've kept for each card, and in the month before a card is due (fish cards April 30, summer crab cards October 1, winter crab cards February 1) the Now screen reminds you to report it. The app's counts are a check only – record each fish in ink or in the eCRC as you keep it.</p></details>
+          <details><summary>Where does the river flow come from?</summary><p>From the nearest USGS stream gauge within about 6 miles, for spots and places that aren't tidal. It shows the flow in cubic feet per second and whether it's rising or falling over the last 3 hours. Catches made near a gauge save the flow, and Stats adds a <b>River flow</b> condition once three catches have one.</p></details>
+          <details><summary>Can I add my fishing partner's catches?</summary><p>Yes. Ask them to make a backup (Settings → Backup), send you the file, then use <b>Add someone else's log</b> in Settings. Their catches are added with their name, their spots join yours when they're within 100 m, and anything already in your log is skipped. Moving to a new phone works the same way.</p></details>
           <details><summary>Why is there no tide on a catch?</summary><p>Tides come from NOAA and cover US coasts. They're recorded within about 15 mi of a NOAA tide station, or at spots set to Saltwater. Spots set to Freshwater never show tides. With no signal, the tide is added later when you're online.</p></details>
           <details><summary>What does Start fishing do?</summary><p>It times your session and keeps track of the lure on your line (tap it to change lures). Catches you log are added to the session. Stats then shows fish per hour for each lure, which is fairer than raw counts. A session left running over 12 hours ends 30 minutes after your last catch.</p></details>
           <details><summary>How are the best lures and best hours chosen?</summary><p>From your own catches: the app counts fish caught in each condition (sky, pressure, temperature, wind, time of day, tide, moon). Counts favour lures you use most; fishing sessions and planned trips record hours fished, which gives fish per hour.</p></details>
