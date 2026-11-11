@@ -183,8 +183,14 @@
         <div class="field">
           <label for="f-species-select">Fish type <span class="req">required</span></label>
           <div class="chips" id="species-chips"></div>
+          <div class="search-wrap find-fish"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg><input type="search" id="f-species-find" placeholder="Search 240+ fish by name" aria-label="Search fish by name" autocomplete="off" enterkeyhint="search"></div>
+          <div class="chips find-results" id="species-find-results" hidden></div>
           <div class="select-wrap">
-            <select id="f-species-select" required></select>
+            <select id="f-species-select" required aria-label="Fish type"></select>
+          </div>
+          <div class="sub-species" id="sub-species-wrap" hidden>
+            <label for="f-subspecies" class="sub-label" id="sub-species-label">Which kind?</label>
+            <div class="select-wrap"><select id="f-subspecies"></select></div>
           </div>
           <input id="f-species" aria-label="Fish name" class="other-species" placeholder="Type the fish name" autocomplete="off" hidden>
           <p class="field-error" id="err-species" hidden>Choose the fish type.</p>

@@ -78,6 +78,12 @@ Tides show only where they apply:
 - **Saltwater spot:** always.
 - **Freshwater spot:** never. Use this for lakes and rivers near the coast.
 
+**New in 3.2: a much bigger fish list, with subspecies and search**
+- About 250 species: 177 freshwater fish from lakes and rivers across the US and Canada (black bass, temperate bass, trout and char, salmon and whitefish, panfish and sunfish, walleye, perch and pike, catfish and bullheads, carp and buffalo, suckers and redhorse, minnows and chubs, gar, sturgeon and bowfin, shad and mooneye, and invasive species), plus the saltwater list.
+- **Two-level picker:** the main menu lists primary species. Fish marked ▸ have subspecies or close variants, which appear in a second menu: for example Cutthroat Trout → Westslope, Yellowstone, Lahontan and more; Redeye Bass → Bartram's, Altamaha, Cahaba, Chattahoochee, Tallapoosa and Warrior Bass; Rainbow Trout → Steelhead, Redband and Golden Trout; Largemouth Bass → Florida Bass; plus hybrids such as Wiper, Saugeye, Tiger Muskie, Tiger Trout and Splake. "Any / not sure" records just the primary species.
+- **Search:** type part of a name ("cutthroat", "gar", "red horse") above the menu and tap a result. A subspecies sets both menus.
+- Catches you've already logged keep their exact names.
+
 **New in 3.1:**
 - **Bite times (solunar):** the Now screen shows today's major periods (2 hours around the moon overhead and underfoot) and minor periods (1 hour around moonrise and moonset) on a 24-hour strip, with what's on now or next and a day rating (Fair to Best: best near new and full moon, better when a period lines up with sunrise or sunset). Trip plans show the periods that fall inside the trip. Stats has a **Solunar** condition, so you can see whether these periods actually work for you. Everything is calculated on the phone and works offline; moon times match published tables to within a couple of minutes.
 - **Automatic backup** (Settings → Backup): after each fishing session, once a day or once a week, whenever something has changed.
