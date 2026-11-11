@@ -74,7 +74,17 @@
   function store(key, val) { try { if (val === undefined) return localStorage.getItem(key); localStorage.setItem(key, val); } catch { return null; } }
 
   // ---------------------------------------------------------------- units
-  const APP_VERSION = '2.4 (Nov 10, 2026)';
+  const APP_VERSION = '3.0 (Nov 10, 2026)';
+  // Night (dim red) mode and large text, applied before anything is drawn.
+  function applyDisplay() {
+    const night = store('tl.theme') === 'night'; const large = store('tl.text') === 'large';
+    document.documentElement.classList.toggle('night', night); document.documentElement.classList.toggle('large', large);
+    const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = night ? '#120000' : '#0e4f5c';
+  }
+  applyDisplay();
+  // One clear line when there's no signal, instead of a message on every card.
+  function paintOffline() { const off = !navigator.onLine; $('#offline-bar').hidden = !off; document.body.classList.toggle('is-offline', off); }
+  window.addEventListener('online', paintOffline); window.addEventListener('offline', paintOffline);
   const settings = { wtOz: store('tl.wtOz') === '1', units: store('tl.units') || (/^en-(US|LR|MM)/.test(navigator.language) ? 'imperial' : 'metric') };
   const imp = () => settings.units === 'imperial';
   const U = {
@@ -113,13 +123,14 @@
     open() {
       if (this._db) return Promise.resolve(this._db);
       return new Promise((res, rej) => {
-        const r = indexedDB.open('tightlines', 4);
+        const r = indexedDB.open('tightlines', 5);
         r.onupgradeneeded = () => {
           const db = r.result;
           if (!db.objectStoreNames.contains('catches')) db.createObjectStore('catches', { keyPath: 'id' }).createIndex('caughtAt', 'caughtAt');
           if (!db.objectStoreNames.contains('spots')) db.createObjectStore('spots', { keyPath: 'id' });
           if (!db.objectStoreNames.contains('trips')) db.createObjectStore('trips', { keyPath: 'id' });
           if (!db.objectStoreNames.contains('sessions')) db.createObjectStore('sessions', { keyPath: 'id' });
+          if (!db.objectStoreNames.contains('tackle')) db.createObjectStore('tackle', { keyPath: 'id' });
         };
         r.onsuccess = () => { const db = r.result; this._db = db; db.onversionchange = () => { db.close(); if (this._db === db) this._db = null; }; res(db); };
         r.onerror = () => rej(r.error);
@@ -145,6 +156,9 @@
     allSessions() { return this.tx('readonly', (s) => s.getAll(), 'sessions'); },
     putSession(x) { return this.tx('readwrite', (s) => s.put(x), 'sessions'); },
     delSession(id) { return this.tx('readwrite', (s) => s.delete(id), 'sessions'); },
+    allTackle() { return this.tx('readonly', (s) => s.getAll(), 'tackle'); },
+    putTackle(x) { return this.tx('readwrite', (s) => s.put(x), 'tackle'); },
+    delTackle(id) { return this.tx('readwrite', (s) => s.delete(id), 'tackle'); },
   };
 
   // ---------------------------------------------------------------- state
@@ -155,6 +169,7 @@
   const weightOf = (x) => (x && typeof x === 'object' && !Array.isArray(x) ? nFish(x.c && x.c.species ? x.c : x) : 1);
   let spots = [];
   let sessions = [];
+  let tackle = [];
   const spotById = (id) => spots.find((x) => x.id === id) || null;
 
   // Distance in metres between two {lat, lon} points.
@@ -191,7 +206,8 @@
     return thumbUrls.get(key);
   }
   async function reload() {
-    [catches, spots, trips, sessions] = await Promise.all([DB.all(), DB.allSpots(), DB.allTrips(), DB.allSessions()]);
+    [catches, spots, trips, sessions, tackle] = await Promise.all([DB.all(), DB.allSpots(), DB.allTrips(), DB.allSessions(), DB.allTackle()]);
+    tackle.sort((a, b) => (a.name || a.bait).localeCompare(b.name || b.bait));
     sessions.sort((a, b) => b.start - a.start);
     catches.sort((a, b) => b.caughtAt - a.caughtAt);
     spots.sort((a, b) => a.name.localeCompare(b.name));
@@ -199,15 +215,16 @@
     if ($('#view-stats').classList.contains('active')) renderStats();
     if (!$('#sheet-spot').hidden && spotDetailId) renderSpotDetail(spotDetailId);
     renderTrips(); updateTripNudge(); if (!$('#sheet-trip').hidden && tripDetailId) renderTrip(tripDetailId);
-    renderNow(); paintSessionBar();
+    renderNow(); paintSessionBar(); paintDemoBar();
   }
 
   // ---------------------------------------------------------------- toast & confirm
   let toastTimer; let toastActionUntil = 0;
   // Background news ("Weather added…") never covers a message that has a button on it.
   function toastBg(msg) { if (Date.now() < toastActionUntil) return; toast(msg); }
-  function toast(msg, action) {
+  function toast(msg, action, cls) {
     toastActionUntil = action ? Date.now() + 6000 : 0;
+    $('#toast').classList.toggle('pb', cls === 'pb');
     const t = $('#toast'); $('#toast-text').textContent = msg; const btn = $('#toast-action');
     btn.hidden = !action; btn.onclick = null;
     if (action) { btn.textContent = action.label; btn.onclick = () => { t.classList.remove('show'); action.fn(); }; }
@@ -291,7 +308,7 @@
       return `<li class="day-h"><span>${esc(dayLabel(k))}</span><span>${trip ? `Trip: ${esc(trip.name)} · ` : ''}${plural(fishIn(cs), 'fish')}</span></li>` + cs.map((c) => {
       const t = thumbUrl(c);
       const size = [U.len(c.lengthCm), U.wt(c.weightKg)].filter(Boolean).join(', ');
-      return `<li><button class="catch" data-id="${c.id}">
+      return `<li class="swipe-row"><div class="swipe-acts" aria-hidden="true"><button type="button" tabindex="-1" data-act="edit" data-id="${c.id}">Edit</button><button type="button" tabindex="-1" data-act="same" data-id="${c.id}">Same again</button><button type="button" tabindex="-1" data-act="del" data-id="${c.id}">Delete</button></div><button class="catch" data-id="${c.id}">
         ${t ? `<img class="thumb" src="${t}" alt="">` : `<span class="thumb"><svg viewBox="0 0 32 32"><use href="#i-fish"/></svg></span>`}
         <span class="min-w">
           <h3>${esc(c.species)}${nFish(c) > 1 ? `<span class="count-badge">×${nFish(c)}</span>` : ''}</h3>
@@ -302,7 +319,38 @@
     }).join('') || (filtering ? `<li class="help" style="text-align:center;padding:20px">No catches match${q ? ` “${esc(q)}”` : ''} these filters.</li>` : '');
   }
 
-  $('#catch-list').addEventListener('click', (e) => { const b = e.target.closest('.catch'); if (b) showDetail(b.dataset.id); });
+  // Swipe a catch left for Edit, Same again and Delete. (A catch's page has the same buttons, for anyone who doesn't swipe.)
+  let swipeOpen = null;
+  function closeSwipe(except) { if (swipeOpen && swipeOpen !== except) { swipeOpen.style.transform = ''; swipeOpen.classList.remove('open'); swipeOpen = null; } }
+  (() => {
+    const list = $('#catch-list'); let st = null; const W = 252;
+    list.addEventListener('touchstart', (e) => { const b = e.target.closest('.catch'); if (!b || e.touches.length > 1) return; st = { b, x: e.touches[0].clientX, y: e.touches[0].clientY, dx: 0, base: b.classList.contains('open') ? -W : 0, lock: null }; }, { passive: true });
+    list.addEventListener('touchmove', (e) => {
+      if (!st) return; const dx = e.touches[0].clientX - st.x; const dy = e.touches[0].clientY - st.y;
+      if (st.lock == null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) st.lock = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      if (st.lock !== 'x') return; e.preventDefault(); closeSwipe(st.b);
+      st.dx = dx; st.b.style.transition = 'none'; st.b.style.transform = `translateX(${Math.max(-W - 24, Math.min(0, st.base + dx))}px)`;
+    }, { passive: false });
+    list.addEventListener('touchend', () => {
+      if (!st) return; const { b, dx, base, lock } = st; st = null; if (lock !== 'x') return;
+      b.style.transition = ''; const open = base + dx < -W / 3;
+      b.style.transform = open ? `translateX(${-W}px)` : ''; b.classList.toggle('open', open); swipeOpen = open ? b : null; b.dataset.swiped = '1'; setTimeout(() => { delete b.dataset.swiped; }, 350);
+    });
+    document.addEventListener('touchstart', (e) => { if (swipeOpen && !e.target.closest('.swipe-row')) closeSwipe(); }, { passive: true });
+  })();
+  $('#catch-list').addEventListener('click', async (e) => {
+    const a = e.target.closest('[data-act]');
+    if (a) {
+      const c = catches.find((x) => x.id === a.dataset.id); closeSwipe(); if (!c) return;
+      if (a.dataset.act === 'edit') form.open(c);
+      if (a.dataset.act === 'same') form.open(null, sameAs(c));
+      if (a.dataset.act === 'del') { if (!(await askConfirm(`Delete this ${c.species}?`))) return; await DB.del(c.id); await reload(); toast('Catch deleted', { label: 'Undo', fn: async () => { await DB.put(c); await reload(); toast('Catch restored'); } }); }
+      return;
+    }
+    const b = e.target.closest('.catch'); if (!b) return;
+    if (b.dataset.swiped) return; if (b.classList.contains('open')) { closeSwipe(); return; }
+    showDetail(b.dataset.id);
+  });
   $('#search').addEventListener('input', renderList);
   ['#lf-when', '#lf-spot', '#lf-species'].forEach((x) => $(x).addEventListener('change', renderList));
 
@@ -481,6 +529,7 @@
       }
       sel.classList.toggle('placeholder', !sel.value);
       sel.classList.remove('invalid'); input.classList.remove('invalid'); if (v || input.value.trim()) $('#err-species').hidden = true;
+      if (draft) { paintWtEst(); paintKept(); }
       $$('#species-chips .chip').forEach((x) => x.classList.toggle('on', x.dataset.species === input.value.trim()));
     }
     $('#f-species-select').addEventListener('change', (e) => {
@@ -504,6 +553,7 @@
       }
       sel.classList.toggle('placeholder', !sel.value);
       sel.classList.remove('invalid'); input.classList.remove('invalid'); if (v || input.value.trim()) $('#err-bait').hidden = true;
+      if (draft && draft.tackleId) { const t = tackle.find((y) => y.id === draft.tackleId); if (!t || t.bait !== input.value.trim()) { draft.tackleId = null; paintTackleChips(); } }
       $$('#bait-chips .chip').forEach((x) => x.classList.toggle('on', x.dataset.bait === input.value.trim()));
     }
     $('#f-bait-select').addEventListener('change', (e) => {
@@ -514,9 +564,52 @@
     $('#f-bait').addEventListener('input', () => setBait($('#f-bait').value, true));
     $('#bait-chips').addEventListener('click', (e) => { const c = e.target.closest('.chip[data-bait]'); if (c) { dirty = true; if (c.dataset.bait !== $('#f-bait').value.trim()) clearAutoLure(); setBait(c.dataset.bait); } });
 
+    // Tackle box: one tap picks the exact lure (type, colour and size).
+    function fillTackleChips() {
+      $('#tackle-chips').hidden = !tackle.length;
+      $('#tackle-chips').innerHTML = tackle.length ? `<span class="tk-chips-label">From your tackle box</span><div class="tk-chip-row">${tackle.map((t) => { const u = tackleThumb(t);
+        return `<button type="button" class="tk-chip" data-tk="${t.id}">${u ? `<img src="${u}" alt="">` : '<span class="tk-dot" aria-hidden="true">🎣</span>'}<span><b>${esc(t.name || t.bait)}</b><small>${esc([t.name ? t.bait : '', t.color, t.size].filter(Boolean).join(' · '))}</small></span></button>`; }).join('')}</div>` : '';
+      paintTackleChips();
+    }
+    function paintTackleChips() { $$('#tackle-chips .tk-chip').forEach((x) => { const on = x.dataset.tk === (draft && draft.tackleId); x.classList.toggle('on', on); x.setAttribute('aria-pressed', String(on)); }); }
+    $('#tackle-chips').addEventListener('click', (e) => {
+      const x = e.target.closest('[data-tk]'); if (!x) return; const t = tackle.find((y) => y.id === x.dataset.tk); if (!t) return;
+      dirty = true; setBait(t.bait); $('#f-lure-color').value = t.color || ''; $('#f-lure-size').value = t.size || ''; lureAuto = false;
+      draft.tackleId = t.id; paintTackleChips(); if (typeof paintCombos === 'function') paintCombos();
+    });
+
+    // Estimated weight from length: the standard weight-for-length of a typical fish of that species.
+    function paintWtEst() {
+      const box = $('#wt-est'); const sp = $('#f-species').value.trim(); const cm = U.lenIn(num($('#f-length').value));
+      const hasWt = $('#f-weight').value.trim() || (!$('#f-weight-oz').hidden && $('#f-weight-oz').value.trim());
+      const kg = cm ? typicalWeightKg(sp, cm) : null;
+      box.hidden = !kg || !!hasWt; if (box.hidden) return;
+      $('#wt-est-text').textContent = `A typical ${U.len(cm)} ${sp} weighs about ${U.wt(kg)}.`;
+      box.dataset.kg = String(kg);
+    }
+    $('#wt-est-use').addEventListener('click', () => {
+      const kg = Number($('#wt-est').dataset.kg); if (!kg) return; dirty = true;
+      if (!$('#f-weight-oz').hidden) { const t = Math.round((kg / 0.45359237) * 16); $('#f-weight').value = String(Math.floor(t / 16)); $('#f-weight-oz').value = String(t % 16); }
+      else $('#f-weight').value = U.wtOut(kg);
+      draft.weightEst = true; $('#wt-est').hidden = true; toast('Estimated weight filled in – change it if you weighed the fish');
+    });
+    ['#f-weight', '#f-weight-oz'].forEach((x) => $(x).addEventListener('input', () => { if (draft) draft.weightEst = false; paintWtEst(); }));
+    ['#f-length', '#f-species'].forEach((x) => $(x).addEventListener('input', paintWtEst));
+
+    // Daily bag limit: how many of this fish you've kept today.
+    function paintKept() {
+      const el = $('#kept-hint'); const sp = $('#f-species').value.trim(); const lim = bagLimit(sp);
+      if (!lim) { el.hidden = true; return; }
+      const before = keptToday(sp, editing && editing.id); const after = before + (draftReleased === false ? draftCount : 0);
+      el.hidden = false; el.classList.toggle('over', after > lim); el.classList.toggle('full', after === lim);
+      el.textContent = draftReleased === false
+        ? `Kept today: ${after} of ${lim} ${sp} with this one${after > lim ? ' – over your limit' : after === lim ? ' – that’s your limit' : ''}.`
+        : `Kept today: ${before} of ${lim} ${sp}.`;
+    }
+
     // How many fish
     let draftCount = 1;
-    function paintCount() { $('#count-value').textContent = draftCount; $('#count-minus').disabled = draftCount <= 1; }
+    function paintCount() { $('#count-value').textContent = draftCount; $('#count-minus').disabled = draftCount <= 1; if (draft) paintKept(); }
     $('#count-minus').addEventListener('click', () => { draftCount = Math.max(1, draftCount - 1); dirty = true; paintCount(); });
     $('#count-plus').addEventListener('click', () => { draftCount = Math.min(999, draftCount + 1); dirty = true; paintCount(); });
     el.addEventListener('input', () => { dirty = true; $('#form-error').textContent = ''; });
@@ -562,7 +655,7 @@
     function paintReleased() { $$('#seg-released button').forEach((b) => { const on = (b.dataset.rel === 'released' && draftReleased === true) || (b.dataset.rel === 'kept' && draftReleased === false); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }); }
     $('#seg-released').addEventListener('click', (e) => {
       const b = e.target.closest('button'); if (!b) return; dirty = true;
-      const v = b.dataset.rel === 'released'; draftReleased = draftReleased === v ? null : v; paintReleased();
+      const v = b.dataset.rel === 'released'; draftReleased = draftReleased === v ? null : v; paintReleased(); paintKept();
     });
 
     // A photo taken earlier: offer to use the time and place stored in it.
@@ -747,7 +840,7 @@
     function open(c, pre) {
       editing = c || null; dirty = false; wxToken++;
       const photos = c ? [c.photo ? { photo: c.photo, thumb: c.thumb } : null, ...(c.extraPhotos || [])].filter((p) => p && p.photo) : [];
-      draft = c ? { photos, location: c.location, weather: c.weather, tide: c.tide, marine: c.marine, spotId: c.spotId || null } : { photos: [], location: null, weather: null, tide: undefined, spotId: (pre && pre.spotId) || null };
+      draft = c ? { photos, location: c.location, weather: c.weather, tide: c.tide, marine: c.marine, spotId: c.spotId || null, tackleId: c.tackleId || null, weightEst: !!c.weightEst } : { photos: [], location: null, weather: null, tide: undefined, spotId: (pre && pre.spotId) || null, tackleId: (pre && pre.tackleId) || null, weightEst: false };
       tideToken++;
       spotTouched = !!c || !!(pre && pre.spotId); draft.autoMatched = false; draft.newSpot = false;
       el.reset(); $('#form-error').textContent = ''; $$('.invalid', el).forEach((x) => x.classList.remove('invalid'));
@@ -775,7 +868,7 @@
       $('#f-notes').value = c ? c.notes || '' : '';
       $('#f-lat').value = ''; $('#f-lon').value = ''; $('.manual-loc').open = false;
       $('#f-spot-name').value = '';
-      fillChoices(); fillCombos(); showPhoto(); showLoc(); showWx(); fillSpots(); showTide(); paintCombos();
+      fillChoices(); fillTackleChips(); fillCombos(); showPhoto(); showLoc(); showWx(); fillSpots(); showTide(); paintCombos(); paintWtEst(); paintKept();
       openSheet($('#sheet-form'));
       if (!c) locate();
       else { if (c.location && !c.weather) loadWeather(); if (c.location && c.tide === undefined) loadTide(); }
@@ -796,6 +889,7 @@
         formError(`Add ${missing} to save.`, !species ? ($('#f-species').hidden ? $('#f-species-select') : $('#f-species')) : ($('#f-bait').hidden ? $('#f-bait-select') : $('#f-bait')));
         return;
       }
+      if (draftReleased === false && !(await overLimitOk(species, draftCount, editing && editing.id))) return;
       let spotId = draft.newSpot ? null : (draft.spotId || null);
       let createdSpot = null;
       if (draft.newSpot) {
@@ -827,7 +921,10 @@
         marine: draft.marine,
         tideTries: 0,
         spotId,
+        tackleId: draft.tackleId && tackle.some((t) => t.id === draft.tackleId && t.bait === bait) ? draft.tackleId : null,
+        weightEst: !!draft.weightEst && $('#f-weight').value.trim() !== '',
       };
+      const pb = personalBest(rec);
       const ses = !editing && sessionFor(rec.caughtAt);
       if (ses) rec.sessionId = ses.id;
       try {
@@ -840,7 +937,8 @@
       const wasEditing = !!editing; dirty = false;
       closeSheet();
       await reload();
-      if (wasEditing) toast('Catch updated');
+      if (pb) celebrate(pb, rec, wasEditing ? null : { label: 'Log another', fn: () => open(null, sameAs(rec)) });
+      else if (wasEditing) toast('Catch updated');
       else toast(`${draftCount > 1 ? draftCount + ' × ' : ''}${species} logged 🎣`, { label: 'Log another', fn: () => open(null, sameAs(rec)) });
       if (wasEditing && !$('#sheet-detail').hidden) renderDetail(rec.id);
     });
@@ -848,7 +946,7 @@
     return { open, cancel, onClosed };
   })();
   // What "Log another" and "Same again" carry over to the next catch.
-  const sameAs = (c) => ({ species: c.species, bait: c.bait, lureColor: c.lureColor, lureSize: c.lureSize, spotId: c.spotId && spotById(c.spotId) ? c.spotId : null, released: c.released });
+  const sameAs = (c) => ({ species: c.species, bait: c.bait, lureColor: c.lureColor, lureSize: c.lureSize, tackleId: c.tackleId || null, spotId: c.spotId && spotById(c.spotId) ? c.spotId : null, released: c.released });
 
   $('#btn-new').addEventListener('click', () => form.open());
 
@@ -895,7 +993,7 @@
       <h3 class="detail-title">${nFish(c) > 1 ? `${nFish(c)} × ` : ''}${esc(c.species)}</h3>
       <p class="detail-sub">${esc(fmtFull(c.caughtAt))}${c.released === true ? ' · Released' : c.released === false ? ' · Kept' : ''}</p>
       <div class="kv"><h4>Catch</h4><dl>
-        ${row('Lure / bait', c.bait)}${row('Colour', c.lureColor)}${row('Size', c.lureSize)}${nFish(c) > 1 ? row('Number of fish', String(nFish(c))) : ''}${row('Length', U.len(c.lengthCm))}${row('Weight', U.wt(c.weightKg))}${row('Released', c.released === true ? 'Yes' : c.released === false ? 'No – kept' : null)}
+        ${row('Lure / bait', c.bait)}${c.tackleId && tackle.find((t) => t.id === c.tackleId && t.name) ? row('From tackle box', tackle.find((t) => t.id === c.tackleId).name) : ''}${row('Colour', c.lureColor)}${row('Size', c.lureSize)}${nFish(c) > 1 ? row('Number of fish', String(nFish(c))) : ''}${row('Length', U.len(c.lengthCm))}${row(c.weightEst ? 'Weight (estimated)' : 'Weight', c.weightEst && c.weightKg != null ? '≈ ' + U.wt(c.weightKg) : U.wt(c.weightKg))}${row('Released', c.released === true ? 'Yes' : c.released === false ? 'No – kept' : null)}
       </dl></div>
       <div class="kv"><h4>Conditions</h4><dl>
         ${w ? `${row('Weather', `${wl.icon} ${wl.text}`)}${row('Air temp', U.temp(w.tempC))}${row('Feels like', U.temp(w.feelsC))}
@@ -995,7 +1093,7 @@
     }).sort((a, b) => (b.last ? b.last.caughtAt : 0) - (a.last ? a.last.caughtAt : 0) || a.sp.name.localeCompare(b.sp.name));
     el.innerHTML = rows.map(({ sp, list, last, topSp, topLure, d }) => `
       <button type="button" class="spot-card" data-spot="${sp.id}">
-        <span class="pin"><svg viewBox="0 0 24 24"><use href="#i-pin"/></svg></span>
+        <span class="pin heat-${spotHeat(sp)}" title="${spotHeat(sp) === 'hot' ? 'Fish in the last 30 days' : spotHeat(sp) === 'warm' ? 'Fish in the last 31–90 days' : 'No fish in 90 days'}"><svg viewBox="0 0 24 24"><use href="#i-pin"/></svg></span>
         <span style="min-width:0">
           <h3>${esc(sp.name)}</h3>
           <div class="meta">${last ? `Last catch ${fmtDate(last.caughtAt)}` : 'No catches yet'}${d != null ? (d < 30 ? ' · You are here' : ` · ${fmtDist(d)} away`) : ''}</div>
@@ -1409,7 +1507,7 @@
         const el = e.popup.getElement();
         const ms = el.querySelector('[data-map-spot]'); if (ms) ms.onclick = () => { const [la, lo] = ms.dataset.mapSpot.split(',').map(Number); map.closePopup(); spotForm.open(null, { location: { lat: la, lon: lo, source: 'map' } }); };
         const mt = el.querySelector('[data-map-trip]'); if (mt) mt.onclick = () => { const [la, lo] = mt.dataset.mapTrip.split(',').map(Number); map.closePopup(); tripForm.open(null, { lat: la, lon: lo }); };
-        const b = el.querySelector('[data-open]'); if (b) b.onclick = () => showDetail(b.dataset.open);
+        el.querySelectorAll('[data-open]').forEach((b) => { b.onclick = () => showDetail(b.dataset.open); });
         const s2 = el.querySelector('[data-spot]'); if (s2) s2.onclick = () => showSpot(s2.dataset.spot);
       });
     }
@@ -1438,27 +1536,53 @@
       .bindPopup(`<div class="pop"><b>${P.last ? 'Your last known location' : 'You are here'}</b><br>${P.lat.toFixed(4)}, ${P.lon.toFixed(4)}${P.accuracy ? `<br>±${Math.round(P.accuracy)} m` : ''}<div class="pop-actions"><button type="button" data-map-spot="${P.lat},${P.lon}">New spot here</button><button type="button" data-map-trip="${P.lat},${P.lon}">Plan a trip here</button></div></div>`);
   }
   $('#btn-map-locate').addEventListener('click', () => locateOnMap(true));
-  function renderMap(fit) {
-    if (!map) return; layer.clearLayers();
-    const pts = [];
-    const icon = L.divIcon({ className: '', html: '<div style="width:18px;height:18px;border-radius:50%;background:#e8611a;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>', iconSize: [18, 18], iconAnchor: [9, 9] });
-    catches.filter((c) => c.location).forEach((c) => {
-      const t = thumbUrl(c);
-      L.marker([c.location.lat, c.location.lon], { icon }).addTo(layer).bindPopup(
-        `<div class="pop">${t ? `<img src="${t}" alt="">` : ''}<b>${esc(c.species)}</b><br>${esc(c.bait)}<br>${fmtDate(c.caughtAt)}<br><button type="button" data-open="${c.id}">View catch</button></div>`);
-      pts.push([c.location.lat, c.location.lon]);
+  // Spots are coloured by how recently you caught fish there; nearby catches merge into one numbered pin.
+  let mapSpecies = ''; let catchLayer = null; let mapList = [];
+  const HEAT = { hot: '#e8611a', warm: '#13707f', cold: '#7f8c8e' };
+  function spotHeat(sp) {
+    const last = Math.max(0, ...catches.filter((c) => c.spotId === sp.id).map((c) => c.caughtAt)); if (!last) return 'cold';
+    const d = (Date.now() - last) / 86400000; return d <= 30 ? 'hot' : d <= 90 ? 'warm' : 'cold';
+  }
+  function fillMapSpecies() {
+    const all = [...new Set(catches.filter((c) => c.location).map((c) => c.species))].sort((a, b) => a.localeCompare(b));
+    if (!all.includes(mapSpecies)) mapSpecies = '';
+    $('#map-species').innerHTML = `<option value="">All fish</option>${all.map((v) => `<option value="${esc(v)}">${esc(v)}</option>`).join('')}`;
+    $('#map-species').value = mapSpecies; $('.map-filter').hidden = all.length < 2;
+  }
+  function catchPopup(c) { const t = thumbUrl(c); return `<div class="pop">${t ? `<img src="${t}" alt="">` : ''}<b>${esc(c.species)}</b><br>${esc(c.bait)}<br>${fmtDate(c.caughtAt)}<br><button type="button" data-open="${c.id}">View catch</button></div>`; }
+  const pinIcon = () => L.divIcon({ className: '', html: '<div class="map-pin"></div>', iconSize: [18, 18], iconAnchor: [9, 9] });
+  function drawCatches() {
+    if (!catchLayer) return; catchLayer.clearLayers();
+    if (!map.project || !map.getZoom) { mapList.forEach((c) => L.marker([c.location.lat, c.location.lon], { icon: pinIcon() }).addTo(catchLayer).bindPopup(catchPopup(c))); return; }
+    const z = map.getZoom(); const cells = new Map();
+    mapList.forEach((c) => { const p = map.project([c.location.lat, c.location.lon], z); const k = `${Math.floor(p.x / 52)}:${Math.floor(p.y / 52)}`; if (!cells.has(k)) cells.set(k, []); cells.get(k).push(c); });
+    cells.forEach((g) => {
+      if (g.length === 1) { L.marker([g[0].location.lat, g[0].location.lon], { icon: pinIcon() }).addTo(catchLayer).bindPopup(catchPopup(g[0])); return; }
+      const lat = g.reduce((a, c) => a + c.location.lat, 0) / g.length; const lon = g.reduce((a, c) => a + c.location.lon, 0) / g.length;
+      const size = g.length < 10 ? 34 : g.length < 100 ? 40 : 46;
+      const m = L.marker([lat, lon], { icon: L.divIcon({ className: '', html: `<div class="map-cluster" style="width:${size}px;height:${size}px" aria-label="${g.length} catches">${g.length}</div>`, iconSize: [size, size], iconAnchor: [size / 2, size / 2] }) }).addTo(catchLayer);
+      if (z >= 17) m.bindPopup(`<div class="pop"><b>${plural(g.length, 'catch')} here</b><ul class="pop-list">${g.slice(0, 8).map((c) => `<li><button type="button" data-open="${c.id}">${esc(c.species)} · ${fmtDate(c.caughtAt)}</button></li>`).join('')}</ul>${g.length > 8 ? `<small>and ${g.length - 8} more</small>` : ''}</div>`);
+      else m.on('click', () => map.fitBounds(g.map((c) => [c.location.lat, c.location.lon]), { padding: [60, 60], maxZoom: Math.min(18, z + 3) }));
     });
-    spots.forEach((sp) => {
-      const n = catches.filter((c) => c.spotId === sp.id).length;
-      L.circle([sp.lat, sp.lon], { radius: sp.radiusM || 250, color: '#13707f', weight: 2, fillOpacity: 0.08 }).addTo(layer);
-      L.marker([sp.lat, sp.lon], { icon: L.divIcon({ className: '', html: `<span class="spot-label">${esc(sp.name)}</span>`, iconSize: [0, 0] }) }).addTo(layer)
-        .bindPopup(`<div class="pop"><b>${esc(sp.name)}</b><br>${plural(n, 'catch')}<br><button type="button" data-spot="${sp.id}">View spot</button></div>`);
+  }
+  function renderMap(fit) {
+    if (!map) return; layer.clearLayers(); fillMapSpecies();
+    if (!catchLayer) { catchLayer = L.layerGroup().addTo(map); if (map.on) map.on('zoomend', drawCatches); }
+    mapList = catches.filter((c) => c.location && (!mapSpecies || c.species === mapSpecies));
+    const pts = mapList.map((c) => [c.location.lat, c.location.lon]);
+    drawCatches();
+    spots.filter((sp) => !mapSpecies || catches.some((c) => c.spotId === sp.id && c.species === mapSpecies)).forEach((sp) => {
+      const n = fishIn(catches.filter((c) => c.spotId === sp.id && (!mapSpecies || c.species === mapSpecies))); const heat = spotHeat(sp);
+      L.circle([sp.lat, sp.lon], { radius: sp.radiusM || 250, color: HEAT[heat], weight: 2, fillOpacity: heat === 'hot' ? 0.14 : 0.08, interactive: false }).addTo(layer);
+      L.marker([sp.lat, sp.lon], { icon: L.divIcon({ className: '', html: `<span class="spot-label heat-${heat}">${esc(sp.name)}</span>`, iconSize: [0, 0] }) }).addTo(layer)
+        .bindPopup(`<div class="pop"><b>${esc(sp.name)}</b><br>${plural(n, 'fish')}${mapSpecies ? ` (${esc(mapSpecies)})` : ''}<br><button type="button" data-spot="${sp.id}">View spot</button></div>`);
       pts.push([sp.lat, sp.lon]);
     });
+    $('#map-legend').hidden = !spots.length;
     if (fit && pts.length) { map.fitBounds(pts, { padding: [40, 40], maxZoom: 14 }); mapCentred = true; }
-    // Only cover the map with the message when we don't even know where you are.
-    $('#map-msg').hidden = pts.length > 0 || mapCentred; if (!pts.length) $('#map-msg').textContent = 'Your spots and catches with a location will show up here. Tap ◎ to find yourself on the map.';
+    $('#map-msg').hidden = pts.length > 0 || mapCentred; if (!pts.length) $('#map-msg').textContent = mapSpecies ? `No ${mapSpecies} on the map yet.` : 'Your spots and catches with a location will show up here. Tap ◎ to find yourself on the map.';
   }
+  $('#map-species').addEventListener('change', (e) => { mapSpecies = e.target.value; renderMap(true); });
 
   // Trips opens from the Now screen, so the Now tab stays lit there.
   function showView(v) {
@@ -1674,6 +1798,8 @@
         <div class="stat"><b>${big ? esc(big[0]) : '–'}</b><span>Biggest</span>${big ? `<small>${esc(big[1].species)}</small>` : ''}</div>
       </div>
 
+      ${insightsCard(list)}
+
       <div class="card">
         <h3>Best lure by conditions</h3>
         <p class="sub">Which lures caught fish in each condition${[oneSpecies && esc(spSel.value), $('#st-spot').value && $('#st-spot').value !== '__none' && spotById($('#st-spot').value) && 'at ' + esc(spotById($('#st-spot').value).name)].filter(Boolean).map((x) => ` (${x})`).join('')}.</p>
@@ -1692,6 +1818,7 @@
       ${oneSpecies ? '' : `<div class="card"><h3>Catches by species</h3><p class="sub">&nbsp;</p>${barsHtml(spRows, Math.max(...spRows.map((x) => x[1])))}</div>`}
 
       <div class="card"><h3>Top lures</h3><p class="sub">Catches per lure or bait.</p>${barsHtml(lrRows, Math.max(...lrRows.map((x) => x[1])))}</div>
+      ${tackleStatsCard(list)}
       ${tripsStatsCard()}`;
     body.querySelectorAll('.card .sub').forEach((el) => { if (el.innerHTML === '&nbsp;') el.remove(); });
   }
@@ -2310,6 +2437,7 @@
       if (loc) { try { weather = await withTimeout(fetchWeather(loc.lat, loc.lon, now), 8000); } catch { /* added later */ } }
       const m = loc ? matchSpot(loc) : null; const ses = sessionFor(now);
       const rel = { released: true, kept: false }[store('tl.lastReleased')] ?? null;
+      if (rel === false && !(await overLimitOk(combo.species, 1))) { toast('Not saved'); return; }
       const rec = { id: uid(), createdAt: now, updatedAt: now, caughtAt: now, species: combo.species, bait: combo.bait, lureColor: combo.lureColor || '', lureSize: combo.lureSize || '',
         lengthCm: null, weightKg: null, released: rel, notes: '', photo: null, thumb: null, extraPhotos: [], count: 1,
         location: loc, weather, weatherTries: 0, tide: undefined, marine: undefined, tideTries: 0,
@@ -2369,7 +2497,7 @@
       $('#now-session').innerHTML = `<div class="card session-card">
         <button type="button" class="btn go big block" id="ses-start">Start fishing</button>
         <p class="sub" style="margin-bottom:0">Tap when your line goes in. Fishamongus! times the session and tracks your lure, so Stats can show fish per hour.</p>
-        ${today.length ? `<p class="today-line">Today so far: <b>${plural(fishIn(today), 'fish')}</b></p>` : last ? `<p class="today-line">Last session: ${esc(relDay(last.start))}, ${durText(last.end - last.start)}, ${plural(fishIn(sessionCatches(last)), 'fish')}</p>` : ''}
+        ${keptLine()}${today.length ? `<p class="today-line">Today so far: <b>${plural(fishIn(today), 'fish')}</b></p>` : last ? `<p class="today-line">Last session: ${esc(relDay(last.start))}, ${durText(last.end - last.start)}, ${plural(fishIn(sessionCatches(last)), 'fish')}</p>` : ''}
         ${quick}</div>`;
       return;
     }
@@ -2382,6 +2510,7 @@
         <div><b>${h >= 0.25 ? round(n / h, 1) : '–'}</b><span>Per hour</span></div>
         <div><b title="${esc(sp ? sp.name : '')}">${sp ? esc(sp.name) : '–'}</b><span>Spot</span></div>
       </div>
+      ${keptLine()}
       <button type="button" class="ses-lure" id="ses-lure"><span><small>On your line</small><b>${l ? esc(l.bait) + (lureDesc(l) ? ' · ' + esc(lureDesc(l)) : '') : 'Not set yet'}</b></span><em>${l ? 'Change' : 'Set lure'}</em></button>
       ${quick}</div>`;
   }
@@ -2508,6 +2637,205 @@
   function resetSections() { sectionState = {}; store('tl.sections', '{}'); $$('.sec').forEach((s) => setSection(s, sectionShut(s.dataset.sec))); }
   $('#btn-reset-sections').addEventListener('click', () => { resetSections(); toast('Sections are back to how they started'); });
 
+  // ---------------------------------------------------------------- personal bests
+  // Compared with your earlier catches of the same fish: weight first (weighed, not estimated), then length.
+  function personalBest(rec) {
+    const prev = catches.filter((c) => c.species === rec.species && c.id !== rec.id);
+    if (rec.weightKg != null && !rec.weightEst) {
+      const ws = prev.filter((c) => c.weightKg != null && !c.weightEst).map((c) => c.weightKg);
+      if (ws.length && rec.weightKg > Math.max(...ws) + 1e-6) return { what: U.wt(rec.weightKg), was: U.wt(Math.max(...ws)) };
+    }
+    if (rec.lengthCm != null) {
+      const ls = prev.filter((c) => c.lengthCm != null).map((c) => c.lengthCm);
+      if (ls.length && rec.lengthCm > Math.max(...ls) + 1e-6) return { what: U.len(rec.lengthCm), was: U.len(Math.max(...ls)) };
+    }
+    return null;
+  }
+  function celebrate(pb, rec, action) {
+    toast(`🏆 New personal best! ${pb.what} ${rec.species} (was ${pb.was})`, action || { label: 'View', fn: () => showDetail(rec.id) }, 'pb');
+    if (navigator.vibrate) try { navigator.vibrate([40, 60, 40]); } catch { /* ignore */ }
+  }
+
+  // ---------------------------------------------------------------- weight from length
+  // Standard weight (Ws) equations, Anderson & Neumann (1996) and Henson (1991): log10(W g) = a + b·log10(total length mm).
+  // They give the weight of a typical fish in good condition, so the app labels the result as an estimate.
+  const WS = { 'Largemouth Bass': [-5.528, 3.273], 'Smallmouth Bass': [-5.329, 3.200], 'Spotted Bass': [-5.392, 3.215], 'Bluegill': [-5.374, 3.316],
+    'Black Crappie': [-5.618, 3.345], 'White Crappie': [-5.642, 3.332], 'Walleye': [-5.453, 3.180], 'Yellow Perch': [-5.386, 3.230],
+    'Channel Catfish': [-5.800, 3.294], 'Rainbow Trout': [-4.898, 2.990], 'Hybrid Striped Bass (Wiper)': [-5.201, 3.139], 'Common Carp': [-4.418, 2.859] };
+  function typicalWeightKg(species, cm) {
+    const k = WS[species]; if (!k || !cm || cm < 8 || cm > 200) return null;
+    return Math.pow(10, k[0] + k[1] * Math.log10(cm * 10)) / 1000;
+  }
+
+  // ---------------------------------------------------------------- daily bag limits
+  const getLimits = () => { try { return JSON.parse(store('tl.limits') || '{}') || {}; } catch { return {}; } };
+  const bagLimit = (sp) => { const n = getLimits()[sp]; return Number.isFinite(n) && n > 0 ? n : null; };
+  function keptToday(sp, exceptId) { const from = dayStart(Date.now()); return fishIn(catches.filter((c) => c.species === sp && c.released === false && c.caughtAt >= from && c.id !== exceptId)); }
+  async function overLimitOk(sp, n, exceptId) {
+    const lim = bagLimit(sp); if (!lim) return true;
+    const after = keptToday(sp, exceptId) + n; if (after <= lim) return true;
+    return askConfirm(`That makes ${after} ${sp} kept today. Your daily limit is ${lim}. Save it as kept anyway?`, 'Save anyway');
+  }
+  function keptLine() {
+    const lim = getLimits(); const from = dayStart(Date.now());
+    const parts = Object.keys(lim).map((sp) => ({ sp, n: fishIn(catches.filter((c) => c.species === sp && c.released === false && c.caughtAt >= from)), lim: lim[sp] })).filter((x) => x.n > 0);
+    return parts.length ? `<p class="kept-line">Kept today: ${parts.map((x) => `<span class="${x.n > x.lim ? 'over' : x.n === x.lim ? 'full' : ''}">${esc(x.sp)} ${x.n} of ${x.lim}</span>`).join(' · ')}</p>` : '';
+  }
+  const limitsSheet = (() => {
+    function paint() {
+      const lim = getLimits(); const names = Object.keys(lim).sort((a, b) => a.localeCompare(b));
+      $('#lim-list').innerHTML = names.length ? `<ul class="lim-list">${names.map((sp) => `<li><span><b>${esc(sp)}</b><small>Kept today: ${keptToday(sp)}</small></span><input inputmode="numeric" value="${lim[sp]}" data-lim="${esc(sp)}" aria-label="Daily limit for ${esc(sp)}"><button type="button" class="icon-x" data-lim-rm="${esc(sp)}" aria-label="Remove limit for ${esc(sp)}">×</button></li>`).join('')}</ul>`
+        : '<p class="help small">No limits yet.</p>';
+      const used = [...new Set(catches.map((c) => c.species))].sort((a, b) => a.localeCompare(b));
+      const opt = (v) => `<option value="${esc(v)}">${esc(v)}</option>`;
+      $('#lim-species').innerHTML = '<option value="">Choose a fish…</option>' + (used.length ? `<optgroup label="Fish you've caught">${used.map(opt).join('')}</optgroup>` : '') + SPECIES_GROUPS.map(([g, l]) => `<optgroup label="${esc(g)}">${l.map(opt).join('')}</optgroup>`).join('');
+    }
+    function save(lim) { store('tl.limits', JSON.stringify(lim)); renderNow(); }
+    $('#lim-add').addEventListener('click', () => {
+      const sp = $('#lim-species').value; const n = Math.round(num($('#lim-n').value) || 0);
+      if (!sp || n < 1) { toast('Choose a fish and enter a limit of 1 or more'); return; }
+      const lim = getLimits(); lim[sp] = n; save(lim); $('#lim-n').value = ''; paint();
+    });
+    $('#lim-list').addEventListener('change', (e) => { const i = e.target.closest('[data-lim]'); if (!i) return; const n = Math.round(num(i.value) || 0); const lim = getLimits(); if (n > 0) lim[i.dataset.lim] = n; else delete lim[i.dataset.lim]; save(lim); paint(); });
+    $('#lim-list').addEventListener('click', (e) => { const b = e.target.closest('[data-lim-rm]'); if (!b) return; const lim = getLimits(); delete lim[b.dataset.limRm]; save(lim); paint(); });
+    $('#btn-limits').addEventListener('click', () => { paint(); openSheet($('#sheet-limits')); });
+    return { paint };
+  })();
+
+  // ---------------------------------------------------------------- tackle box
+  const tackleUrls = new Map();
+  function tackleThumb(t) {
+    if (!t.thumb) return null; const k = t.id + ':' + (t.updatedAt || 0);
+    if (!tackleUrls.has(k)) tackleUrls.set(k, URL.createObjectURL(t.thumb)); return tackleUrls.get(k);
+  }
+  const tackleCatches = (t) => catches.filter((c) => c.tackleId === t.id);
+  const tackleBox = (() => {
+    let editingT = null; let thumb = null;
+    function list() {
+      $('#tk-list').innerHTML = tackle.length ? `<ul class="tk-list">${tackle.map((t) => { const u = tackleThumb(t); const n = fishIn(tackleCatches(t));
+        return `<li><button type="button" data-tk-edit="${t.id}">${u ? `<img src="${u}" alt="">` : '<span class="tk-ph" aria-hidden="true">🎣</span>'}<span><b>${esc(t.name || t.bait)}</b><small>${esc([t.name ? t.bait : '', t.color, t.size].filter(Boolean).join(' · '))}</small></span><em>${plural(n, 'fish')}</em></button></li>`; }).join('')}</ul>`
+        : '<p class="help small">Your tackle box is empty. Tap <b>Add</b> to save your first lure.</p>';
+    }
+    function fillTypes(v) {
+      const opt = (x) => `<option value="${esc(x)}">${esc(x)}</option>`;
+      $('#tk-type').innerHTML = '<option value="">Choose a type…</option>' + LURE_GROUPS.map(([g, l]) => `<optgroup label="${esc(g)}">${l.map(opt).join('')}</optgroup>`).join('') + `<optgroup label="Not listed"><option value="${OTHER}">Other – type it in…</option></optgroup>`;
+      const listed = v && KNOWN_LURES.has(v); $('#tk-type').value = !v ? '' : listed ? v : OTHER; $('#tk-type-other').hidden = !v || listed; $('#tk-type-other').value = v && !listed ? v : '';
+    }
+    function paintThumb() { $('#tk-thumb').innerHTML = thumb ? `<img src="${URL.createObjectURL(thumb)}" alt="Lure photo">` : '<span aria-hidden="true">🎣</span>'; $('#tk-photo-btn').textContent = thumb ? 'Change photo' : 'Add a photo'; }
+    function edit(t) {
+      editingT = t || null; thumb = t ? t.thumb || null : null;
+      $('#tk-form-title').textContent = t ? 'Edit lure' : 'Add a lure'; fillTypes(t ? t.bait : '');
+      $('#tk-name').value = t ? t.name || '' : ''; $('#tk-color').value = t ? t.color || '' : ''; $('#tk-size').value = t ? t.size || '' : '';
+      $('#tk-error').textContent = ''; $('#tk-delete').hidden = !t; paintThumb();
+      $('#tk-form').hidden = false; $('#tk-list').hidden = true; $('#tk-add').hidden = true; $('#tk-type').focus();
+    }
+    function done() { $('#tk-form').hidden = true; $('#tk-list').hidden = false; $('#tk-add').hidden = false; list(); }
+    $('#tk-type').addEventListener('change', () => { const o = $('#tk-type').value === OTHER; $('#tk-type-other').hidden = !o; if (o) $('#tk-type-other').focus(); });
+    $('#tk-photo-btn').addEventListener('click', () => $('#tk-photo').click());
+    $('#tk-photo').addEventListener('change', async (e) => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; try { thumb = (await processPhoto(f)).thumb; paintThumb(); } catch { toast('Could not read that image'); } });
+    $('#tk-cancel').addEventListener('click', done);
+    $('#tk-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const bait = $('#tk-type').value === OTHER ? $('#tk-type-other').value.trim() : $('#tk-type').value;
+      if (!bait) { $('#tk-error').textContent = 'Choose the type of lure or bait.'; return; }
+      const now = Date.now();
+      const t = { ...(editingT || { id: uid(), createdAt: now }), updatedAt: now, bait, name: $('#tk-name').value.trim(), color: $('#tk-color').value.trim(), size: $('#tk-size').value.trim(), thumb };
+      await DB.putTackle(t); await reload(); done(); toast(editingT ? 'Lure updated' : `${t.name || t.bait} added to your tackle box`);
+    });
+    $('#tk-delete').addEventListener('click', async () => {
+      if (!editingT || !(await askConfirm(`Remove ${editingT.name || editingT.bait} from your tackle box? Catches made with it keep their lure.`, 'Remove'))) return;
+      await DB.delTackle(editingT.id); await reload(); done();
+    });
+    $('#tk-list').addEventListener('click', (e) => { const b = e.target.closest('[data-tk-edit]'); if (b) edit(tackle.find((t) => t.id === b.dataset.tkEdit)); });
+    $('#tk-add').addEventListener('click', () => edit(null));
+    $('#btn-tackle').addEventListener('click', () => { done(); openSheet($('#sheet-tackle')); });
+    return { list };
+  })();
+  function tackleStatsCard(list) {
+    if (!tackle.length) return '';
+    const rows = tackle.map((t) => ({ t, n: fishIn(list.filter((c) => c.tackleId === t.id)) })).sort((a, b) => b.n - a.n);
+    const max = Math.max(1, ...rows.map((r) => r.n));
+    return `<div class="card"><h3>My tackle box</h3><p class="sub">Fish caught on each lure you've saved, with its colour and size.</p>
+      <ul class="tk-stats">${rows.map(({ t, n }) => { const u = tackleThumb(t); return `<li>${u ? `<img src="${u}" alt="">` : '<span class="tk-ph" aria-hidden="true">🎣</span>'}<span class="tk-st-main"><b>${esc(t.name || t.bait)}</b><small>${esc([t.name ? t.bait : '', t.color, t.size].filter(Boolean).join(' · '))}</small><span class="track"><span class="fill" style="width:${Math.max(2, (n / max) * 100)}%"></span></span></span><em>${n}</em></li>`; }).join('')}</ul>
+      <p class="note">Only catches logged by picking the lure from your tackle box count here.</p></div>`;
+  }
+
+  // ---------------------------------------------------------------- display (night mode, large text)
+  function paintDisplay() {
+    $$('#seg-theme button').forEach((b) => b.classList.toggle('on', b.dataset.theme === (store('tl.theme') === 'night' ? 'night' : 'auto')));
+    $$('#seg-text button').forEach((b) => b.classList.toggle('on', b.dataset.text === (store('tl.text') === 'large' ? 'large' : 'normal')));
+  }
+  $('#seg-theme').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; store('tl.theme', b.dataset.theme); applyDisplay(); paintDisplay(); });
+  $('#seg-text').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; store('tl.text', b.dataset.text); applyDisplay(); paintDisplay(); if (map) setTimeout(() => map.invalidateSize(), 50); });
+
+  // ---------------------------------------------------------------- plain-language insights (top of Stats)
+  const INSIGHT_PHRASE = {
+    sky: (b) => ({ Clear: 'under clear skies', 'Partly cloudy': 'under partly cloudy skies', Overcast: 'under overcast skies', Fog: 'in fog', Rain: 'in rain', Snow: 'in snow', Storm: 'in storms' }[b] || b),
+    pressure: (b) => `when the pressure was ${b.toLowerCase()}`,
+    temp: (b) => `with the air at ${b}`,
+    wind: (b) => `in ${b.replace(/ \(.*\)/, '').toLowerCase()} wind`,
+    time: (b) => { const x = b.replace(/ \(.*\)/, '').toLowerCase(); return x === 'dawn' || x === 'night' || x === 'midday' ? `at ${x}` : `in the ${x}`; },
+    tide: (b) => `on a ${b.toLowerCase()} tide`,
+    coef: (b) => `on ${b.replace(/ \(.*\)/, '').toLowerCase()} tides`,
+    moon: (b) => (b === 'Waxing' || b === 'Waning' ? `while the moon was ${b.toLowerCase()}` : `around the ${b.toLowerCase()}`),
+  };
+  function insightsCard(list) {
+    if (fishIn(list) < 5) return '';
+    const out = [];
+    // 1. The strongest lure-and-condition pair
+    let best = null;
+    Object.entries(DIMENSIONS).forEach(([dk, d]) => {
+      const pool = list.filter((c) => bucketOf(d, c) != null);
+      const byB = new Map(); pool.forEach((c) => { const b = bucketOf(d, c); const m = byB.get(b) || new Map(); m.set(c.bait, (m.get(c.bait) || 0) + nFish(c)); byB.set(b, m); });
+      byB.forEach((m, b) => { const tot = [...m.values()].reduce((a, v) => a + v, 0); const [lure, n] = ranked(m)[0];
+        if (n >= 3 && n / tot >= 0.4 && (!best || n > best.n || (n === best.n && n / tot > best.n / best.tot))) best = { dk, b, lure, n, tot }; });
+    });
+    if (best) out.push(`<b>${esc(best.lure)}</b> caught ${best.n} of your ${best.tot} fish ${esc(INSIGHT_PHRASE[best.dk](best.b))}.`);
+    // 2. When most fish come
+    const tc = ranked(countBy(list, (c) => DIMENSIONS.time.of(c))); const total = fishIn(list);
+    if (tc.length && tc[0][1] / total >= 0.35) out.push(`${pct(tc[0][1], total)}% of your fish came ${esc(INSIGHT_PHRASE.time(tc[0][0]))} (${tc[0][0].match(/\((.*)\)/) ? tc[0][0].match(/\((.*)\)/)[1] : ''}).`.replace(' ()', ''));
+    // 3. Fish per hour, when sessions are timed
+    const per = new Map(); sessions.filter((x) => x.end).forEach((x) => { lureTime(x).forEach((ms, l) => { const e = per.get(l) || { ms: 0, n: 0 }; e.ms += ms; per.set(l, e); }); sessionCatches(x).forEach((c) => { const e = per.get(c.bait) || { ms: 0, n: 0 }; e.n += nFish(c); per.set(c.bait, e); }); });
+    const fr = [...per.entries()].filter(([, e]) => e.ms >= HOUR_MS && e.n > 0).map(([l, e]) => ({ l, r: e.n / (e.ms / HOUR_MS) })).sort((a, b) => b.r - a.r)[0];
+    if (fr) out.push(`When you time it, <b>${esc(fr.l)}</b> is your fastest lure: ${round(fr.r, 1)} fish per hour.`);
+    // 4. Recent trend
+    const now = Date.now(); const a = fishIn(catches.filter((c) => c.caughtAt >= now - 30 * 86400000)); const b2 = fishIn(catches.filter((c) => c.caughtAt < now - 30 * 86400000 && c.caughtAt >= now - 60 * 86400000));
+    if (a + b2 >= 5 && a !== b2) out.push(`${plural(a, 'fish')} in the last 30 days, ${a > b2 ? 'up' : 'down'} from ${b2} the 30 days before.`);
+    if (!out.length) return '';
+    return `<div class="card insights"><h3>What your log says</h3><ul>${out.slice(0, 4).map((x) => `<li>${x}</li>`).join('')}</ul><p class="note">From your own catches, so small numbers can mislead.</p></div>`;
+  }
+
+  // ---------------------------------------------------------------- sample data
+  // A realistic month of fishing around Santa Monica, so a new user can see what Stats, Spots and Trips do.
+  async function loadDemo() {
+    const H = 3600000, D = 86400000, now = Date.now(); let seed = 11; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+    const sp = [{ id: 'demo-sp1', name: 'Santa Monica Pier (sample)', lat: 34.0092, lon: -118.4976, radiusM: 250, notes: 'Sample spot.', water: 'salt' }, { id: 'demo-sp2', name: 'Malibu Lagoon (sample)', lat: 34.0335, lon: -118.6795, radiusM: 500, notes: '', water: 'salt' }].map((x) => ({ ...x, demo: true, createdAt: now, updatedAt: now }));
+    const kinds = [['Calico Bass (Kelp Bass)', 'Swimbait', 'Sardine', '5 in'], ['Barred Sand Bass', 'Curly-tail grub', 'Motor oil', ''], ['California Halibut', 'Live bait', '', ''], ['Spotted Bay Bass', 'Curly-tail grub', 'Motor oil', ''], ['California Corbina', 'Sand crab', '', ''], ['Calico Bass (Kelp Bass)', 'Curly-tail grub', '', '']];
+    const cs = [];
+    for (let i = 0; i < 24; i++) { const [s, b, col, size] = kinds[Math.floor(rnd() * kinds.length)]; const t = now - (1 + Math.floor(rnd() * 40)) * D + Math.floor(rnd() * 12) * H - 6 * H; const p = rnd() < 0.7 ? sp[0] : sp[1];
+      cs.push({ id: 'demo-c' + i, demo: true, createdAt: t, updatedAt: t, caughtAt: t, species: s, bait: b, lureColor: col, lureSize: size, count: rnd() < 0.15 ? 2 : 1,
+        lengthCm: rnd() < 0.6 ? round(28 + rnd() * 30, 1) : null, weightKg: rnd() < 0.45 ? round(0.4 + rnd() * 2.2, 2) : null, released: rnd() < 0.75, notes: '', photo: null, thumb: null, extraPhotos: [],
+        location: { lat: p.lat + (rnd() - 0.5) * 0.002, lon: p.lon + (rnd() - 0.5) * 0.002, accuracy: 8, source: 'gps', at: t }, spotId: p.id,
+        weather: { tempC: round(13 + rnd() * 10, 1), feelsC: 15, humidity: 70, precipMm: 0, code: [0, 1, 2, 3, 3, 61][Math.floor(rnd() * 6)], isDay: true, cloud: 40, pressure: round(1009 + rnd() * 10, 1), pressureTrend: ['rising', 'steady', 'falling', 'falling'][Math.floor(rnd() * 4)], windKmh: round(rnd() * 28, 1), windDir: 270, gustKmh: 20, source: 'hourly', time: t },
+        weatherTries: 0, tide: { stationId: '9410840', stationName: 'Santa Monica, CA', distM: 300, stage: ['Rising', 'Falling', 'High slack', 'Low slack', 'Falling'][Math.floor(rnd() * 5)], rising: rnd() < 0.5, heightM: round(rnd() * 1.6, 2), lastType: 'L', lastT: t - 2 * H, nextType: 'H', nextT: t + 4 * H, coef: Math.round(40 + rnd() * 60) },
+        marine: { seaTempC: 17, waveM: 0.9, periodS: 12 }, tideTries: 0 }); }
+    const ses = { id: 'demo-s1', demo: true, start: now - 4 * D - 3 * H, end: now - 4 * D, lat: 34.0092, lon: -118.4976, spotId: 'demo-sp1', createdAt: now, lures: [{ bait: 'Swimbait', color: 'Sardine', size: '5 in', at: now - 4 * D - 3 * H }, { bait: 'Curly-tail grub', color: 'Motor oil', size: '', at: now - 4 * D - 1.5 * H }] };
+    cs[0].sessionId = ses.id; cs[0].caughtAt = now - 4 * D - 2.5 * H; cs[0].bait = 'Swimbait'; cs[1].sessionId = ses.id; cs[1].caughtAt = now - 4 * D - 1 * H; cs[1].bait = 'Curly-tail grub'; cs[2].sessionId = ses.id; cs[2].caughtAt = now - 4 * D - 0.5 * H; cs[2].bait = 'Curly-tail grub';
+    const ts = new Date(now + 2 * D); ts.setHours(6, 0, 0, 0);
+    const trip = { id: 'demo-t1', demo: true, name: 'Pier dawn session (sample)', lat: 34.0092, lon: -118.4976, spotId: 'demo-sp1', start: ts.getTime(), end: ts.getTime() + 4 * H, species: ['Calico Bass (Kelp Bass)'], gear: [], notes: '', createdAt: now, updatedAt: now };
+    for (const x of sp) await DB.putSpot(x); for (const c of cs) await DB.put(c); await DB.putSession(ses); await DB.putTrip(trip);
+    await reload(); toast('Sample data loaded – look around, then clear it from the banner');
+  }
+  async function clearDemo() {
+    if (!(await askConfirm('Remove all the sample data? Anything you logged yourself stays.', 'Remove'))) return;
+    for (const c of catches.filter((x) => x.demo)) await DB.del(c.id); for (const x of spots.filter((y) => y.demo)) await DB.delSpot(x.id);
+    for (const x of sessions.filter((y) => y.demo)) await DB.delSession(x.id); for (const x of trips.filter((y) => y.demo)) await DB.delTrip(x.id);
+    await reload(); toast('Sample data removed');
+  }
+  function paintDemoBar() { $('#demo-bar').hidden = !(catches.some((c) => c.demo) || spots.some((x) => x.demo) || trips.some((x) => x.demo)); }
+  $('#demo-clear').addEventListener('click', clearDemo);
+  $('#demo-try-log').addEventListener('click', loadDemo);
+
   // ---------------------------------------------------------------- settings, export, import
   function paintBackupInfo() {
     const { last, since } = backupState();
@@ -2519,7 +2847,7 @@
   }
   $('#seg-weight').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; settings.wtOz = b.dataset.wt === 'oz'; store('tl.wtOz', settings.wtOz ? '1' : '0'); paintUnits(); renderList(); renderSpots(); });
   $('#btn-menu').addEventListener('click', async () => {
-    paintUnits(); $('#app-version').textContent = `Fishamongus! version ${APP_VERSION}`;
+    paintUnits(); paintDisplay(); $('#app-version').textContent = `Fishamongus! version ${APP_VERSION}`;
     $('#storage-info').textContent = ''; paintBackupInfo();
     if (navigator.storage && navigator.storage.estimate) {
       try { const e = await navigator.storage.estimate(); const p = navigator.storage.persisted ? await navigator.storage.persisted() : false;
@@ -2569,11 +2897,12 @@
     if (!catches.length && !spots.length && !trips.length && !sessions.length) return toast('Nothing to export yet');
     toast('Preparing backup…');
     const out = [];
-    for (const c of catches) {
+    const tk = []; for (const t of tackle) tk.push({ ...t, thumb: t.thumb ? await blobToDataURL(t.thumb) : null });
+    for (const c of catches.filter((x) => !x.demo)) {
       const extra = []; for (const p of c.extraPhotos || []) extra.push({ photo: await blobToDataURL(p.photo), thumb: p.thumb ? await blobToDataURL(p.thumb) : null });
       out.push({ ...c, photo: c.photo ? await blobToDataURL(c.photo) : null, thumb: c.thumb ? await blobToDataURL(c.thumb) : null, extraPhotos: extra });
     }
-    const ok = await deliverFile(new Blob([JSON.stringify({ app: 'fishamongus', version: 4, exportedAt: new Date().toISOString(), spots, trips, sessions, catches: out })], { type: 'application/json' }), `fishamongus-backup-${stamp()}.json`);
+    const ok = await deliverFile(new Blob([JSON.stringify({ app: 'fishamongus', version: 5, exportedAt: new Date().toISOString(), spots: spots.filter((x) => !x.demo), trips: trips.filter((x) => !x.demo), sessions: sessions.filter((x) => !x.demo), tackle: tk, limits: getLimits(), catches: out })], { type: 'application/json' }), `fishamongus-backup-${stamp()}.json`);
     if (ok) { store('tl.lastBackup', String(Date.now())); store('tl.backupSnooze', '0'); updateBackupNudge(); paintBackupInfo(); toast('Backup saved'); }
   }
   $('#btn-export-csv').addEventListener('click', async () => {
@@ -2603,6 +2932,8 @@
       let nt = 0;
       for (const x of (Array.isArray(j.trips) ? j.trips : [])) { if (x && x.id && Number.isFinite(x.start) && Number.isFinite(x.lat)) { await DB.putTrip(x); nt++; } }
       for (const x of (Array.isArray(j.sessions) ? j.sessions : [])) { if (x && x.id && Number.isFinite(x.start)) await DB.putSession(x); }
+      for (const x of (Array.isArray(j.tackle) ? j.tackle : [])) { if (x && x.id && x.bait) await DB.putTackle({ ...x, thumb: x.thumb ? await dataURLToBlob(x.thumb) : null }); }
+      if (j.limits && typeof j.limits === 'object' && !Object.keys(getLimits()).length) store('tl.limits', JSON.stringify(j.limits));
       for (const x of (Array.isArray(j.spots) ? j.spots : [])) { if (x && x.id && x.name && Number.isFinite(x.lat) && Number.isFinite(x.lon)) { await DB.putSpot(x); ns++; } }
       for (const c of j.catches) {
         if (!c.id || !c.species) continue;
@@ -2634,9 +2965,10 @@
   $('#install-later').addEventListener('click', () => { store('tl.installSnooze', String(Date.now() + 30 * 86400000)); updateInstallNudge(); });
   const firstRun = !store('tl.welcomed');
   $('#welcome-go').addEventListener('click', () => { closeSheet(); updateInstallNudge(); refreshNow(true); });
+  $('#welcome-demo').addEventListener('click', async () => { closeSheet(); updateInstallNudge(); await loadDemo(); refreshNow(true); });
   if (!store('tl.welcomed')) { store('tl.welcomed', '1'); setTimeout(() => openSheet($('#sheet-welcome')), 50); } else updateInstallNudge();
 
-  setSpotsMode(spotsMode);
+  setSpotsMode(spotsMode); paintOffline();
   reload().then(() => { if (!firstRun) refreshNow(); }).then(backfillWeather).then(backfillTides).then(backfillMarine).catch((err) => { console.error(err); toast('Storage is unavailable in this browser mode'); });
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();

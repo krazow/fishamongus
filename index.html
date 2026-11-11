@@ -26,6 +26,8 @@
     </button>
   </header>
 
+  <div class="offline-bar" id="offline-bar" role="status" hidden>No signal – weather and tides will be added when you're back online.</div>
+  <div class="demo-bar" id="demo-bar" hidden><span>You're looking at <b>sample data</b>.</span><button type="button" class="btn sm" id="demo-clear">Clear it</button></div>
   <main>
     <!-- NOW VIEW (home) -->
     <section id="view-now" class="view active" aria-label="Now">
@@ -61,7 +63,7 @@
       <div class="summary" id="summary"></div>
       <div class="search-wrap">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg>
-        <input type="search" id="search" placeholder="Search species, lure, spot, notes" autocomplete="off">
+        <input type="search" id="search" aria-label="Search your catches" placeholder="Search species, lure, spot, notes" autocomplete="off">
       </div>
       <div class="log-filters" id="log-filters" hidden>
         <div class="select-wrap sm"><select id="lf-when" aria-label="When">
@@ -75,6 +77,7 @@
         <svg viewBox="0 0 32 32" aria-hidden="true"><use href="#i-fish"/></svg>
         <h2>No catches yet</h2>
         <p>Tap the orange <strong>+</strong> button when you land one. Your location and the weather are filled in for you.</p>
+        <button type="button" class="btn" id="demo-try-log">Try it with sample data</button>
       </div>
     </section>
 
@@ -119,6 +122,8 @@
         <button type="button" class="map-fab" id="btn-tides" aria-label="Tides near the map center">
           <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wave"/></svg><span>Tides</span>
         </button>
+        <div class="map-legend" id="map-legend" hidden><span><i style="background:#e8611a"></i>Fish in last 30 days</span><span><i style="background:#13707f"></i>31–90 days</span><span><i style="background:#7f8c8e"></i>Older or none</span></div>
+        <div class="select-wrap sm map-filter"><select id="map-species" aria-label="Show species on the map"></select></div>
         <button type="button" class="map-locate" id="btn-map-locate" aria-label="Show where I am">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor"/><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         </button>
@@ -138,7 +143,7 @@
 
   <!-- Running fishing session, shown above the tab bar on every screen but Now -->
   <div class="session-bar" id="session-bar" hidden>
-    <button type="button" id="sb-open"><span class="live-dot" aria-hidden="true"></span><span id="sb-text"></span></button>
+    <button type="button" id="sb-open" aria-label="Open the running fishing session"><span class="live-dot" aria-hidden="true"></span><span id="sb-text"></span></button>
     <button type="button" class="btn sm" id="sb-end">End</button>
   </div>
 
@@ -180,19 +185,20 @@
           <div class="select-wrap">
             <select id="f-species-select" required></select>
           </div>
-          <input id="f-species" class="other-species" placeholder="Type the fish name" autocomplete="off" hidden>
+          <input id="f-species" aria-label="Fish name" class="other-species" placeholder="Type the fish name" autocomplete="off" hidden>
           <p class="field-error" id="err-species" hidden>Choose the fish type.</p>
         </div>
 
         <!-- Lure / bait -->
         <div class="field">
           <label for="f-bait-select">Lure or bait <span class="req">required</span></label>
+          <div class="tk-chips" id="tackle-chips" hidden></div>
           <div class="chips" id="bait-chips"></div>
           <div class="select-wrap"><select id="f-bait-select"></select></div>
-          <input id="f-bait" class="other-species" placeholder="Type the lure or bait" autocomplete="off" hidden>
+          <input id="f-bait" aria-label="Lure or bait name" class="other-species" placeholder="Type the lure or bait" autocomplete="off" hidden>
           <div class="row2 lure-details">
-            <input id="f-lure-color" placeholder="Colour (optional)" autocomplete="off">
-            <input id="f-lure-size" placeholder="Size (optional)" autocomplete="off">
+            <input id="f-lure-color" aria-label="Lure colour" placeholder="Colour (optional)" autocomplete="off">
+            <input id="f-lure-size" aria-label="Lure size" placeholder="Size (optional)" autocomplete="off">
           </div>
           <p class="field-error" id="err-bait" hidden>Add the lure or bait.</p>
         </div>
@@ -234,8 +240,8 @@
           <details class="manual-loc">
             <summary>Enter coordinates by hand</summary>
             <div class="row2">
-              <input id="f-lat" inputmode="decimal" placeholder="Latitude">
-              <input id="f-lon" inputmode="decimal" placeholder="Longitude">
+              <input id="f-lat" aria-label="Latitude" inputmode="decimal" placeholder="Latitude">
+              <input id="f-lon" aria-label="Longitude" inputmode="decimal" placeholder="Longitude">
             </div>
             <button type="button" class="chip" id="btn-manual-loc">Use these coordinates</button>
           </details>
@@ -246,7 +252,7 @@
         <div class="field">
           <label for="f-spot">Spot</label>
           <div class="select-wrap"><select id="f-spot"></select></div>
-          <input id="f-spot-name" class="other-species" placeholder="Name this spot, e.g. North cove dock" autocomplete="off" hidden>
+          <input id="f-spot-name" aria-label="Name of the new spot" class="other-species" placeholder="Name this spot, e.g. North cove dock" autocomplete="off" hidden>
           <p class="help small spot-hint" id="spot-hint"></p>
         </div>
 
@@ -270,6 +276,7 @@
             </div>
           </div>
         </div>
+        <div class="wt-est" id="wt-est" hidden><span id="wt-est-text"></span><button type="button" class="chip" id="wt-est-use">Use estimate</button></div>
         <div class="field">
           <label id="lbl-count">How many fish?</label>
           <div class="stepper" role="group" aria-labelledby="lbl-count">
@@ -285,6 +292,7 @@
             <button type="button" data-rel="released">Released</button>
             <button type="button" data-rel="kept">Kept</button>
           </div>
+          <p class="kept-hint" id="kept-hint" hidden></p>
         </div>
         <div class="field">
           <label for="f-notes">Notes</label>
@@ -350,8 +358,8 @@
           <details class="manual-loc" id="sp-manual">
             <summary>Enter coordinates by hand</summary>
             <div class="row2">
-              <input id="sp-lat" inputmode="decimal" placeholder="Latitude">
-              <input id="sp-lon" inputmode="decimal" placeholder="Longitude">
+              <input id="sp-lat" aria-label="Latitude" inputmode="decimal" placeholder="Latitude">
+              <input id="sp-lon" aria-label="Longitude" inputmode="decimal" placeholder="Longitude">
             </div>
             <button type="button" class="chip" id="sp-use-manual">Use these coordinates</button>
           </details>
@@ -417,8 +425,8 @@
           <label for="tr-where">Where</label>
           <div class="select-wrap"><select id="tr-where"></select></div>
           <div class="row2" id="tr-coords" hidden style="margin-top:8px">
-            <input id="tr-lat" inputmode="decimal" placeholder="Latitude">
-            <input id="tr-lon" inputmode="decimal" placeholder="Longitude">
+            <input id="tr-lat" aria-label="Latitude" inputmode="decimal" placeholder="Latitude">
+            <input id="tr-lon" aria-label="Longitude" inputmode="decimal" placeholder="Longitude">
           </div>
           <p class="help small" id="tr-where-hint" style="margin-top:6px"></p>
         </div>
@@ -459,7 +467,7 @@
         <div class="chips big" id="lp-chips"></div>
         <div class="field">
           <div class="select-wrap"><select id="lp-select" aria-label="Lure or bait"></select></div>
-          <input id="lp-other" class="other-species" placeholder="Type the lure or bait" autocomplete="off" hidden>
+          <input id="lp-other" aria-label="Lure or bait name" class="other-species" placeholder="Type the lure or bait" autocomplete="off" hidden>
         </div>
         <div class="row2">
           <input id="lp-color" placeholder="Colour (optional)" autocomplete="off" aria-label="Colour">
@@ -471,6 +479,65 @@
         <button type="submit" class="btn primary block big">Use this lure</button>
       </div>
     </form>
+  </div>
+
+  <!-- TACKLE BOX -->
+  <div class="sheet" id="sheet-tackle" role="dialog" aria-modal="true" aria-labelledby="tackle-title" hidden>
+    <div class="sheet-body">
+      <div class="sheet-head">
+        <button type="button" class="text-btn" data-close>Close</button>
+        <h2 id="tackle-title">My tackle box</h2>
+        <button type="button" class="text-btn strong" id="tk-add">Add</button>
+      </div>
+      <div class="sheet-scroll">
+        <p class="help">Save the lures you actually own, with their colour, size and a photo. Pick them when you log a catch, and Stats shows how each one does.</p>
+        <div id="tk-list"></div>
+        <form id="tk-form" class="tk-form card" novalidate hidden>
+          <h3 id="tk-form-title">Add a lure</h3>
+          <div class="field">
+            <label for="tk-type">Type</label>
+            <div class="select-wrap"><select id="tk-type"></select></div>
+            <input id="tk-type-other" aria-label="Lure or bait name" class="other-species" placeholder="Type the lure or bait" autocomplete="off" hidden>
+          </div>
+          <div class="field">
+            <label for="tk-name">Name <span class="req">optional</span></label>
+            <input id="tk-name" placeholder="e.g. Keitech 4.8 Easy Shiner" autocomplete="off">
+          </div>
+          <div class="row2">
+            <div class="field"><label for="tk-color">Colour</label><input id="tk-color" placeholder="e.g. Sardine" autocomplete="off"></div>
+            <div class="field"><label for="tk-size">Size</label><input id="tk-size" placeholder="e.g. 5 in, 1/2 oz" autocomplete="off"></div>
+          </div>
+          <div class="field">
+            <label>Photo <span class="req">optional</span></label>
+            <input type="file" id="tk-photo" accept="image/*" hidden>
+            <div class="tk-photo-row"><span class="tk-thumb" id="tk-thumb"></span><button type="button" class="btn sm" id="tk-photo-btn">Add a photo</button></div>
+          </div>
+          <p class="form-error" id="tk-error" role="alert"></p>
+          <div class="btn-row"><button type="button" class="btn" id="tk-cancel">Cancel</button><button type="submit" class="btn primary">Save lure</button></div>
+          <button type="button" class="btn danger" id="tk-delete" style="margin-top:8px" hidden>Remove from tackle box</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- BAG LIMITS -->
+  <div class="sheet" id="sheet-limits" role="dialog" aria-modal="true" aria-labelledby="limits-title" hidden>
+    <div class="sheet-body">
+      <div class="sheet-head">
+        <span></span>
+        <h2 id="limits-title">Daily bag limits</h2>
+        <button type="button" class="text-btn strong" data-close>Done</button>
+      </div>
+      <div class="sheet-scroll">
+        <p class="help">Enter the number of each fish you may keep per day where you fish. The app counts fish you mark <b>Kept</b> today, shows it on the Now screen, and warns you before you go over. Limits vary by place and season – check your state's rules.</p>
+        <div id="lim-list"></div>
+        <div class="lim-add">
+          <div class="select-wrap"><select id="lim-species" aria-label="Fish"></select></div>
+          <input id="lim-n" inputmode="numeric" placeholder="Limit" aria-label="Daily limit">
+          <button type="button" class="btn primary sm" id="lim-add">Add</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="sheet" id="sheet-welcome" role="dialog" aria-modal="true" aria-labelledby="welcome-title" hidden>
@@ -488,6 +555,7 @@
           <li><b>Camera and photos</b> are used only when you add a photo to a catch.</li>
         </ul>
         <button type="button" class="btn primary" id="welcome-go">Get started</button>
+        <button type="button" class="btn" id="welcome-demo" style="margin-top:10px">Look around with sample data first</button>
       </div>
     </div>
   </div>
@@ -513,6 +581,25 @@
           </div>
         </div>
         <div class="field">
+          <label>Display</label>
+          <div class="seg" id="seg-theme" role="group" aria-label="Colour scheme">
+            <button type="button" data-theme="auto">Day (follows phone)</button>
+            <button type="button" data-theme="night">Night (red)</button>
+          </div>
+          <div class="seg" id="seg-text" role="group" aria-label="Text size" style="margin-top:8px">
+            <button type="button" data-text="normal">Normal text</button>
+            <button type="button" data-text="large">Large text</button>
+          </div>
+          <p class="help small" style="margin-top:6px">Night mode turns the screen dim red, so it doesn't spoil your night vision at dawn or after dark.</p>
+        </div>
+        <div class="field">
+          <label>Tackle and limits</label>
+          <div class="stack">
+            <button type="button" class="btn" id="btn-tackle">My tackle box</button>
+            <button type="button" class="btn" id="btn-limits">Daily bag limits</button>
+          </div>
+        </div>
+        <div class="field">
           <label>Backup</label>
           <p class="help">Your log is saved only on this phone. Export a backup now and then so you don't lose it.</p>
           <div class="stack">
@@ -530,6 +617,8 @@
           <details><summary>Why is there no tide on a catch?</summary><p>Tides come from NOAA and cover US coasts. They're recorded within about 15 mi of a NOAA tide station, or at spots set to Saltwater. Spots set to Freshwater never show tides. With no signal, the tide is added later when you're online.</p></details>
           <details><summary>What does Start fishing do?</summary><p>It times your session and keeps track of the lure on your line (tap it to change lures). Catches you log are added to the session. Stats then shows fish per hour for each lure, which is fairer than raw counts. A session left running over 12 hours ends 30 minutes after your last catch.</p></details>
           <details><summary>How are the best lures and best hours chosen?</summary><p>From your own catches: the app counts fish caught in each condition (sky, pressure, temperature, wind, time of day, tide, moon). Counts favour lures you use most; fishing sessions and planned trips record hours fished, which gives fish per hour.</p></details>
+          <details><summary>Where does the estimated weight come from?</summary><p>For 12 common freshwater species (black bass, bluegill, crappie, walleye, perch, channel catfish, rainbow trout, wiper and carp), fisheries "standard weight" equations give the weight of a typical fish of that length. Your fish may be heavier or lighter, so it's saved as an estimate and doesn't count as a personal best.</p></details>
+          <details><summary>How do bag limits work?</summary><p>Set a daily limit for any fish in Settings → Daily bag limits. Fish marked Kept today count towards it. The app warns you before you save one over the limit, but it doesn't know your local rules – always check them.</p></details>
           <details><summary>How do I log a fish I caught earlier?</summary><p>Add the photo you took: the app offers to use the time and place stored in it. Or change "Caught at" and the weather and tide are looked up for that time.</p></details>
           <details><summary>Does the map work with no signal?</summary><p>Map areas you've already looked at while online are kept on the phone and show without signal. Open the map at your spots once at home to keep them handy.</p></details>
         </div>

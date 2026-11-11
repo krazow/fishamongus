@@ -78,6 +78,19 @@ Tides show only where they apply:
 - **Saltwater spot:** always.
 - **Freshwater spot:** never. Use this for lakes and rivers near the coast.
 
+**New in 3.0:**
+- **What your log says:** the top of Stats sums up your log in plain sentences, each with the number of fish behind it. For example: "Curly-tail grub caught 8 of your 13 fish around the new moon", your best time of day, your fastest lure per hour, and how the last 30 days compare with the 30 before.
+- **Personal-best moments:** when a catch beats your heaviest (or, without a weight, longest) fish of that species, a gold message says so and the phone buzzes. Estimated weights don't count.
+- **My tackle box** (Settings): save the lures you own, with type, name, colour, size and a photo. They appear as one-tap picks in the catch form, and Stats shows how many fish each one caught.
+- **Map:** nearby catches merge into a numbered pin that zooms in when tapped. Spots are coloured orange for fish in the last 30 days, teal for 31–90 days and grey for older or none, on the map and in the Spots list. A menu shows one species at a time.
+- **Night mode and large text** (Settings → Display): a dim red screen that doesn't spoil your night vision, and 15% larger text everywhere.
+- **Daily bag limits** (Settings): set a limit per species. The catch form shows "Kept today: 2 of 5", the Now screen shows what you've kept today, and the app asks before saving a fish over the limit. Limits differ by place and season, so check your state's rules.
+- **No-signal banner:** one line at the top when the phone is offline.
+- **Swipe a catch** in the Log to the left for Edit, Same again and Delete.
+- **Weight from length:** for 12 common freshwater species, entering a length offers the weight of a typical fish that long (standard weight equations, Anderson & Neumann 1996). It's saved as an estimate and shown as "≈" on the catch's page.
+- **Sample data:** "Look around with sample data first" on the welcome screen, or "Try it with sample data" on an empty log, loads a month of example fishing. A banner clears it in one tap and leaves anything you logged yourself. Sample data is never included in backups.
+- Screen-reader labels on every field and button.
+
 **Collapsible sections:** on the Now screen, Stats, a spot's page, a trip plan, the tides panel and a catch's page, tap a section's header to fold it away or open it again. The app remembers what you folded. Long or less-used sections start folded: Catches by species, Top lures and Trips in Stats; Species here on a spot; Regulations on a trip; and a catch's Conditions, Tide and Location, which still show their key values (for example "⛅ Partly cloudy · 58°F") while folded. **Reset folded sections** in Settings puts them back.
 
 Settings (units, pounds or pounds and ounces, backup, and Help) is the gear icon at the top right. The app also has a map of all your catch spots, search, an "Open spot in Maps" button for getting back to a spot, sharing, and imperial/metric units.
