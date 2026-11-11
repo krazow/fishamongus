@@ -1,6 +1,6 @@
 // Fishamongus! service worker: keeps the app working with no signal.
 // Bump VERSION whenever you change any app file so phones pick up the update.
-const VERSION = 'tl-v17';
+const VERSION = 'tl-v18';
 const TILES = 'tl-tiles';          // map tiles you've looked at, kept across app updates
 const MAX_TILES = 1500;            // about 30 MB
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest',
@@ -21,6 +21,8 @@ self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+  // The demo video page is left to the browser: no caching of large video files, and seeking (range requests) works normally.
+  if (url.origin === location.origin && url.pathname.includes('/demo/')) return;
   // Weather, tides and marine data always go to the network.
   if (url.hostname.endsWith('open-meteo.com') || url.hostname.endsWith('noaa.gov')) return;
   // Map tiles: only tiles you've already viewed are kept (no bulk downloading, per OpenStreetMap's tile policy).

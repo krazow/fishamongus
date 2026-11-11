@@ -1,5 +1,7 @@
 # Fishamongus! – Catch Log
 
+**[Watch the 2-minute video tour](https://krazow.github.io/fishamongus/demo/)**
+
 A phone app (installable web app) for logging fish you catch. Each catch records:
 
 - **GPS coordinates** from your phone, with accuracy (or type coordinates in by hand)

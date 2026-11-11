@@ -1,0 +1,108 @@
+1
+00:00:00,000 --> 00:00:04,000
+A quick tour of the app.
+
+2
+00:00:04,000 --> 00:00:08,750
+Fishamongus! is a fishing log that lives on your phone. No account, nothing uploaded.
+
+3
+00:00:08,750 --> 00:00:13,000
+New here? Load a month of sample fishing to look around, and clear it in one tap.
+
+4
+00:00:13,000 --> 00:00:17,750
+The Now screen shows the weather, wind, pressure trend, tide, moon and water temperature where you stand.
+
+5
+00:00:17,750 --> 00:00:22,250
+Solunar bite times are worked out on the phone from the moon, with a rating for the day.
+
+6
+00:00:22,250 --> 00:00:27,000
+It suggests the lures that have caught you the most fish in conditions like these.
+
+7
+00:00:27,000 --> 00:00:31,750
+Tap Start fishing when your line goes in. The app times the session and tracks your lure.
+
+8
+00:00:31,750 --> 00:00:36,000
+Switch lures with one tap, so Stats can show fish per hour for each one.
+
+9
+00:00:36,000 --> 00:00:40,750
+Tap + to log a catch. Add a photo, then search more than 240 fish by name.
+
+10
+00:00:40,750 --> 00:00:45,250
+Species with subspecies get a second menu – Florida bass, Westslope cutthroat and more.
+
+11
+00:00:45,250 --> 00:00:49,750
+Your lure is already on the form, and GPS, weather and tide are filled in automatically.
+
+12
+00:00:49,750 --> 00:00:54,500
+No scale? Enter the length and the app estimates a typical weight for that fish.
+
+13
+00:00:54,500 --> 00:00:58,750
+Every catch is saved with its photo, lure, place and conditions, grouped by day.
+
+14
+00:00:58,750 --> 00:01:02,750
+Swipe a catch to edit it, log the same again, or delete it.
+
+15
+00:01:02,750 --> 00:01:07,500
+Open a catch to see everything. Sections fold away and still show their key values.
+
+16
+00:01:07,500 --> 00:01:12,750
+Stats sums up your log in plain words, always with the number of fish behind it.
+
+17
+00:01:12,750 --> 00:01:17,250
+See which lures work in each sky, pressure, wind, tide, moon and solunar period.
+
+18
+00:01:17,250 --> 00:01:22,000
+Timed sessions give fish per hour for each lure – a fairer test than raw counts.
+
+19
+00:01:22,000 --> 00:01:26,750
+Save your spots. Catches made there are linked automatically, and colours show where fish came lately.
+
+20
+00:01:26,750 --> 00:01:31,500
+Each spot has its own stats: best lures, best conditions and recent catches.
+
+21
+00:01:31,500 --> 00:01:36,250
+Plan a trip: the hourly forecast, with your best hours marked from your own history.
+
+22
+00:01:36,250 --> 00:01:41,000
+Trip plans add NOAA tides, sunrise and sunset, and the bite times during your trip.
+
+23
+00:01:41,000 --> 00:01:45,250
+Keep your real lures in a tackle box and pick them with one tap when you log a catch.
+
+24
+00:01:45,250 --> 00:01:49,250
+Set daily limits. The app counts what you keep and warns you before you go over.
+
+25
+00:01:49,250 --> 00:01:53,750
+Your log stays on your phone, and automatic backups keep a copy safe.
+
+26
+00:01:53,750 --> 00:01:58,000
+Fishing before dawn? Night mode turns the screen dim red to protect your night vision.
+
+27
+00:01:58,000 --> 00:02:03,500
+Open the link in Safari or Chrome, then add it to your home screen.
+
