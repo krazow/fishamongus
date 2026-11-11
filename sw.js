@@ -1,6 +1,6 @@
 // Fishamongus! service worker: keeps the app working with no signal.
 // Bump VERSION whenever you change any app file so phones pick up the update.
-const VERSION = 'tl-v25';
+const VERSION = 'tl-v26';
 const TILES = 'tl-tiles';          // map tiles you've looked at, kept across app updates
 const MAX_TILES = 1500;            // about 30 MB
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest',
@@ -35,14 +35,6 @@ self.addEventListener('fetch', (e) => {
       } catch {
         return (await cache.match(req)) || Response.error();
       }
-    }));
-    return;
-  }
-  // Washington rules and stocking data: always try the network first, fall back to the last copy.
-  if (url.origin === location.origin && url.pathname.includes('/data/')) {
-    e.respondWith(caches.open(VERSION).then(async (cache) => {
-      try { const res = await fetch(req); if (res.ok) cache.put(url.pathname, res.clone()); return res; }
-      catch { return (await cache.match(url.pathname)) || Response.error(); }
     }));
     return;
   }

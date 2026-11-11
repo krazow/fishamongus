@@ -11,13 +11,7 @@ A phone app (installable web app) for logging fish you catch. Each catch records
 - **Photo** (take one with the camera or choose from your photos)
 - Optional length, weight, released yes/no and notes
 
-**New in 4.4: Washington rules, shellfish safety and trout stocking.** In Washington, the Now screen, spot pages and trip plans show:
-
-- **WDFW emergency rules** in effect (and starting in the next two weeks) for the marine area you're in (from WDFW's map service) or, for lakes and rivers, a saved spot with the same name. Each one is marked Closed, Open or Changed with its dates, WDFW's wording and a link. Trips show the rules on the trip date for your target species. Saving a kept fish where WDFW lists a closure asks first.
-- **Shellfish safety** for public beaches near saltwater places and clamming trips, straight from the Department of Health's Shellfish Safety Map data (updated hourly): Open, Closed or Conditionally Open, species closures, biotoxin and Vibrio notes. The catch form shows it when you log clams, oysters or mussels.
-- **Trout stocking** from WDFW's catchable trout reports: plants at a lake you've saved as a spot, or in your county in the last two weeks.
-
-Rules and stocking are collected by a scheduled job in this repository (`.github/workflows/wa-data.yml`, `scripts/wa-data.mjs`) every 30 minutes into `data/`. If WDFW's pages can't be read, the job fails (GitHub emails the owner), the last good data is kept, and the app says **Couldn't verify – check WDFW** instead of quietly showing old rules. These are a helper, not the law: always confirm with WDFW or the Fish Washington app.
+**New in 4.4: shellfish safety.** In Washington, the Now screen, saltwater spots and crabbing, clamming and shrimping trips show the status of public shellfish beaches nearby, straight from the Department of Health's Shellfish Safety Map data (updated hourly): Open, Closed or Conditionally Open, species closures, biotoxin and Vibrio notes. The catch form shows it when you log clams, oysters or mussels. Always confirm with the Shellfish Safety Map or the hotline (1-800-562-5632) before you harvest. (WDFW emergency rules, openings and closures are planned for a later version.)
 
 **New in 4.3:**
 
