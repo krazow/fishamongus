@@ -611,8 +611,10 @@
           <li><b>Location</b> is used to record where each fish was caught and to look up the weather and tides there. Your phone asks when you tap Get started.</li>
           <li><b>Camera and photos</b> are used only when you add a photo to a catch.</li>
         </ul>
-        <button type="button" class="btn primary" id="welcome-go">Get started</button>
-        <button type="button" class="btn" id="welcome-demo" style="margin-top:10px">Look around with sample data first</button>
+        <div class="welcome-actions">
+          <button type="button" class="btn primary" id="welcome-go">Get started</button>
+          <button type="button" class="btn" id="welcome-demo">Look around with sample data first</button>
+        </div>
       </div>
     </div>
   </div>
@@ -664,7 +666,7 @@
             <div class="select-wrap"><select id="ab-mode">
               <option value="session">After each fishing session</option>
               <option value="daily">Once a day, when something's new</option>
-              <option value="weekly">Once a week, when something's new</option>
+              <option value="weekly">Weekly, if anything changed</option>
               <option value="off">Off – I'll do it myself</option>
             </select></div>
             <div id="ab-file-row" hidden>
