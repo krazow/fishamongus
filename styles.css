@@ -888,3 +888,22 @@ html.night .scale i { filter: grayscale(1) sepia(1) hue-rotate(-50deg) saturate(
 .quick-grid { grid-template-columns: minmax(0, 1fr); }
 .quick-grid > * { min-width: 0; }
 .now-card, .card, #view-now > * { min-width: 0; }
+
+/* ---------- 4.3 ---------- */
+.quick h4 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.quick h4 small { flex: 1 1 auto; }
+.say-btn { margin: 0; min-height: 40px; padding: 6px 12px; }
+.find-fish { position: relative; }
+.say-mini { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border: 0; border-radius: 10px; background: none; font-size: 18px; }
+.find-fish input { padding-right: 46px !important; }
+.merge-box { margin-top: 14px; padding: 12px; border-radius: 12px; background: var(--surface-2); }
+.merge-box h4 { margin: 0 0 4px; font-size: 15px; }
+.merge-box .field { margin: 8px 0; }
+.qlinks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.qlinks li { display: flex; align-items: center; gap: 8px; }
+.qlinks li span { flex: 1; min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
+.qlinks .btn { margin: 0; }
+.crc-due { margin-bottom: 12px; border-left: 4px solid var(--accent); }
+.crc-due .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.crc-due .btn { margin: 0; }
+.say-mini[hidden] { display: none; }

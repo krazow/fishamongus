@@ -11,6 +11,13 @@ A phone app (installable web app) for logging fish you catch. Each catch records
 - **Photo** (take one with the camera or choose from your photos)
 - Optional length, weight, released yes/no and notes
 
+**New in 4.3:**
+
+- **Say it.** Tap 🎤 on the Now screen and say what you caught (“two Dungeness, kept, crab pot”). It's saved with GPS, weather and tide, with Undo if it misheard. The 🎤 in the catch form fills in the fish, lure, count and kept/released instead. On Android, press and hold the app icon for Say a catch, Log a catch and Start fishing. Settings gives one-tap links for your usual catches.
+- **Catch record cards.** Stats counts the salmon, steelhead, sturgeon and halibut you've kept this license year (halibut against the 6-a-year limit), alongside the Dungeness crab cards. In the month before a card is due (fish April 30, summer crab October 1, winter crab February 1) the Now screen reminds you. Saving a kept fish or crab that goes on a card says to record it.
+- **River flows.** Away from the tides, the Now screen and spot pages show the nearest USGS stream gauge within about 6 miles: flow in cubic feet per second and whether it's rising or falling. Catches near a gauge save it, and Stats adds a River flow condition. Uses the new USGS Water Data API (the old service shuts down in February 2027).
+- **Add someone else's log.** Settings → Add someone else's log merges a partner's (or an old phone's) backup into yours: their catches are labelled with their name, their spots join yours within 100 m, and duplicates are skipped.
+
 **New in 4.0: shellfish.** Above the species list, **Fish / Shellfish** and **Freshwater / Saltwater / Both** buttons filter the list. Water is set from your spot or the distance to the nearest tide station. The shellfish list has crab, shrimp and prawns, clams, oysters, mussels, scallops, lobster, squid and octopus, plus crayfish for freshwater. For shellfish:
 
 - the lure menu becomes **gear** (crab pot, ring net, snare, shrimp pot, clam gun, shovel, rake and more), with an optional bait;
