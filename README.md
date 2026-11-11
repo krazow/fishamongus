@@ -1,0 +1,121 @@
+# Fishamongus! – Catch Log
+
+A phone app (installable web app) for logging fish you catch. Each catch records:
+
+- **GPS coordinates** from your phone, with accuracy (or type coordinates in by hand)
+- **Weather at that spot**: temperature, feels-like, sky, wind speed/direction/gusts, barometric pressure and whether it's rising or falling, humidity, cloud cover, rain, plus the moon phase
+- **Lure or bait** used
+- **Fish type**, picked from a dropdown of about 140 common recreational species grouped by family and water type (freshwater bass, trout & char, panfish, catfish, Pacific coast, inshore, reef, offshore and more). Use "Other" to type one that isn't listed; it's added to the dropdown under "Your other species".
+- **Photo** (take one with the camera or choose from your photos)
+- Optional length, weight, released yes/no and notes
+
+The **Now** screen opens first. It shows:
+
+- **Start fishing / End session.** Tap when your line goes in and again when you're done. While a session runs, the screen shows the time, the fish so far, fish per hour, the spot, and the lure **on your line**. Tap the lure to change it whenever you switch. Logging a catch on a different lure also counts as a switch. A bar above the tabs keeps the session visible on every other screen. A session left running over 12 hours ends 30 minutes after your last catch, a session under 5 minutes with no fish is thrown away, and **Undo** reopens a session you ended by mistake.
+- **Quick catch:** large buttons for your three most recent fish-and-lure pairs (the lure on your line first). One tap saves the catch with GPS, weather, tide and spot, and **Add details** in the message lets you add a photo or size later.
+- **Conditions here:** your spot (or the nearest one), weather, wind, pressure trend, tide stage with the next high or low and the coefficient, moon, next sunrise or sunset, and water temperature and waves on the coast. Without signal it shows the last conditions with their time.
+- **Lures for right now:** the lures that caught the most fish for you in conditions like the next three hours, with the reasons. During a session, **Use** puts that lure on your line.
+- **Trips:** your next planned trip, **+ Plan a trip** and **All trips**.
+
+The **Spots** tab keeps your fishing places:
+
+- **Saved spots** each have a name, a location and private notes (access, parking, structure, hazards). You also set how close a catch must be to count, from 330 ft (a dock) to 1.2 mi (a whole small lake).
+- **Automatic linking:** when you log a catch inside a spot's range, it's filled in for you. You can change it, or choose **+ New spot here…** to save a new place right from the catch form. Creating a spot also links any earlier catches you made there. A catch that already has a location can be turned into a spot with **Save this location as a spot**.
+- **Analysis for each spot:** catches, days with fish, species, biggest fish, which lures work there, the most common conditions when you caught fish there, and recent catches. **Best lure by conditions here** opens the Stats tab filtered to that spot.
+- A **map** of all your spots (with their ranges) and catches, and **Directions in Maps** for each spot. A blue dot shows where you are, and the ◎ button centres the map on you. Before you've saved anything, the map opens on your location instead of the whole country. Tap anywhere on the map to make a new spot there or plan a trip there. Map areas you've looked at while online stay available with no signal.
+- A **Tides** button on the map finds the nearest NOAA tide station to the middle of the map. It shows:
+  - Whether the tide is rising or falling now, and when the next high or low comes.
+  - Today's tide curve (tap it to read any time).
+  - Highs and lows for today and tomorrow.
+  - An estimated **tidal coefficient** for today and the next 7 days, with the next spring tides.
+  - You can switch between the 5 nearest stations. NOAA covers US coasts only; for inland water the app warns that the nearest station is far away. Saltwater spots also have a **Tides at this spot** button.
+  - NOAA doesn't publish a tidal coefficient, so the app estimates one: 70 × today's range ÷ the average daily range over the surrounding month. About 45 means neap tides, 70 an average day and 95 spring tides.
+- Deleting a spot keeps its catches; they just no longer have a spot.
+
+**Trips** (from the Now screen) plans a fishing trip. Pick a saved spot (or your location or coordinates), a date, start and end times, and your target species. The trip plan shows:
+
+- **Hour by hour:** the forecast for each hour of the trip (sky, temperature, wind, chance of rain), up to 16 days ahead. ★ marks the **best hours**: the ones whose conditions best match when you've caught fish at that spot (or nearby, or anywhere, when the spot has fewer than 5 catches).
+- **Sun and moon:** first light, sunrise, sunset, last light and the moon phase. These are calculated on the phone, so they work offline.
+- **Tides** (saltwater and coastal spots): the NOAA tide curve for the day with your trip shaded, highs and lows, and the tidal coefficient.
+- **Lures to bring:** the lures that caught the most fish in conditions like the trip's, with the reasons ("Rising tide · 5 fish").
+- **Target species:** how many you've caught there and nearby, and the best lures for them.
+- **Gear checklist:** a starter packing list you can tick off and edit, plus suggestions for the trip, such as your best lures, a rain jacket if rain is likely, or a headlamp if you start before sunrise.
+- **Regulations:** a reminder to carry your license and check limits and closures, with links to California's rules (CDFW) and to every state's licenses and rules.
+- **Add to calendar** saves the trip to your phone's calendar with two reminders: the evening before and an hour before. On the day before a trip, the Now screen also shows it with the latest forecast.
+- **Share plan** sends the date, best hours, forecast, tides, lures and gear list to your fishing partners, and **Directions** opens Maps.
+- **After the trip:** catches logged during the trip near that place are linked automatically. The trip shows a summary (fish, fish per hour, top lure) and compares the forecast with the actual weather. Stats gains a **Trips** card with your overall fish per hour.
+
+The forecast and tides refresh when you open an upcoming trip, and the last copy is kept on the phone for use with no signal.
+
+The **Stats** tab shows:
+
+- **Best lure by conditions:** pick sky, pressure trend, air temperature, wind, time of day or moon phase. You see the lure that caught the most fish in each condition, plus a grid of every lure against every condition. Tap any square for its numbers.
+- **When you catch the most:** the condition that shows up most often across your catches, one card per condition.
+- **Personal bests** for each species, and totals by species and by lure.
+- **Filters** for time range (30 days, 90 days, this year, 12 months, all time), a single species and a single spot.
+
+Most stats count fish caught, so lures you use most naturally rank higher. **Fish per hour** fixes that for time you tracked with **Start fishing**: hours fished, overall fish per hour, and fish per hour for each lure that was in the water at least 30 minutes, including lures that caught nothing.
+
+**Quick logging:**
+- The catch form's **Save catch** button sits at the bottom, under your thumb. Quick-pick buttons are large, and **Same as a recent catch** fills the fish, lure, colour and size in one tap. During a session the lure on your line is filled in for you.
+- Location, weather and tide are folded into one line (for example "📍 Santa Monica Pier · ⛅ 63°F · ↓ falling tide"). Tap it for the details, to refresh GPS or to type coordinates. It opens by itself if the GPS fails.
+- After saving, tap **Log another** in the message at the bottom, or **Same again** on a catch's page. The fish, lure and spot are filled in for you.
+- **How many fish?** logs several identical fish as one entry. Stats count every fish.
+- The lure is picked from a grouped list (soft plastics, hard baits, jigs, saltwater lures, flies, live bait, prepared bait), with optional colour and size. Choose **Other** to type your own.
+- A catch can have several photos. Tap a photo to see it full screen and swipe between them.
+- Deleted a catch by mistake? Tap **Undo** in the message that appears.
+
+**Finding catches:** the Log can be filtered by date, spot and species as well as searched. Catches are grouped by day, with the trip they belong to.
+
+**Logging a catch later from a photo:** when you add a photo that was taken earlier, the app reads when (and, if the photo has it, where) it was taken and offers to use that time and place, so the weather, tide and spot match the moment you caught the fish. Some phones remove the location when a photo is shared with a website; then only the time is offered.
+
+**Released or kept:** choose Released or Kept for each catch (tap again to leave it unrecorded). The app remembers your last choice, and Stats counts only catches where you recorded it.
+
+**Tides on each catch:** near the coast, each catch also records the water temperature and waves (from Open-Meteo Marine) and the tide from the nearest NOAA station: the stage (low slack, rising, high slack, falling), the height, the time since the last high or low, the next turn, and the tidal coefficient. Tides appear in the catch form, on the catch's page, in Stats ("Tide" and "Tide strength" in *Best lure by conditions* and *When you catch the most*), on each spot's *Best conditions here*, and in the spreadsheet export. Catches logged earlier, or with no signal, get their tide filled in automatically when the app is online.
+
+Tides show only where they apply:
+- **Automatic** (the default): within about 15 mi of a NOAA tide station.
+- **Saltwater spot:** always.
+- **Freshwater spot:** never. Use this for lakes and rivers near the coast.
+
+Settings (units, pounds or pounds and ounces, backup, and Help) is the gear icon at the top right. The app also has a map of all your catch spots, search, an "Open spot in Maps" button for getting back to a spot, sharing, and imperial/metric units.
+
+## Get it on your phone (about 5 minutes)
+
+The app has to be on a web address that starts with `https://`, because phones only allow GPS on secure sites. Netlify's free drag-and-drop host is the simplest way to do that.
+
+1. Unzip `fishamongus.zip` on your computer. You'll get a folder named `fishamongus`.
+2. Go to **https://app.netlify.com/drop** and sign up for a free account. Then drag the whole `fishamongus` folder onto the page.
+3. Netlify gives you a link such as `https://something-random.netlify.app`. You can rename it under *Site configuration → Change site name*.
+4. Open that link on your phone:
+   - **iPhone (Safari):** tap Share → **Add to Home Screen**.
+   - **Android (Chrome):** tap ⋮ → **Install app** (or **Add to Home screen**).
+5. Open Fishamongus! from your home screen. The first time you log a catch, allow **Location**, and allow **Camera** when you add a photo.
+
+Other free hosts work too, such as GitHub Pages or Cloudflare Pages. Upload the folder's contents as they are.
+
+## How it works
+
+- **Storage:** catches and photos are saved only on your phone, in the app's own storage. Nothing is uploaded anywhere. Photos are shrunk to about 1600 px to save space.
+- **Backup reminder:** once you have 5 catches, the Log screen reminds you to back up (and again after 20 new catches, or 30 days with new ones). Settings shows when you last backed up.
+- **Back up regularly:** use Settings → *Export full backup*. You get one `.json` file that includes your photos, spots and trips. Use *Restore from backup* to load it on a new phone. *Export spreadsheet (CSV)* opens in Excel or Google Sheets.
+  - On iPhone, if you delete the home-screen app, its stored data is deleted with it, so export a backup first.
+- **No signal on the water:** the app still opens and saves catches with GPS. GPS doesn't need cell service. Weather for those catches is filled in automatically the next time you open the app with a connection. It looks up the weather for the time and place of the catch.
+- **Logging a catch later:** change the "Caught at" time and the weather is looked up for that hour. Weather history goes back years.
+- **Weather source:** [Open-Meteo](https://open-meteo.com/). It's free for non-commercial use and needs no API key. If you ever sell the app, you'll need their paid plan.
+- **Map:** OpenStreetMap. The map needs a connection to load map tiles.
+- **Tides:** NOAA CO-OPS tide predictions (public, no key). The station list is saved on the phone for 30 days; predictions need a connection. A catch's tide is saved with it, so it stays available offline.
+
+## Files
+
+| File | What it is |
+|---|---|
+| `index.html` | The app's screens |
+| `styles.css` | Look and feel, with automatic light and dark mode |
+| `app.js` | All the logic: GPS, weather, photos, storage, map, export |
+| `sw.js` | Service worker that makes the app open with no signal |
+| `manifest.webmanifest`, `icons/` | Home-screen name and icon |
+
+**Updating the app:** after you change any file, open `sw.js` and bump `VERSION`, for example from `tl-v1` to `tl-v2`. Then drag the folder onto Netlify again. Phones pick up the new version the next time the app is opened twice.
+
+**Renamed from Tight Lines:** the app was renamed Fishamongus!. Catches saved under the old name are kept, and backups made by the old version can still be restored. If the app is already on your home screen, delete the icon and add it again to see the new name. Before you delete it, export a backup (Settings → *Export full backup*): on iPhone, deleting the home-screen app also deletes its saved data. Then restore the backup in the new copy.
