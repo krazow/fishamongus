@@ -3,8 +3,8 @@
   --surface: #ffffff;
   --surface-2: #ece8de;
   --ink: #12262c;
-  --ink-2: #4c5f64;
-  --ink-3: #7d8c8f;
+  --ink-2: #3f5156;
+  --ink-3: #566569;
   --line: #ddd7ca;
   --lake: #0e4f5c;
   --lake-2: #13707f;
@@ -26,7 +26,7 @@
     --surface-2: #17313a;
     --ink: #e7efef;
     --ink-2: #a9bcbf;
-    --ink-3: #7a9196;
+    --ink-3: #86a0a5;
     --line: #22414a;
     --lake: #0b3c46;
     --lake-2: #4fb3c2;
@@ -349,7 +349,7 @@ input.invalid { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger)
 .cond-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .cond-cell { background: var(--surface-2); border-radius: 12px; padding: 10px 12px; min-width: 0; }
 .cond-cell span { display: block; font-size: 12px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .5px; }
-.cond-cell b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cond-cell b { display: block; overflow-wrap: anywhere; }
 .cond-cell small { color: var(--ink-2); font-size: 13px; }
 .stats-empty { text-align: center; padding: 40px 24px; color: var(--ink-2); }
 @media (prefers-color-scheme: dark) { .chip.on { background: var(--lake-2); border-color: var(--lake-2); color: #06181c; } }
@@ -637,3 +637,25 @@ body.has-session-bar .toast { bottom: calc(var(--tabbar-h) + var(--safe-b) + 76p
 .map-locate svg { width: 24px; height: 24px; }
 .map-locate.busy svg { animation: sp 1.2s linear infinite; }
 .map-msg { pointer-events: none; }
+
+/* ---------- polish pass ---------- */
+/* filters: room for "All species" in three columns */
+.select-wrap.sm select { padding-right: 26px; text-overflow: ellipsis; }
+.select-wrap.sm::after { right: 11px; }
+@media (max-width: 400px) { .select-wrap.sm select { font-size: 14px; padding-left: 10px; } }
+/* Now screen */
+.now-cell small + small { margin-top: 1px; }
+.rec-list .rk { background: var(--lake-2); color: var(--bg); }
+.btn-row .btn { white-space: nowrap; padding: 10px 8px; }
+@media (max-width: 360px) { .btn-row .btn { font-size: 15px; } .quick h4 small { display: block; } }
+/* help: custom chevrons instead of the browser's triangles */
+.help-section summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; }
+.help-section summary::-webkit-details-marker { display: none; }
+.help-section summary::after { content: ""; flex: none; width: 8px; height: 8px; border-right: 2px solid var(--ink-3); border-bottom: 2px solid var(--ink-3); transform: rotate(45deg); margin: -4px 4px 0 0; transition: transform .15s; }
+.help-section details[open] summary::after { transform: rotate(-135deg); margin-top: 4px; }
+/* visible keyboard focus everywhere */
+button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--lake-2); outline-offset: 2px; }
+/* gentle press feedback on cards and big buttons */
+.catch:active, .btn:active, .next-trip:active, .ses-lure:active { transform: scale(.985); }
+.catch, .btn, .next-trip, .ses-lure { transition: transform .08s ease; }
+@media (prefers-reduced-motion: reduce) { .catch, .btn, .next-trip, .ses-lure { transition: none; } .catch:active, .btn:active, .next-trip:active, .ses-lure:active { transform: none; } }

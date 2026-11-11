@@ -74,7 +74,7 @@
   function store(key, val) { try { if (val === undefined) return localStorage.getItem(key); localStorage.setItem(key, val); } catch { return null; } }
 
   // ---------------------------------------------------------------- units
-  const APP_VERSION = '2.2 (Nov 10, 2026)';
+  const APP_VERSION = '2.3 (Nov 10, 2026)';
   const settings = { wtOz: store('tl.wtOz') === '1', units: store('tl.units') || (/^en-(US|LR|MM)/.test(navigator.language) ? 'imperial' : 'metric') };
   const imp = () => settings.units === 'imperial';
   const U = {
@@ -1242,6 +1242,7 @@
     const w = water || (c.spotId && spotById(c.spotId) ? spotById(c.spotId).water || 'auto' : 'auto');
     return w === 'salt' || (w === 'auto' && t.distM <= TIDE_NEAR);
   }
+  function hmText(ms) { const m = Math.round(ms / 60000); const h = Math.floor(m / 60); return h ? (m % 60 ? `${h} h ${m % 60} min` : `${h} h`) : `${m} min`; }
   function durText(ms) { const m = Math.max(0, Math.round(ms / 60000)); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${pad(m % 60)} min`; }
   function tideSince(t, at) { return `${durText(at - t.lastT)} after ${t.lastType === 'H' ? 'high' : 'low'}`; }
   function coefShort(c) { return c < 45 ? 'weak' : c < 70 ? 'moderate' : c < 95 ? 'strong' : 'very strong'; }
@@ -1564,8 +1565,8 @@
     const best = list.filter((x) => x.end && sessionEnd(x) - x.start >= 30 * 60000).map((x) => ({ x, r: fishOf(sessionCatches(x)) / ((sessionEnd(x) - x.start) / HOUR_MS) })).sort((a, b) => b.r - a.r)[0];
     return `<div class="card"><h3>Fish per hour</h3><p class="sub">From ${plural(list.length, 'fishing session')}${sp ? ` · ${esc(sp)} only` : ''}, where the app knows how long each lure was in the water.</p>
       <div class="tiles" style="margin-bottom:12px">
-        <div class="stat"><b>${round(hrs, 1)}</b><span>Hours fished</span></div>
-        <div class="stat"><b>${hrs >= 0.25 ? round(fish / hrs, 2) : '–'}</b><span>Fish per hour</span><small>${plural(fish, 'fish')}</small></div>
+        <div class="stat"><b>${hmText(hrs * HOUR_MS)}</b><span>Time fished</span></div>
+        <div class="stat"><b>${hrs >= 0.25 ? round(fish / hrs, 1) : '–'}</b><span>Fish per hour</span><small>${plural(fish, 'fish')}</small></div>
       </div>
       ${rows.length ? `<div class="fph-rows">${rows.map((x) => `<div class="fph-row"><span class="lbl">${esc(x.lure)}</span><span class="v">${round(x.r, 1)}/h</span><span class="track"><span class="fill" style="width:${Math.max(2, (x.r / max) * 100)}%"></span></span><small>${plural(x.n, 'fish')} in ${durText(x.h * HOUR_MS)}</small></div>`).join('')}</div>`
         : '<p class="note" style="margin:0">Lures show up here once one has been in the water for 30 minutes.</p>'}
@@ -1678,8 +1679,10 @@
         <p class="sub">Which lures caught fish in each condition${[oneSpecies && esc(spSel.value), $('#st-spot').value && $('#st-spot').value !== '__none' && spotById($('#st-spot').value) && 'at ' + esc(spotById($('#st-spot').value).name)].filter(Boolean).map((x) => ` (${x})`).join('')}.</p>
         <div class="dims" role="tablist">${Object.entries(DIMENSIONS).filter(([, d]) => anyTide || !d.needsTide).map(([k, d]) => `<button type="button" role="tab" class="chip${k === statsDim ? ' on' : ''}" data-dim="${k}" aria-selected="${k === statsDim}">${esc(d.label)}</button>`).join('')}</div>
         ${lureBlock}
-        <p class="note">${skipped && D.needsWx ? `${plural(skipped, 'catch')} without weather data not included. ` : ''}${skipped && D.needsTide ? `${plural(skipped, 'catch')} without tide data (freshwater, inland or not looked up yet) not included. ` : ''}These are counts of fish caught, so a lure you use most will tend to show up most. ${sessions.length ? 'For a fairer comparison, see <b>Fish per hour</b> below.' : 'Use <b>Start fishing</b> on the Now screen to get fish per hour.'}</p>
+        <p class="note">${skipped && D.needsWx ? `${plural(skipped, 'catch')} without weather data not included. ` : ''}${skipped && D.needsTide ? `${plural(skipped, 'catch')} without tide data (freshwater, inland or not looked up yet) not included. ` : ''}These are counts of fish caught, so a lure you use most will tend to show up most. ${sessions.length ? 'For a fairer comparison, see <b>Fish per hour</b> just below.' : 'Use <b>Start fishing</b> on the Now screen to get fish per hour.'}</p>
       </div>
+
+      ${sessionsStatsCard()}
 
       ${!condCells ? `<div class="card"><h3>When you catch the most</h3><p class="sub" style="margin:0">Shows up once you've logged ${MIN_POOL} catches. You have ${list.length} so far.</p></div>` : ''}
       ${condCells ? `<div class="card"><h3>When you catch the most</h3><p class="sub">The most common condition across your catches.</p><div class="cond-grid">${condCells}</div></div>` : ''}
@@ -1689,7 +1692,6 @@
       ${oneSpecies ? '' : `<div class="card"><h3>Catches by species</h3><p class="sub">&nbsp;</p>${barsHtml(spRows, Math.max(...spRows.map((x) => x[1])))}</div>`}
 
       <div class="card"><h3>Top lures</h3><p class="sub">Catches per lure or bait.</p>${barsHtml(lrRows, Math.max(...lrRows.map((x) => x[1])))}</div>
-      ${sessionsStatsCard()}
       ${tripsStatsCard()}`;
     body.querySelectorAll('.card .sub').forEach((el) => { if (el.innerHTML === '&nbsp;') el.remove(); });
   }
@@ -1821,13 +1823,14 @@
     const pcs = hours.map((h) => hourAsCatch(t, h));
     const pool = t.species && t.species.length && hist.filter((c) => t.species.includes(c.species)).length >= 3 ? hist.filter((c) => t.species.includes(c.species)) : hist;
     const score = new Map(); const why = new Map();
-    const phrase = { sky: (b) => `${b} sky`, pressure: (b) => `${b} pressure`, temp: (b) => `${b} air`, wind: (b) => `${b} wind`, time: (b) => b, tide: (b) => `${b} tide`, coef: (b) => `${b.replace(/ \(.*\)/, '')} tides`, moon: (b) => b };
+    const bare = (b) => b.replace(/ \(.*\)/, '');
+    const phrase = { sky: (b) => ({ Clear: 'Clear sky', 'Partly cloudy': 'Partly cloudy', Overcast: 'Overcast' }[b] || b), pressure: (b) => `${b} pressure`, temp: (b) => `${b} air`, wind: (b) => `${bare(b)} wind`, time: (b) => bare(b), tide: (b) => `${b} tide`, coef: (b) => `${bare(b)} tides`, moon: (b) => b };
     Object.entries(DIMENSIONS).forEach(([dk, d]) => {
       const bs = pcs.map((pc) => bucketOf(d, pc)).filter(Boolean); if (!bs.length) return;
       const b = ranked(countBy(bs, (x) => x))[0][0]; const p0 = (phrase[dk] || ((x) => x))(b); const key = p0.charAt(0).toUpperCase() + p0.slice(1).replace(/ (Sky|Pressure|Wind|Tide|Air)$/, (m) => m.toLowerCase());
       pool.forEach((c) => { if (bucketOf(d, c) !== b) return; score.set(c.bait, (score.get(c.bait) || 0) + nFish(c)); const w = why.get(c.bait) || new Map(); w.set(key, (w.get(key) || 0) + nFish(c)); why.set(c.bait, w); });
     });
-    return { forSpecies: pool !== hist, recs: ranked(score).slice(0, 3).map(([lure]) => ({ lure, total: fishIn(pool.filter((c) => c.bait === lure)), reasons: ranked(why.get(lure)).slice(0, 3).map(([k, n]) => `${k} · ${plural(n, 'fish')}`) })) };
+    return { forSpecies: pool !== hist, recs: ranked(score).slice(0, 3).map(([lure]) => ({ lure, total: fishIn(pool.filter((c) => c.bait === lure)), reasons: ranked(why.get(lure)).slice(0, 3).map(([k, n]) => `${k} (${plural(n, 'fish')})`) })) };
   }
   function gearSuggestions(t, hours, recs, sun) {
     const have = new Set((t.gear || []).map((g) => g.text.toLowerCase()));
@@ -1972,7 +1975,7 @@
     // gear
     const sugg = isPast ? [] : gearSuggestions(t, hours, recs, sun);
     const gear = t.gear || [];
-    const gearCard = `<div class="card" style="margin-bottom:12px"><h3>Gear checklist</h3><p class="sub">${gear.filter((g) => g.done).length} of ${gear.length} packed.</p>
+    const gearCard = `<div class="card" style="margin-bottom:12px"><h3>Gear checklist</h3><p class="sub">${gear.length ? `${gear.filter((g) => g.done).length} of ${gear.length} packed.` : 'Nothing on the list yet. Tap a suggestion or add your own.'}</p>
       <ul class="gear">${gear.map((g, i) => `<li class="${g.done ? 'done' : ''}"><input type="checkbox" data-gear="${i}" ${g.done ? 'checked' : ''} aria-label="Packed ${esc(g.text)}"><span>${esc(g.text)}</span><button type="button" class="x" data-gear-del="${i}" aria-label="Remove ${esc(g.text)}">×</button></li>`).join('')}</ul>
       ${sugg.length ? `<p class="sub" style="margin:0 0 6px">Suggested for this trip:</p><div class="chips">${sugg.map((x) => `<button type="button" class="chip add" data-gear-add="${esc(x)}">+ ${esc(x)}</button>`).join('')}</div>` : ''}
       <div class="gear-add"><input id="gear-new" placeholder="Add an item" autocomplete="off"><button type="button" class="btn sm" id="gear-add-btn" style="margin:0">Add</button></div></div>`;
@@ -2395,17 +2398,18 @@
     const cells = [];
     if (w) { const l = wxLabel(w); cells.push(`<div class="now-cell"><span>Weather</span><b>${l.icon} ${esc(U.temp(w.tempC))}</b><small>${esc(l.text)}</small></div>`);
       cells.push(`<div class="now-cell"><span>Wind</span><b>${esc(U.wind(w.windKmh))} ${compass(w.windDir)}</b><small>gusts ${esc(U.wind(w.gustKmh))}</small></div>`);
-      cells.push(`<div class="now-cell"><span>Pressure</span><b>${esc(U.pressure(w.pressure))} ${trendArrow(w.pressureTrend)}</b><small>${esc(w.pressureTrend || 'trend unknown')}</small></div>`); }
+      cells.push(`<div class="now-cell"><span>Pressure</span><b>${esc(U.pressure(w.pressure))}</b><small>${w.pressureTrend ? `${trendArrow(w.pressureTrend)} ${esc(w.pressureTrend.charAt(0).toUpperCase() + w.pressureTrend.slice(1))}` : 'Trend unknown'}</small></div>`); }
     if (tidal) {
       // Recompute the stage from the saved high/low times, so it stays right as time passes.
       let stage = t.stage; let rising = t.rising;
       if (st.tripTide && st.tripTide.ev) { const cur = tideAt(st.tripTide.ev, Date.now()); if (cur) { stage = tideStage(cur, Date.now()); rising = cur.rising; } }
       const nxt = st.tripTide && st.tripTide.ev ? st.tripTide.ev.find((e) => e.t > Date.now()) : (t.nextT > Date.now() ? { t: t.nextT, type: t.nextType } : null);
-      cells.push(`<div class="now-cell"><span>Tide</span><b>${rising ? '↑' : '↓'} ${esc(stage)}</b><small>${nxt ? `${nxt.type === 'H' ? 'High' : 'Low'} at ${fmtTime(nxt.t)}` : ''}${t.coef != null ? `${nxt ? ' · ' : ''}coef ${t.coef}` : ''}</small></div>`);
+      cells.push(`<div class="now-cell"><span>Tide</span><b>${rising ? '↑' : '↓'} ${esc(stage)}</b>${nxt ? `<small>${nxt.type === 'H' ? 'High' : 'Low'} at ${fmtTime(nxt.t)}</small>` : ''}${t.coef != null ? `<small>Coefficient ${t.coef} (${coefShort(t.coef)})</small>` : ''}</div>`);
     }
     cells.push(`<div class="now-cell"><span>Moon</span><b>${moon.icon} ${moon.illum}%</b><small>${esc(moon.name)}</small></div>`);
     cells.push(`<div class="now-cell"><span>${nextSun[0]}</span><b>${nextSun[1] ? fmtTime(nextSun[1]) : '–'}</b><small>${nextSun[1] ? durText(nextSun[1] - Date.now()) + ' from now' : ''}</small></div>`);
-    if (tidal && st.marine && !st.marine.none) cells.push(`<div class="now-cell wide"><span>Water</span><b>${esc(waveText(st.marine))}</b></div>`);
+    if (tidal && st.marine && !st.marine.none) { const mr = st.marine; const wv = mr.waveM != null ? `${imp() ? `${round(mr.waveM * 3.28084, 1)} ft` : `${round(mr.waveM, 1)} m`}${mr.periodS != null ? `, ${round(mr.periodS)} s apart` : ''}` : '';
+      cells.push(`<div class="now-cell wide"><span>Water</span><b>${mr.seaTempC != null ? esc(U.temp(mr.seaTempC)) : '–'}</b>${wv ? `<small>Waves ${esc(wv)}</small>` : ''}</div>`); }
     const msg = nowErr === 'offline' ? `No signal – showing conditions from ${fmtTime(st.at)}.` : nowErr ? `Couldn't update: ${nowErr}` : age > 60 * 60000 ? `From ${fmtTime(st.at)}. Tap ↻ to update.` : '';
     box.innerHTML = `<div class="card">
       <div class="now-place"><svg viewBox="0 0 24 24"><use href="#i-pin"/></svg><span><b>${esc(pl.name)}</b><small>${esc(pl.sub)}${st.loc.source === 'last' ? ' · last known location' : ''}</small></span>
