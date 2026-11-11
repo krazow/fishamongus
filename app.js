@@ -159,7 +159,7 @@
   function store(key, val) { try { if (val === undefined) return localStorage.getItem(key); localStorage.setItem(key, val); } catch { return null; } }
 
   // ---------------------------------------------------------------- units
-  const APP_VERSION = '4.1 (Nov 11, 2026)';
+  const APP_VERSION = '4.2 (Nov 11, 2026)';
   // Night (dim red) mode and large text, applied before anything is drawn.
   function applyDisplay() {
     const night = store('tl.theme') === 'night'; const large = store('tl.text') === 'large';
@@ -331,12 +331,14 @@
   const sheetStack = [];
   function openSheet(el) {
     el.hidden = false; el.style.zIndex = 50 + sheetStack.length; sheetStack.push(el); document.body.style.overflow = 'hidden';
+    document.body.classList.add('sheet-open');
+    if (Date.now() < toastActionUntil) { $('#toast').classList.remove('show'); toastActionUntil = 0; }
     try { history.pushState({ sheet: el.id }, ''); } catch { /* ignore */ }
     const sc = $('.sheet-scroll', el); if (sc) sc.scrollTop = 0;
   }
   function hideTop() {
     const el = sheetStack.pop(); if (el) el.hidden = true;
-    if (!sheetStack.length) document.body.style.overflow = '';
+    if (!sheetStack.length) { document.body.style.overflow = ''; document.body.classList.remove('sheet-open'); }
     return el;
   }
   function closeSheet() { if (!sheetStack.length) return; if (history.state && history.state.sheet) history.back(); else hideTop(); }
@@ -718,7 +720,8 @@
         .sort((a, b) => (b.toLowerCase().startsWith(q) - a.toLowerCase().startsWith(q)) || a.length - b.length || a.localeCompare(b)).slice(0, 8);
       box.hidden = false;
       box.innerHTML = hits.length ? hits.map((n) => `<button type="button" class="chip" data-find="${esc(n)}">${esc(n)}</button>`).join('')
-        : `<span class="help small">No fish called that in the list. Choose <b>Other</b> below to type it in.</span>`;
+        : (() => { const raw = $('#f-species-find').value.trim().replace(/\s+/g, ' '); const name = raw.replace(/(^|[\s-])\S/g, (m) => m.toUpperCase());
+          return `<span class="help small">Not in the list.</span> <button type="button" class="chip" data-find="${esc(name)}">Use “${esc(name)}”</button>`; })();
     }
     $('#f-species-find').addEventListener('input', findFish);
     $('#species-find-results').addEventListener('click', (e) => { const c = e.target.closest('[data-find]'); if (!c) return; dirty = true; setSpecies(c.dataset.find); $('#f-species-find').value = ''; findFish(); });
@@ -1071,18 +1074,34 @@
     }
     function onClosed() { wxToken++; photoUrls.forEach((u) => URL.revokeObjectURL(u)); photoUrls = []; }
 
+    let saving = false;
     el.addEventListener('submit', async (e) => {
-      e.preventDefault();
+      e.preventDefault(); if (saving) return;
+      saving = true; $('#btn-save-catch').disabled = true;
+      try { await submitCatch(); } finally { saving = false; $('#btn-save-catch').disabled = false; }
+    });
+    async function submitCatch() {
       const species = $('#f-species').value.trim(); const bait = $('#f-bait').value.trim();
       const typeOpen = !species && FISH_TYPES.has($('#f-species-select').value);
       const spField = typeOpen ? $('#f-subspecies') : ($('#f-species').hidden ? $('#f-species-select') : $('#f-species'));
       spField.classList.toggle('invalid', !species); ($('#f-bait').hidden ? $('#f-bait-select') : $('#f-bait')).classList.toggle('invalid', !bait);
       $('#err-species').hidden = !!species; $('#err-bait').hidden = !!bait;
       if (!species || !bait) {
-        const missing = [!species && (typeOpen ? `which ${typeWord($('#f-species-select').value)} it is` : 'the fish type'), !bait && 'the lure or bait'].filter(Boolean).join(' and ');
-        $('#err-species').textContent = typeOpen ? `Choose which ${typeWord($('#f-species-select').value)} (or "Not sure which").` : 'Choose the fish type.';
+        const shell = draftKind === 'shellfish';
+        const missing = [!species && (typeOpen ? `which ${typeWord($('#f-species-select').value)} it is` : shell ? 'the shellfish' : 'the fish type'), !bait && (shell ? 'the gear' : 'the lure or bait')].filter(Boolean).join(' and ');
+        $('#err-species').textContent = typeOpen ? `Choose which ${typeWord($('#f-species-select').value)} (or "Not sure which").` : shell ? 'Choose the shellfish.' : 'Choose the fish type.';
+        $('#err-bait').textContent = shell ? 'Add the gear you used.' : 'Add the lure or bait.';
         formError(`${typeOpen ? 'Choose' : 'Add'} ${missing} to save.`, !species ? spField : ($('#f-bait').hidden ? $('#f-bait-select') : $('#f-bait')));
         return;
+      }
+      if (caughtAtValue() > Date.now() + 15 * 60000) { formError('That time is in the future. Check the date and time it was caught.', $('#f-time')); return; }
+      if (draftKind !== 'shellfish') {
+        const len = num($('#f-length').value); const wt = num($('#f-weight').value); const oz = $('#f-weight-oz').hidden ? null : num($('#f-weight-oz').value);
+        if ((len != null && len <= 0) || (wt != null && wt < 0) || (oz != null && oz < 0) || (wt === 0 && !oz)) { formError('Length and weight must be more than 0. Leave them empty if you didn\u2019t measure.', len != null && len <= 0 ? $('#f-length') : $('#f-weight')); return; }
+        const lenIn = len == null ? null : (imp() ? len : len / 2.54); const lb = wt == null ? null : (imp() ? wt + (oz || 0) / 16 : wt * 2.20462);
+        if ((lenIn != null && lenIn > 120) || (lb != null && lb > 400)) {
+          if (!(await askConfirm(`${lenIn != null && lenIn > 120 ? U.len(len * (imp() ? 2.54 : 1)) : U.wt(lb / 2.20462)} is bigger than almost any fish. Save it anyway?`, 'Save anyway'))) return;
+        }
       }
       const shellFields = draftKind === 'shellfish' ? { crabSex: $('#crab-fields').hidden ? null : draftSex, shellHard: $('#crab-fields').hidden || !draftShell ? null : draftShell === 'hard', carapaceCm: $('#crab-fields').hidden ? null : U.lenIn(num($('#f-carapace').value)) } : {};
       if (draftReleased === false && !(await overLimitOk(species, draftCount, editing && editing.id, shellFields))) return;
@@ -1142,7 +1161,7 @@
       else if (wasEditing) toast('Catch updated');
       else toast(`${draftCount > 1 ? draftCount + ' × ' : ''}${species} logged 🎣`, { label: 'Log another', fn: () => open(null, sameAs(rec)) });
       if (wasEditing && !$('#sheet-detail').hidden) renderDetail(rec.id);
-    });
+    }
 
     return { open, cancel, onClosed };
   })();
@@ -1398,6 +1417,16 @@
       const name = $('#sp-name').value.trim();
       if (!name) { $('#sp-name').classList.add('invalid'); $('#sp-error').textContent = 'Give the spot a name.'; $('#sp-name').focus(); return; }
       if (!loc) { $('#sp-error').textContent = 'The spot needs a location. Use GPS or enter coordinates.'; return; }
+      if (e.target.dataset.busy) return;
+      const others = spots.filter((x) => !editing || x.id !== editing.id);
+      const same = others.find((x) => x.name.trim().toLowerCase() === name.toLowerCase());
+      const near = others.find((x) => distM(x, loc) < 50);
+      if (same || near) {
+        e.target.dataset.busy = '1';
+        const ok = await askConfirm(same ? `You already have a spot called ${same.name}${near === same ? ' here' : ''}. Save another one?` : `${near.name} is already saved within 50 m of here. Save a second spot anyway?`, 'Save anyway');
+        delete e.target.dataset.busy; if (!ok) return;
+      }
+      e.target.dataset.busy = '1'; setTimeout(() => { delete e.target.dataset.busy; }, 1500);
       const now = Date.now();
       const sp = { ...(editing || { id: uid(), createdAt: now }), name, lat: loc.lat, lon: loc.lon, radiusM: Number($('#sp-radius').value) || 250, water: $('#sp-water').value || 'auto', notes: $('#sp-notes').value.trim(), updatedAt: now };
       await DB.putSpot(sp);
@@ -2442,7 +2471,7 @@
     const sugg = isPast ? [] : gearSuggestions(t, hours, recs, sun);
     const gear = t.gear || [];
     const gearCard = `<div class="card" style="margin-bottom:12px"><h3>Gear checklist</h3><p class="sub">${gear.length ? `${gear.filter((g) => g.done).length} of ${gear.length} packed.` : 'Nothing on the list yet. Tap a suggestion or add your own.'}</p>
-      <ul class="gear">${gear.map((g, i) => `<li class="${g.done ? 'done' : ''}"><input type="checkbox" data-gear="${i}" ${g.done ? 'checked' : ''} aria-label="Packed ${esc(g.text)}"><span>${esc(g.text)}</span><button type="button" class="x" data-gear-del="${i}" aria-label="Remove ${esc(g.text)}">×</button></li>`).join('')}</ul>
+      <ul class="gear">${gear.map((g, i) => `<li class="${g.done ? 'done' : ''}"><label class="gear-row"><input type="checkbox" data-gear="${i}" ${g.done ? 'checked' : ''}><span>${esc(g.text)}</span></label><button type="button" class="x" data-gear-del="${i}" aria-label="Remove ${esc(g.text)}">×</button></li>`).join('')}</ul>
       ${sugg.length ? `<p class="sub" style="margin:0 0 6px">Suggested for this trip:</p><div class="chips">${sugg.map((x) => `<button type="button" class="chip add" data-gear-add="${esc(x)}">+ ${esc(x)}</button>`).join('')}</div>` : ''}
       <div class="gear-add"><input id="gear-new" placeholder="Add an item" autocomplete="off"><button type="button" class="btn sm" id="gear-add-btn" style="margin:0">Add</button></div></div>`;
 
@@ -2599,7 +2628,7 @@
         `<option value="${GPS}">My current location</option><option value="${OTHER_PT}">Enter coordinates…</option>`;
       if (t) { $('#tr-where').value = t.spotId && spotById(t.spotId) ? t.spotId : OTHER_PT; $('#tr-lat').value = t.lat; $('#tr-lon').value = t.lon; }
       else if (pre && pre.lat != null) { $('#tr-where').value = OTHER_PT; $('#tr-lat').value = round(pre.lat, 6); $('#tr-lon').value = round(pre.lon, 6); }
-      else $('#tr-where').value = opts.length ? opts[0].sp.id : GPS;
+      else { const near = opts.filter((o) => o.d != null).sort((a, b) => a.d - b.d)[0]; $('#tr-where').value = near ? near.sp.id : opts.length ? opts[0].sp.id : GPS; }
       const start = t ? new Date(t.start) : (() => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(6, 0, 0, 0); return d; })();
       const end = t ? new Date(t.end) : new Date(start.getTime() + 5 * HOUR_MS);
       $('#tr-date').value = toLocalInput(start).slice(0, 10); $('#tr-start').value = toLocalInput(start).slice(11); $('#tr-end').value = toLocalInput(end).slice(11);
@@ -3098,7 +3127,7 @@
         : '<p class="help small">No limits yet.</p>';
       const used = [...new Set(catches.map((c) => c.species))].sort((a, b) => a.localeCompare(b));
       const opt = (v) => `<option value="${esc(v)}">${esc(v)}</option>`;
-      $('#lim-species').innerHTML = '<option value="">Choose a fish or shellfish…</option>' + (used.length ? `<optgroup label="What you've caught">${used.map(opt).join('')}</optgroup>` : '') + SPECIES_GROUPS.map(([g, l]) => `<optgroup label="${esc(g)}">${l.map(opt).join('')}</optgroup>`).join('');
+      $('#lim-species').innerHTML = '<option value="">Choose…</option>' + (used.length ? `<optgroup label="What you've caught">${used.map(opt).join('')}</optgroup>` : '') + SPECIES_GROUPS.map(([g, l]) => `<optgroup label="${esc(g)}">${l.map(opt).join('')}</optgroup>`).join('');
     }
     function save(lim) { store('tl.limits', JSON.stringify(lim)); renderNow(); }
     $('#lim-add').addEventListener('click', () => {
