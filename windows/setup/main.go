@@ -63,7 +63,7 @@ func main() {
 	}
 	if win.Ask(head,
 		"Open it from the Start menu or the desktop shortcut. To remove it later: Settings → Apps → Installed apps → Fishamongus! → Uninstall.\n\n"+
-			"Moving your log from your phone? In the phone app use Settings → Backup, send yourself the file, then use Restore from backup (or Add someone else's log) on this computer.",
+			"Moving your log from your phone or another app? Make a backup or a spreadsheet (CSV) there, then use Settings → Import a log here, or drop the file onto the Fishamongus! window.",
 		"Open Fishamongus!", "Close") {
 		c := exec.Command(exe)
 		c.Dir = dir
@@ -118,6 +118,15 @@ func install(dir, exe string) error {
 		if err := win.RegSet(v[0], v[1], v[2]); err != nil {
 			return fmt.Errorf("couldn't register the uninstaller: %v", err)
 		}
+	}
+	// "Open with → Fishamongus!" for spreadsheets and backups (it doesn't become the default app for them).
+	cmd := `"` + exe + `" "%1"`
+	_ = win.Hidden("reg.exe", "add", win.OpenWithKey, "/v", "FriendlyAppName", "/t", "REG_SZ", "/d", win.AppName, "/f")
+	_ = win.Hidden("reg.exe", "add", win.OpenWithKey+`\shell\open\command`, "/ve", "/t", "REG_SZ", "/d", cmd, "/f")
+	_ = win.Hidden("reg.exe", "add", win.OpenWithKey+`\DefaultIcon`, "/ve", "/t", "REG_SZ", "/d", icon, "/f")
+	for _, ext := range []string{".csv", ".json"} {
+		_ = win.Hidden("reg.exe", "add", win.OpenWithKey+`\SupportedTypes`, "/v", ext, "/t", "REG_SZ", "/d", "", "/f")
+		_ = win.Hidden("reg.exe", "add", `HKCU\Software\Classes\`+ext+`\OpenWithList\`+win.ExeName, "/f")
 	}
 	return nil
 }
