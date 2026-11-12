@@ -938,3 +938,22 @@ html.night .wa-unverified { background: #2a0505; color: var(--ink); }
 body.dropping::after { content: 'Drop to import this log'; position: fixed; inset: 12px; z-index: 200; display: grid; place-items: center;
   border: 3px dashed currentColor; border-radius: 20px; background: color-mix(in srgb, var(--bg, #f3efe6) 88%, transparent); color: var(--ink, #12313a);
   font-size: 22px; font-weight: 600; pointer-events: none; }
+
+/* Find a place by name */
+.place-search { margin: 8px 0 4px; }
+.ps-row { display: flex; gap: 8px; }
+.ps-row input { flex: 1; min-width: 0; }
+.ps-row .ps-go { flex: none; min-height: 44px; }
+.ps-msg { margin: 6px 0 0; }
+.ps-results { list-style: none; margin: 8px 0 0; padding: 0; border-radius: 12px; overflow: hidden; background: var(--surface); box-shadow: 0 0 0 1px var(--line); }
+.ps-results li + li { border-top: 1px solid var(--line); }
+.ps-results button { display: grid; gap: 2px; width: 100%; min-height: 48px; padding: 9px 12px; border: 0; background: none; color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
+.ps-results button:hover, .ps-results button:focus-visible { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.ps-results b { font-weight: 600; overflow-wrap: anywhere; }
+.ps-results small { color: var(--ink-2); font-size: 13px; overflow-wrap: anywhere; }
+.ps-or { margin: 10px 0 0; }
+.map-search-btn { position: absolute; right: 10px; top: 144px; z-index: 1000; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 12px; background: var(--surface); color: var(--ink); box-shadow: 0 2px 8px rgba(0,0,0,.25); cursor: pointer; }
+.map-search-btn svg { width: 22px; height: 22px; }
+.map-search-btn[aria-expanded="true"] { background: var(--accent); color: #fff; }
+.map-search { position: absolute; right: 64px; left: 12px; top: 12px; z-index: 1001; max-width: 460px; padding: 10px; border-radius: 14px; background: var(--surface); box-shadow: 0 4px 18px rgba(0,0,0,.28); max-height: calc(100% - 40px); overflow: auto; }
+.map-search.place-search { margin-top: 0; }

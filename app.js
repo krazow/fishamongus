@@ -163,7 +163,7 @@
 
   // ---------------------------------------------------------------- units
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition; // speech recognition, where the browser has it
-  const APP_VERSION = '4.7.1 (Nov 11, 2026)';
+  const APP_VERSION = '4.8 (Nov 12, 2026)';
   // Night (dim red) mode and large text, applied before anything is drawn.
   function applyDisplay() {
     const night = store('tl.theme') === 'night'; const large = store('tl.text') === 'large';
@@ -288,6 +288,92 @@
   }
   let lastLoc = (() => { try { return JSON.parse(store('tl.lastLoc') || 'null'); } catch { return null; } })();
   function rememberLoc(L) { if (L && L.source === 'gps') { lastLoc = { lat: L.lat, lon: L.lon, at: Date.now() }; store('tl.lastLoc', JSON.stringify(lastLoc)); } }
+
+  // ---------------------------------------------------------------- find a place by name
+  // One search box for the catch, spot and trip forms and the map. Your saved spots match first (offline too);
+  // then OpenStreetMap's Nominatim search, run when you press Search (its usage policy rules out search-as-you-type),
+  // at most once a second, and biased towards where you are. Coordinates and map links pasted in work as well.
+  const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
+  const placeCache = new Map(); let placeLastAt = 0;
+  // "47.144, -122.675", "47.144 -122.675", 47°08'38"N 122°40'30"W, or a Google / Apple / OpenStreetMap link.
+  function parseCoords(text) {
+    const s = String(text || '').trim(); if (!s) return null;
+    const ok = (la, lo) => (Number.isFinite(la) && Number.isFinite(lo) && Math.abs(la) <= 90 && Math.abs(lo) <= 180 && !(la === 0 && lo === 0) ? { lat: la, lon: lo } : null);
+    let m = /@(-?\d+\.\d+),(-?\d+\.\d+)/.exec(s) || /[?&](?:q|ll|query|destination|daddr|center)=(-?\d+\.\d+)(?:,|%2C)\s*(-?\d+\.\d+)/i.exec(s) || /#map=\d+\/(-?\d+\.\d+)\/(-?\d+\.\d+)/.exec(s) || /[?&]mlat=(-?\d+\.\d+)&mlon=(-?\d+\.\d+)/.exec(s);
+    if (m) return ok(+m[1], +m[2]);
+    m = /^\s*(-?\d{1,2}(?:\.\d+)?)\s*[,;\s]\s*(-?\d{1,3}(?:\.\d+)?)\s*$/.exec(s);
+    if (m && (m[1].includes('.') || m[2].includes('.'))) return ok(+m[1], +m[2]);
+    const part = '(\\d{1,3}(?:\\.\\d+)?)\\s*°\\s*(?:(\\d{1,2}(?:\\.\\d+)?)\\s*[\'′]\\s*)?(?:(\\d{1,2}(?:\\.\\d+)?)\\s*["″]\\s*)?([NSEW])';
+    m = new RegExp(`^\\s*${part}[\\s,]+${part}\\s*$`, 'i').exec(s);
+    if (m) {
+      const dms = (d, mi, se, h) => (+d + (+mi || 0) / 60 + (+se || 0) / 3600) * (/[SW]/i.test(h) ? -1 : 1);
+      const a = dms(m[1], m[2], m[3], m[4]); const b = dms(m[5], m[6], m[7], m[8]);
+      return /[NS]/i.test(m[4]) ? ok(a, b) : ok(b, a);
+    }
+    return null;
+  }
+  const PLACE_KIND = { lake: 'Lake', reservoir: 'Reservoir', pond: 'Pond', river: 'River', stream: 'Stream', canal: 'Canal', bay: 'Bay', cove: 'Cove', strait: 'Strait', sound: 'Sound', lagoon: 'Lagoon',
+    wetland: 'Wetland', beach: 'Beach', slipway: 'Boat launch', marina: 'Marina', pier: 'Pier', fishing: 'Fishing spot', dam: 'Dam', weir: 'Weir', park: 'Park', nature_reserve: 'Nature reserve',
+    protected_area: 'Protected area', island: 'Island', peninsula: 'Peninsula', cape: 'Point', city: 'City', town: 'Town', village: 'Village', hamlet: 'Hamlet', suburb: 'Neighbourhood', county: 'County',
+    state: 'State', water: 'Water', camp_site: 'Campground', harbour: 'Harbour', ferry_terminal: 'Ferry terminal' };
+  function placeFrom(r) {
+    const a = r.address || {};
+    const kind = PLACE_KIND[r.type] || PLACE_KIND[a.water] || (r.category === 'waterway' ? 'Waterway' : r.category === 'natural' && r.type === 'water' ? 'Water' : '');
+    const name = r.name || (r.display_name || '').split(',')[0];
+    const area = [a.city || a.town || a.village || a.hamlet || a.municipality, a.county, a.state || a.region, a.country_code && a.country_code !== (navigator.language || 'en-US').slice(-2).toLowerCase() ? a.country : '']
+      .filter((x, i, arr) => x && x !== name && arr.indexOf(x) === i).slice(0, 3).join(', ');
+    return { name, kind, area, lat: +r.lat, lon: +r.lon, label: [name, area].filter(Boolean).join(', ') };
+  }
+  async function geocode(q, near) {
+    const key = `${q.toLowerCase()}|${near ? `${near.lat.toFixed(1)},${near.lon.toFixed(1)}` : ''}`;
+    if (placeCache.has(key)) return placeCache.get(key);
+    const wait = placeLastAt + 1100 - Date.now(); if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    placeLastAt = Date.now();
+    const u = new URL(NOMINATIM);
+    u.search = new URLSearchParams({ q, format: 'jsonv2', addressdetails: '1', limit: '8', 'accept-language': navigator.language || 'en' });
+    if (near) u.searchParams.set('viewbox', [near.lon - 2, near.lat + 1.5, near.lon + 2, near.lat - 1.5].map((v) => v.toFixed(3)).join(','));
+    const res = await fetch(u, { headers: { Accept: 'application/json' } });
+    if (res.status === 429) throw new Error('The place search is busy. Try again in a minute.');
+    if (!res.ok) throw new Error('The place search isn’t answering right now.');
+    const out = (await res.json()).map(placeFrom).filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon));
+    placeCache.set(key, out); return out;
+  }
+  // Mount the search box in host. onPick({ lat, lon, name, label, spotId? }) is called with the chosen place.
+  function mountPlaceSearch(host, { onPick, near = () => lastLoc, placeholder = 'Find a place: lake, river, launch, town…' }) {
+    host.classList.add('place-search');
+    host.innerHTML = `<div class="ps-row"><input type="search" enterkeyhint="search" autocomplete="off" aria-label="Search for a place" placeholder="${esc(placeholder)}"><button type="button" class="btn sm ps-go">Search</button></div>
+      <p class="ps-msg help small" aria-live="polite" hidden></p><ul class="ps-results" hidden></ul>`;
+    const input = host.querySelector('input'); const list = host.querySelector('.ps-results'); const msg = host.querySelector('.ps-msg');
+    let shown = []; let run = 0;
+    const say = (t) => { msg.hidden = !t; msg.textContent = t || ''; };
+    const draw = () => {
+      const from = near();
+      list.hidden = !shown.length;
+      list.innerHTML = shown.map((p, i) => `<li><button type="button" data-i="${i}"><b>${esc(p.name)}</b><small>${esc([p.spotId ? 'Saved spot' : p.kind, p.area, from ? fmtDist(distM(from, p)) + ' away' : ''].filter(Boolean).join(' · '))}</small></button></li>`).join('');
+    };
+    async function search() {
+      const q = input.value.trim(); const id = ++run; shown = []; draw();
+      if (q.length < 2) return say('Type the name of a place.');
+      const c = parseCoords(q);
+      if (c) { say(''); input.value = ''; return onPick({ ...c, name: '', label: `${c.lat.toFixed(5)}, ${c.lon.toFixed(5)}` }); }
+      const from = near(); const k = q.toLowerCase();
+      shown = spots.filter((sp) => sp.name.toLowerCase().includes(k)).map((sp) => ({ name: sp.name, area: '', lat: sp.lat, lon: sp.lon, spotId: sp.id, label: sp.name }))
+        .sort((a, b) => (from ? distM(from, a) - distM(from, b) : 0)).slice(0, 3);
+      draw();
+      if (!navigator.onLine) return say(shown.length ? 'Your saved spots. Searching other places needs a connection.' : 'Searching for places needs a connection. You can enter coordinates instead.');
+      say('Searching…');
+      try {
+        const found = await geocode(q, from); if (id !== run) return;
+        const more = found.filter((p) => !shown.some((s) => distM(s, p) < 150)).sort((a, b) => (from ? Math.min(distM(from, a), 4e5) - Math.min(distM(from, b), 4e5) : 0));
+        shown = [...shown, ...more].slice(0, 8); draw();
+        say(shown.length ? '' : `Nothing found for “${q}”. Try adding the nearest town or the state.`);
+      } catch (err) { if (id === run) say((err && err.message && !/fetch/i.test(err.message) ? err.message : 'Couldn’t reach the place search.') + (shown.length ? '' : ' You can enter coordinates instead.')); }
+    }
+    host.querySelector('.ps-go').addEventListener('click', search);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); search(); } });
+    list.addEventListener('click', (e) => { const b = e.target.closest('[data-i]'); if (!b) return; const p = shown[+b.dataset.i]; shown = []; draw(); say(''); input.value = ''; onPick(p); });
+    return { reset() { run++; shown = []; draw(); say(''); input.value = ''; }, focus() { input.focus(); } };
+  }
   const thumbUrls = new Map();
   function thumbUrl(c) {
     const key = c.id + ':' + (c.updatedAt || c.createdAt);
@@ -455,7 +541,7 @@
       if (!('geolocation' in navigator)) return rej(new Error('This browser has no GPS access.'));
       navigator.geolocation.getCurrentPosition(
         (p) => res({ lat: p.coords.latitude, lon: p.coords.longitude, accuracy: p.coords.accuracy, source: 'gps', at: Date.now() }),
-        (err) => rej(new Error(err.code === 1 ? 'Location permission is off. Allow it for this site, or enter coordinates by hand.' : err.code === 3 ? 'GPS timed out. Try again with a clearer view of the sky.' : 'Could not get a GPS fix.')),
+        (err) => rej(new Error(err.code === 1 ? 'Location permission is off. Allow it for this site, search for the place by name.' : err.code === 3 ? 'GPS timed out. Try again with a clearer view of the sky.' : 'Could not get a GPS fix.')),
         { enableHighAccuracy: true, timeout: 20000, maximumAge: maxAge }
       );
     });
@@ -919,7 +1005,7 @@
     function spotHint() {
       const v = $('#f-spot').value; const h = $('#spot-hint');
       $('#f-spot-name').hidden = v !== NEW_SPOT;
-      if (v === NEW_SPOT) h.textContent = draft.location ? 'The spot is saved at this catch\'s location.' : 'A new spot needs a location. Use GPS or enter coordinates above.';
+      if (v === NEW_SPOT) h.textContent = draft.location ? 'The spot is saved at this catch\'s location.' : 'A new spot needs a location. Use GPS, or search for the place above.';
       else if (v && draft.autoMatched && !spotTouched) { const sp = spotById(v); const dd = distM(draft.location, sp); h.textContent = dd < 15 ? 'Matched automatically – you are at this spot.' : `Matched automatically – ${fmtDist(dd)} from the spot.`; }
       else if (!v && draft.location && spots.length) h.textContent = 'Not inside a saved spot.';
       else h.textContent = '';
@@ -938,7 +1024,7 @@
       else if (state === 'error') { $('#loc-text').textContent = 'No location'; $('#loc-sub').textContent = msg; }
       else if (L) {
         $('#loc-text').textContent = `${L.lat.toFixed(5)}, ${L.lon.toFixed(5)}`;
-        $('#loc-sub').textContent = L.source === 'gps' ? `GPS · ±${Math.round(L.accuracy)} m` : L.source === 'photo' ? 'From the photo' : L.source === 'last' ? 'Last GPS fix (quick catch)' : 'Entered by hand';
+        $('#loc-sub').textContent = L.source === 'gps' ? `GPS · ±${Math.round(L.accuracy)} m` : L.source === 'photo' ? 'From the photo' : L.source === 'last' ? 'Last GPS fix (quick catch)' : L.source === 'search' ? (L.place ? `Found: ${L.place}` : 'From the place search') : 'Entered by hand';
         $('#f-lat').value = L.lat.toFixed(6); $('#f-lon').value = L.lon.toFixed(6);
       } else { $('#loc-text').textContent = 'No location'; $('#loc-sub').textContent = ''; }
       $('#btn-locate').disabled = state === 'busy';
@@ -1050,6 +1136,12 @@
       draft.location = { lat, lon, accuracy: null, source: 'manual', at: Date.now() }; dirty = true;
       showLoc(); spotTouched = false; autoSpot(); loadConditions(); $('.manual-loc').open = false;
     });
+    const fPlace = mountPlaceSearch($('#f-place'), { near: () => (draft && draft.location) || lastLoc, onPick: (p) => {
+      draft.location = { lat: p.lat, lon: p.lon, accuracy: null, source: 'search', place: p.label || p.name, at: Date.now() }; dirty = true;
+      showLoc(); spotTouched = false;
+      if (p.spotId && spotById(p.spotId)) { $('#f-spot').value = p.spotId; spotTouched = true; } else autoSpot();
+      loadConditions(); $('#f-manual').open = false;
+    } });
     $('#f-time').addEventListener('change', () => { if (draft.location) loadConditions(); });
 
     function open(c, pre) {
@@ -1136,7 +1228,7 @@
       let createdSpot = null;
       if (draft.newSpot) {
         const name = $('#f-spot-name').value.trim();
-        if (!draft.location) { formError('A new spot needs a location. Use GPS or enter coordinates.', $('#btn-locate')); return; }
+        if (!draft.location) { formError('A new spot needs a location. Use GPS, or search for the place by name.', $('#btn-locate')); return; }
         if (!name) { $('#f-spot-name').classList.add('invalid'); formError('Give the new spot a name.', $('#f-spot-name')); return; }
         createdSpot = { id: uid(), name, lat: draft.location.lat, lon: draft.location.lon, radiusM: 250, notes: '', createdAt: Date.now(), updatedAt: Date.now() };
         spotId = createdSpot.id;
@@ -1421,7 +1513,7 @@
     const radiusLabel = (m) => `${fmtDist(m)}${m === 100 ? ' – a dock or small pool' : m === 250 ? ' – a cove or point' : m === 500 ? ' – a bay or bend' : m === 1000 ? ' – part of a lake' : ' – a whole small lake'}`;
     function showLoc(state, msg) {
       if (state === 'busy') { $('#sp-loc-text').innerHTML = '<span class="spin"></span>Getting GPS fix…'; $('#sp-loc-sub').textContent = ''; return; }
-      if (loc) { $('#sp-loc-text').textContent = `${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`; $('#sp-loc-sub').textContent = msg || (loc.source === 'gps' ? `GPS · ±${Math.round(loc.accuracy)} m` : loc.source === 'catch' ? 'From the catch' : loc.source === 'map' ? 'Picked on the map' : loc.source === 'saved' ? 'Saved location' : 'Entered by hand'); $('#sp-lat').value = loc.lat.toFixed(6); $('#sp-lon').value = loc.lon.toFixed(6); }
+      if (loc) { $('#sp-loc-text').textContent = `${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`; $('#sp-loc-sub').textContent = msg || (loc.source === 'gps' ? `GPS · ±${Math.round(loc.accuracy)} m` : loc.source === 'catch' ? 'From the catch' : loc.source === 'map' ? 'Picked on the map' : loc.source === 'saved' ? 'Saved location' : loc.source === 'search' ? (loc.place ? `Found: ${loc.place}` : 'From the place search') : 'Entered by hand'); $('#sp-lat').value = loc.lat.toFixed(6); $('#sp-lon').value = loc.lon.toFixed(6); }
       else { $('#sp-loc-text').textContent = 'No location'; $('#sp-loc-sub').textContent = msg || ''; }
     }
     async function locate() {
@@ -1434,15 +1526,21 @@
       $('#spot-form-title').textContent = sp ? 'Edit spot' : 'New spot';
       $('#sp-radius').innerHTML = RADII.map((m) => `<option value="${m}">${esc(radiusLabel(m))}</option>`).join('');
       $('#sp-radius').value = String(sp ? sp.radiusM : 250);
-      $('#sp-name').value = sp ? sp.name : ''; $('#sp-notes').value = sp ? sp.notes || '' : '';
+      $('#sp-name').value = sp ? sp.name : opts.name || ''; spPlace.reset(); $('#sp-notes').value = sp ? sp.notes || '' : '';
       $('#sp-delete').hidden = !sp; $('#sp-water').value = sp ? sp.water || 'auto' : 'auto'; $('#sp-manual').open = false;
-      loc = sp ? { lat: sp.lat, lon: sp.lon, source: 'saved' } : opts.location ? { ...opts.location, source: opts.location.source === 'map' ? 'map' : 'catch' } : null;
+      loc = sp ? { lat: sp.lat, lon: sp.lon, source: 'saved' } : opts.location ? { ...opts.location, source: ['map', 'search'].includes(opts.location.source) ? opts.location.source : 'catch' } : null;
       showLoc();
       openSheet($('#sheet-spot-form'));
       if (!loc) locate();
       if (!sp) setTimeout(() => $('#sp-name').focus(), 250);
     }
     $('#sp-locate').addEventListener('click', locate);
+    const spPlace = mountPlaceSearch($('#sp-place'), { near: () => loc || lastLoc, onPick: (p) => {
+      if (p.spotId && (!editing || editing.id !== p.spotId)) { toast(`${p.name} is already a saved spot`); }
+      loc = { lat: p.lat, lon: p.lon, source: 'search', place: p.label || p.name }; showLoc(); $('#sp-manual').open = false;
+      const nm = $('#sp-name'); if (!nm.value.trim() && p.name && !p.spotId) { nm.value = p.name; nm.classList.remove('invalid'); }
+      $('#sp-error').textContent = '';
+    } });
     $('#sp-use-manual').addEventListener('click', () => {
       const lat = num($('#sp-lat').value); const lon = num($('#sp-lon').value);
       if (lat == null || lon == null || Math.abs(lat) > 90 || Math.abs(lon) > 180) { toast('Enter a valid latitude and longitude'); return; }
@@ -1452,7 +1550,7 @@
       e.preventDefault();
       const name = $('#sp-name').value.trim();
       if (!name) { $('#sp-name').classList.add('invalid'); $('#sp-error').textContent = 'Give the spot a name.'; $('#sp-name').focus(); return; }
-      if (!loc) { $('#sp-error').textContent = 'The spot needs a location. Use GPS or enter coordinates.'; return; }
+      if (!loc) { $('#sp-error').textContent = 'The spot needs a location. Use GPS, or search for the place by name.'; spPlace.focus(); return; }
       if (e.target.dataset.busy) return;
       const others = spots.filter((x) => !editing || x.id !== editing.id);
       const same = others.find((x) => x.name.trim().toLowerCase() === name.toLowerCase());
@@ -1768,14 +1866,31 @@
       // With nothing saved yet, start where you last were rather than on the whole country.
       const hasPts = catches.some((c) => c.location) || spots.length;
       if (!hasPts && lastLoc) { map.setView([lastLoc.lat, lastLoc.lon], 13); mapCentred = true; }
+      // Find a place by name: the map moves there and offers the same actions as tapping it.
+      const mapSearchBox = $('#map-search');
+      const mapPlace = mountPlaceSearch(mapSearchBox, { near: () => { const c = map.getCenter(); return { lat: c.lat, lon: c.lng }; }, placeholder: 'Find a lake, river, launch, town…', onPick: (p) => {
+        toggleMapSearch(false);
+        if (p.spotId) { map.setView([p.lat, p.lon], Math.max(map.getZoom(), 14)); showSpot(p.spotId); return; }
+        map.setView([p.lat, p.lon], p.kind === 'City' || p.kind === 'County' || p.kind === 'State' ? 12 : 15);
+        const title = p.name || 'This place'; const sub = p.name ? [p.kind, p.area].filter(Boolean).join(' · ') : `${p.lat.toFixed(4)}, ${p.lon.toFixed(4)}`;
+        L.popup().setLatLng([p.lat, p.lon]).setContent(`<div class="pop"><b>${esc(title)}</b><br>${esc(sub)}<div class="pop-actions"><button type="button" data-map-spot="${p.lat},${p.lon}" data-name="${esc(p.name || '')}" data-place="${esc(p.name ? p.label : '')}">New spot here</button><button type="button" data-map-trip="${p.lat},${p.lon}" data-place="${esc(p.name ? p.label : '')}">Plan a trip here</button></div></div>`).openOn(map);
+      } });
+      function toggleMapSearch(open) {
+        mapSearchBox.hidden = !open; $('#btn-map-search').setAttribute('aria-expanded', String(open));
+        if (open) { mapPlace.reset(); setTimeout(() => mapPlace.focus(), 50); }
+      }
+      $('#btn-map-search').addEventListener('click', () => toggleMapSearch(mapSearchBox.hidden));
+      mapSearchBox.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); toggleMapSearch(false); } });
+      L.DomEvent.disableClickPropagation(mapSearchBox); L.DomEvent.disableScrollPropagation(mapSearchBox);
       map.on('click', (e) => {
+        if (!mapSearchBox.hidden) { toggleMapSearch(false); return; }
         const { lat, lng } = e.latlng;
         L.popup().setLatLng(e.latlng).setContent(`<div class="pop"><b>This place</b><br>${lat.toFixed(4)}, ${lng.toFixed(4)}<div class="pop-actions"><button type="button" data-map-spot="${lat},${lng}">New spot here</button><button type="button" data-map-trip="${lat},${lng}">Plan a trip here</button></div></div>`).openOn(map);
       });
       map.on('popupopen', (e) => {
         const el = e.popup.getElement();
-        const ms = el.querySelector('[data-map-spot]'); if (ms) ms.onclick = () => { const [la, lo] = ms.dataset.mapSpot.split(',').map(Number); map.closePopup(); spotForm.open(null, { location: { lat: la, lon: lo, source: 'map' } }); };
-        const mt = el.querySelector('[data-map-trip]'); if (mt) mt.onclick = () => { const [la, lo] = mt.dataset.mapTrip.split(',').map(Number); map.closePopup(); tripForm.open(null, { lat: la, lon: lo }); };
+        const ms = el.querySelector('[data-map-spot]'); if (ms) ms.onclick = () => { const [la, lo] = ms.dataset.mapSpot.split(',').map(Number); map.closePopup(); spotForm.open(null, { location: { lat: la, lon: lo, source: ms.dataset.place ? 'search' : 'map', place: ms.dataset.place }, name: ms.dataset.name || '' }); };
+        const mt = el.querySelector('[data-map-trip]'); if (mt) mt.onclick = () => { const [la, lo] = mt.dataset.mapTrip.split(',').map(Number); map.closePopup(); tripForm.open(null, { lat: la, lon: lo, name: mt.dataset.place || '' }); };
         el.querySelectorAll('[data-open]').forEach((b) => { b.onclick = () => showDetail(b.dataset.open); });
         const s2 = el.querySelector('[data-spot]'); if (s2) s2.onclick = () => showSpot(s2.dataset.spot);
       });
@@ -2715,18 +2830,18 @@
     }
     function whereHint() {
       const v = $('#tr-where').value; $('#tr-coords').hidden = v !== OTHER_PT;
-      $('#tr-where-hint').textContent = v === GPS ? 'Uses where you are when you save.' : v === OTHER_PT ? 'Enter the latitude and longitude of the place.' : '';
+      $('#tr-where-hint').textContent = v === GPS ? 'Uses where you are when you save.' : '';
       if (!editing && v && v !== GPS && v !== OTHER_PT && !picked.length) {
         const top = ranked(countBy(catches.filter((c) => c.spotId === v), (c) => c.species)).slice(0, 2).map((x) => x[0]);
         if (top.length) { picked = top; speciesChips(); }
       }
     }
     function open(t, pre) {
-      editing = t || null; $('#trip-form').reset(); $('#tr-error').textContent = '';
+      editing = t || null; $('#trip-form').reset(); $('#tr-error').textContent = ''; trPlace.reset(); setTripPlace(t && !t.spotId ? t.placeName || '' : (pre && pre.name) || '');
       $('#trip-form-title').textContent = t ? 'Edit trip' : 'Plan a trip'; $('#tr-delete').hidden = !t;
       const opts = spots.map((sp) => ({ sp, d: lastLoc ? distM(lastLoc, sp) : null })).sort((a, b) => (b.sp.id === (t && t.spotId) ? 1 : 0) - (a.sp.id === (t && t.spotId) ? 1 : 0) || a.sp.name.localeCompare(b.sp.name));
       $('#tr-where').innerHTML = (opts.length ? `<optgroup label="Saved spots">${opts.map(({ sp }) => `<option value="${sp.id}">${esc(sp.name)}</option>`).join('')}</optgroup>` : '') +
-        `<option value="${GPS}">My current location</option><option value="${OTHER_PT}">Enter coordinates…</option>`;
+        `<option value="${GPS}">My current location</option><option value="${OTHER_PT}">Another place (search or coordinates)…</option>`;
       if (t) { $('#tr-where').value = t.spotId && spotById(t.spotId) ? t.spotId : OTHER_PT; $('#tr-lat').value = t.lat; $('#tr-lon').value = t.lon; }
       else if (pre && pre.lat != null) { $('#tr-where').value = OTHER_PT; $('#tr-lat').value = round(pre.lat, 6); $('#tr-lon').value = round(pre.lon, 6); }
       else { const near = opts.filter((o) => o.d != null).sort((a, b) => a.d - b.d)[0]; $('#tr-where').value = near ? near.sp.id : opts.length ? opts[0].sp.id : GPS; }
@@ -2740,13 +2855,20 @@
       openSheet($('#sheet-trip-form'));
     }
     $('#tr-where').addEventListener('change', whereHint);
+    let tripPlaceName = '';
+    function setTripPlace(name) { tripPlaceName = name || ''; $('#tr-place-name').hidden = !tripPlaceName; $('#tr-place-name').textContent = tripPlaceName ? `Place: ${tripPlaceName}` : ''; }
+    const trPlace = mountPlaceSearch($('#tr-place'), { near: () => lastLoc, onPick: (p) => {
+      if (p.spotId && spotById(p.spotId)) { $('#tr-where').value = p.spotId; setTripPlace(''); whereHint(); return; }
+      $('#tr-lat').value = round(p.lat, 6); $('#tr-lon').value = round(p.lon, 6); setTripPlace(p.name ? p.label || p.name : ''); $('#tr-error').textContent = '';
+    } });
+    ['#tr-lat', '#tr-lon'].forEach((q) => $(q).addEventListener('input', () => setTripPlace('')));
     $('#tr-species-add').addEventListener('change', (e) => { const v = e.target.value; if (v && !picked.includes(v)) picked.push(v); speciesChips(); });
     $('#tr-species-chips').addEventListener('click', (e) => { const b = e.target.closest('[data-rm]'); if (b) { picked = picked.filter((x) => x !== b.dataset.rm); speciesChips(); } });
     $('#trip-form').addEventListener('submit', async (e) => {
       e.preventDefault(); const err = $('#tr-error'); err.textContent = '';
       const where = $('#tr-where').value; let lat; let lon; let spotId = null; let name;
       if (where === GPS) { err.innerHTML = '<span class="spin"></span>Getting your location…'; try { const p = await getPosition(); rememberLoc(p); lat = p.lat; lon = p.lon; } catch (x) { err.textContent = x.message; return; } err.textContent = ''; name = 'Fishing trip'; }
-      else if (where === OTHER_PT) { lat = num($('#tr-lat').value); lon = num($('#tr-lon').value); if (lat == null || lon == null || Math.abs(lat) > 90 || Math.abs(lon) > 180) { err.textContent = 'Enter a valid latitude and longitude.'; return; } name = editing && !editing.spotId ? editing.name : 'Fishing trip'; }
+      else if (where === OTHER_PT) { lat = num($('#tr-lat').value); lon = num($('#tr-lon').value); if (lat == null || lon == null || Math.abs(lat) > 90 || Math.abs(lon) > 180) { err.textContent = 'Enter a valid latitude and longitude.'; return; } name = tripPlaceName ? tripPlaceName.split(',')[0] : editing && !editing.spotId ? editing.name : 'Fishing trip'; }
       else { const sp = spotById(where); lat = sp.lat; lon = sp.lon; spotId = sp.id; name = sp.name; }
       const date = $('#tr-date').value; const st = $('#tr-start').value; const en = $('#tr-end').value;
       if (!date || !st || !en) { err.textContent = 'Pick a date, a start time and an end time.'; return; }
@@ -2759,7 +2881,7 @@
       const base = editing || { id: uid(), createdAt: now, gear: (TYPE_GEAR[type] || BASE_GEAR).map((text) => ({ text, done: false })) };
       if (name === 'Fishing trip') name = `${TRIP_TYPES[type]} trip`;
       const moved = !editing || editing.lat !== lat || editing.lon !== lon || editing.start !== start || editing.end !== end;
-      const t = { ...base, type, name, spotId, lat, lon, start, end, species: [...picked], notes: $('#tr-notes').value.trim(), ...(moved ? { forecast: null, tide: null, actual: null } : {}) };
+      const t = { ...base, type, name, spotId, lat, lon, placeName: where === OTHER_PT ? tripPlaceName : '', start, end, species: [...picked], notes: $('#tr-notes').value.trim(), ...(moved ? { forecast: null, tide: null, actual: null } : {}) };
       await saveTrip(t);
       const wasNew = !editing; closeSheet();
       renderTrips(); toast(wasNew ? 'Trip planned' : 'Trip updated');
