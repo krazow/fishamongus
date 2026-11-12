@@ -153,6 +153,9 @@
   const toLocalInput = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   const fmtDate = (ms) => new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: new Date(ms).getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
   const fmtTime = (ms) => new Date(ms).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  // Catches imported with a date but no time are marked noTime: shown without a time, and kept out of time-based stats.
+  const whenFull = (c) => (c.noTime ? `${new Date(c.caughtAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} · time not recorded` : fmtFull(c.caughtAt));
+  const whenTime = (c) => (c.noTime ? 'time not recorded' : fmtTime(c.caughtAt));
   const fmtFull = (ms) => new Date(ms).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
   const isTouch = matchMedia('(pointer: coarse)').matches;
 
@@ -160,7 +163,7 @@
 
   // ---------------------------------------------------------------- units
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition; // speech recognition, where the browser has it
-  const APP_VERSION = '4.7 (Nov 11, 2026)';
+  const APP_VERSION = '4.7.1 (Nov 11, 2026)';
   // Night (dim red) mode and large text, applied before anything is drawn.
   function applyDisplay() {
     const night = store('tl.theme') === 'night'; const large = store('tl.text') === 'large';
@@ -405,8 +408,8 @@
         <span class="min-w">
           <h3>${esc(c.species)}${nFish(c) > 1 ? `<span class="count-badge">×${nFish(c)}</span>` : ''}</h3>
           <div class="meta">${esc(c.bait)}${c.shellBait ? ' · ' + esc(c.shellBait) : ''}${c.lureColor ? ' · ' + esc(c.lureColor) : ''}${c.crabSex ? ' · ' + (c.crabSex === 'male' ? 'male' : 'female') : ''}${c.carapaceCm ? ' · ' + esc(U.len(c.carapaceCm)) : ''}${size ? ' · ' + esc(size) : ''}${c.from ? ' · from ' + esc(c.from) : ''}</div>
-          <div class="meta">${fmtTime(c.caughtAt)}${c.spotId && spotById(c.spotId) ? ' · ' + esc(spotById(c.spotId).name) : ''}</div>
-          <div class="wx">${c.weather ? esc(weatherLine(c.weather)) : (c.location ? 'Weather pending…' : 'No location')}</div>
+          <div class="meta">${whenTime(c)}${c.spotId && spotById(c.spotId) ? ' · ' + esc(spotById(c.spotId).name) : ''}</div>
+          <div class="wx">${c.weather ? esc(weatherLine(c.weather)) : c.noTime ? 'No time, so no weather' : (c.location && (c.weatherTries || 0) < 6 ? 'Weather pending…' : c.location ? 'No weather' : 'No location')}</div>
         </span></button></li>`; }).join('');
     }).join('') || (filtering ? `<li class="help" style="text-align:center;padding:20px">No catches match${q ? ` “${esc(q)}”` : ''} these filters.</li>` : '');
   }
@@ -1168,6 +1171,8 @@
         Object.assign(rec, shellFields, { shellBait: $('#f-lure-color').value.trim(), lureColor: '', lureSize: '', lengthCm: null, weightKg: null, weightEst: false, tackleId: null,
           pots: $('#pot-fields').hidden ? null : Math.round(num($('#f-pots').value) || 0) || null, soakH: $('#pot-fields').hidden ? null : num($('#f-soak').value) });
       } else { ['crabSex', 'shellHard', 'carapaceCm', 'shellBait', 'pots', 'soakH'].forEach((k) => { delete rec[k]; }); }
+      // An imported catch with no time gets one when you set it: then its weather and tide are looked up too.
+      if (rec.noTime && rec.caughtAt !== editing.caughtAt) { delete rec.noTime; Object.assign(rec, { weather: null, weatherTries: 0, tide: undefined, tideTries: 0, marine: undefined }); delete rec.flow; }
       const pb = personalBest(rec);
       const ses = !editing && sessionFor(rec.caughtAt);
       if (ses) rec.sessionId = ses.id;
@@ -1235,7 +1240,7 @@
       ${detailUrl ? `<img class="detail-photo" src="${detailUrl}" alt="Photo of ${esc(c.species)} – tap to enlarge" data-view-photo="0">` : ''}
       ${thumbsHtml}
       <h3 class="detail-title">${nFish(c) > 1 ? `${nFish(c)} × ` : ''}${esc(c.species)}</h3>
-      <p class="detail-sub">${c.from ? `Caught by ${esc(c.from)} · ` : ''}${esc(fmtFull(c.caughtAt))}${c.released === true ? ' · Released' : c.released === false ? ' · Kept' : ''}</p>
+      <p class="detail-sub">${c.from ? `Caught by ${esc(c.from)} · ` : ''}${esc(whenFull(c))}${c.released === true ? ' · Released' : c.released === false ? ' · Kept' : ''}</p>
       <div class="kv"><h4>Catch</h4><dl>
         ${kindOf(c) === 'shellfish' ? `${row('Gear', c.bait)}${row('Bait', c.shellBait)}${nFish(c) > 1 ? row('Number caught', String(nFish(c))) : ''}${row('Sex', c.crabSex === 'male' ? 'Male' : c.crabSex === 'female' ? 'Female' : null)}${row('Shell', c.shellHard === true ? 'Hard' : c.shellHard === false ? 'Soft' : null)}${row('Carapace width', U.len(c.carapaceCm))}${row('Pots or rings', c.pots ? String(c.pots) : null)}${row('Soak time', c.soakH ? `${round(c.soakH, 1)} h` : null)}${row('Released', c.released === true ? 'Yes' : c.released === false ? 'No – kept' : null)}` : `${row('Lure / bait', c.bait)}${c.tackleId && tackle.find((t) => t.id === c.tackleId && t.name) ? row('From tackle box', tackle.find((t) => t.id === c.tackleId).name) : ''}${row('Colour', c.lureColor)}${row('Size', c.lureSize)}${nFish(c) > 1 ? row('Number of fish', String(nFish(c))) : ''}${row('Length', U.len(c.lengthCm))}${row(c.weightEst ? 'Weight (estimated)' : 'Weight', c.weightEst && c.weightKg != null ? '≈ ' + U.wt(c.weightKg) : U.wt(c.weightKg))}${row('Released', c.released === true ? 'Yes' : c.released === false ? 'No – kept' : null)}`}
       </dl></div>
@@ -1245,7 +1250,7 @@
           ${row('Wind', `${U.wind(w.windKmh)} ${compass(w.windDir)}`)}${row('Gusts', U.wind(w.gustKmh))}
           ${row('Pressure', `${U.pressure(w.pressure)}${w.pressureTrend ? ` ${trendArrow(w.pressureTrend)} ${w.pressureTrend}` : ''}`)}
           ${row('Humidity', w.humidity != null ? w.humidity + '%' : null)}${row('Cloud cover', w.cloud != null ? w.cloud + '%' : null)}${row('Precipitation', U.precip(w.precipMm))}`
-          : row('Weather', L ? 'Pending – needs a connection' : 'Not recorded')}
+          : row('Weather', c.noTime ? 'Not looked up – no time recorded' : L && (c.weatherTries || 0) < 6 ? 'Pending – needs a connection' : 'Not recorded')}
         ${row('Moon', `${moon.icon} ${moon.name} (${moon.illum}%)`)}
       </dl></div>
       ${c.flow ? `<div class="kv"><h4>River</h4><dl>${row('Flow', `${trendSym(c.flow.trend)} ${cfsText(c.flow.cfs)}${c.flow.trend ? ' · ' + c.flow.trend.toLowerCase() : ''}`)}${row('Gauge', `${c.flow.name || c.flow.site} (${fmtDist(c.flow.distM)})`)}</dl></div>` : ''}
@@ -1286,7 +1291,7 @@
       toast('Catch deleted', { label: 'Undo', fn: async () => { await DB.put(c); await reload(); toast('Catch restored'); } });
     }
     if (e.target.id === 'btn-share') {
-      const parts = [`${c.species} on ${c.bait}`, fmtFull(c.caughtAt)];
+      const parts = [`${c.species} on ${c.bait}`, whenFull(c)];
       const size = [U.len(c.lengthCm), U.wt(c.weightKg)].filter(Boolean).join(', '); if (size) parts.push(size);
       if (c.weather) parts.push(weatherLine(c.weather));
       const data = { title: c.species, text: parts.join('\n') };
@@ -1876,13 +1881,13 @@
       buckets: () => imp() ? ['Calm (<5 mph)', 'Light (5–12)', 'Breezy (12–22)', 'Windy (22+)'] : ['Calm (<8 km/h)', 'Light (8–20)', 'Breezy (20–35)', 'Windy (35+)'],
       of: (c) => { const w = c.weather.windKmh; if (w == null) return null; const b = DIMENSIONS.wind.buckets(); return b[w < 8 ? 0 : w < 20 ? 1 : w < 35 ? 2 : 3]; } },
     time: { label: 'Time of day', needsWx: false, buckets: () => ['Dawn (5–8)', 'Morning (8–11)', 'Midday (11–2)', 'Afternoon (2–5)', 'Evening (5–9)', 'Night (9–5)'],
-      of: (c) => { const h = new Date(c.caughtAt).getHours(); const b = DIMENSIONS.time.buckets(); return b[h >= 5 && h < 8 ? 0 : h >= 8 && h < 11 ? 1 : h >= 11 && h < 14 ? 2 : h >= 14 && h < 17 ? 3 : h >= 17 && h < 21 ? 4 : 5]; } },
+      of: (c) => { if (c.noTime) return null; const h = new Date(c.caughtAt).getHours(); const b = DIMENSIONS.time.buckets(); return b[h >= 5 && h < 8 ? 0 : h >= 8 && h < 11 ? 1 : h >= 11 && h < 14 ? 2 : h >= 14 && h < 17 ? 3 : h >= 17 && h < 21 ? 4 : 5]; } },
     tide: { label: 'Tide', needsTide: true, buckets: () => ['Low slack', 'Rising', 'High slack', 'Falling'],
       of: (c) => (tideShown(c) ? c.tide.stage : null) },
     coef: { label: 'Tide strength', needsTide: true, buckets: () => ['Weak (under 45)', 'Moderate (45–69)', 'Strong (70–94)', 'Very strong (95+)'],
       of: (c) => { if (!tideShown(c) || c.tide.coef == null) return null; const k = c.tide.coef; return DIMENSIONS.coef.buckets()[k < 45 ? 0 : k < 70 ? 1 : k < 95 ? 2 : 3]; } },
     solunar: { label: 'Solunar', needsWx: false, buckets: () => ['Major period', 'Minor period', 'Outside periods'],
-      of: (c) => { const L = c.location || (c.spotId && spotById(c.spotId)); if (!L) return null; const p = SOL.at(c.caughtAt, L.lat, L.lon); return p ? (p.kind === 'major' ? 'Major period' : 'Minor period') : 'Outside periods'; } },
+      of: (c) => { if (c.noTime) return null; const L = c.location || (c.spotId && spotById(c.spotId)); if (!L) return null; const p = SOL.at(c.caughtAt, L.lat, L.lon); return p ? (p.kind === 'major' ? 'Major period' : 'Minor period') : 'Outside periods'; } },
     flow: { label: 'River flow', needsFlow: true, buckets: () => ['Rising', 'Steady', 'Falling'], of: (c) => (c.flow && c.flow.trend) || null },
     moon: { label: 'Moon', needsWx: false, buckets: () => ['New moon', 'Waxing', 'Full moon', 'Waning'],
       of: (c) => { const m = moonPhase(c.caughtAt); const q = m.age / m.synodic; return ['New moon', 'Waxing', 'Full moon', 'Waning'][q < 0.125 || q >= 0.875 ? 0 : q < 0.375 ? 1 : q < 0.625 ? 2 : 3]; } },
@@ -2503,7 +2508,7 @@
           <div class="stat"><b>${lu.length ? esc(lu[0][0]) : '–'}</b><span>Top lure</span></div>
         </div>
         ${sp2.length ? `<p style="margin:0 0 10px">${sp2.map(([k, v]) => `${esc(k)} ×${v}`).join(' · ')}</p>` : ''}
-        ${tc.length ? `<ul class="recent-list" style="margin-bottom:10px">${tc.slice(0, 6).map((c) => `<li><button type="button" data-open="${c.id}"><span class="t"><svg viewBox="0 0 32 32"><use href="#i-fish"/></svg></span><span style="min-width:0"><b>${esc(c.species)}</b><small>${esc(c.bait)} · ${fmtTime(c.caughtAt)}</small></span></button></li>`).join('')}</ul>` : ''}
+        ${tc.length ? `<ul class="recent-list" style="margin-bottom:10px">${tc.slice(0, 6).map((c) => `<li><button type="button" data-open="${c.id}"><span class="t"><svg viewBox="0 0 32 32"><use href="#i-fish"/></svg></span><span style="min-width:0"><b>${esc(c.species)}</b><small>${esc(c.bait)} · ${whenTime(c)}</small></span></button></li>`).join('')}</ul>` : ''}
         <h3 style="font-size:15px;margin:6px 0">Forecast vs actual</h3>${cmp}</div>`;
     }
 
@@ -3720,7 +3725,7 @@
     const q = (v) => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
     const head = ['Date', 'Time', 'Spot', 'Species', 'Count', 'Lure/Bait', 'Lure colour', 'Lure size', `Length ${U.lenLabel()}`, `Weight ${U.wtLabel()}`, 'Released', 'Latitude', 'Longitude', 'GPS accuracy (m)', 'Weather', `Temp ${imp() ? '(°F)' : '(°C)'}`, `Wind ${imp() ? '(mph)' : '(km/h)'}`, 'Wind dir', `Pressure ${imp() ? '(inHg)' : '(hPa)'}`, 'Pressure trend', 'Humidity (%)', 'Moon', 'Tide stage', `Tide height ${imp() ? '(ft)' : '(m)'}`, 'Tidal coefficient', 'Tide station', `Water temp ${imp() ? '(°F)' : '(°C)'}`, `Waves ${imp() ? '(ft)' : '(m)'}`, 'Wave period (s)', 'Session', 'Fish or shellfish', 'Bait (shellfish)', 'Crab sex', 'Shell', `Carapace ${U.lenLabel()}`, 'Pots', 'Soak (h)', 'River flow (cfs)', 'Flow trend', 'From', 'Notes'];
     const rows = catches.map((c) => { const w = c.weather; const L = c.location; const d = new Date(c.caughtAt);
-      return [toLocalInput(d).slice(0, 10), toLocalInput(d).slice(11), (c.spotId && spotById(c.spotId) ? spotById(c.spotId).name : ''), c.species, nFish(c), c.bait, c.lureColor || '', c.lureSize || '', U.lenOut(c.lengthCm), U.wtOut(c.weightKg), c.released === true ? 'yes' : c.released === false ? 'no' : '',
+      return [toLocalInput(d).slice(0, 10), c.noTime ? '' : toLocalInput(d).slice(11), (c.spotId && spotById(c.spotId) ? spotById(c.spotId).name : ''), c.species, nFish(c), c.bait, c.lureColor || '', c.lureSize || '', U.lenOut(c.lengthCm), U.wtOut(c.weightKg), c.released === true ? 'yes' : c.released === false ? 'no' : '',
         L ? L.lat.toFixed(6) : '', L ? L.lon.toFixed(6) : '', L && L.accuracy != null ? Math.round(L.accuracy) : '',
         w ? wxLabel(w).text : '', w ? (imp() ? round(w.tempC * 9 / 5 + 32, 1) : round(w.tempC, 1)) : '', w ? (imp() ? round(w.windKmh * 0.621371, 1) : round(w.windKmh, 1)) : '',
         w ? compass(w.windDir) : '', w ? (imp() ? round(w.pressure * 0.02953, 2) : round(w.pressure, 1)) : '', w ? w.pressureTrend || '' : '', w ? w.humidity : '',
@@ -3866,8 +3871,8 @@
     let y; let mo; let da; let rest = '';
     let m;
     if (/^\d{5}(\.\d+)?$/.test(d) && +d > 20000 && +d < 80000) { // a spreadsheet serial date
-      const ms = Math.round((+d - 25569) * 864e5); const t = new Date(ms);
-      return new Date(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate(), t.getUTCHours(), t.getUTCMinutes()).getTime();
+      const ms = Math.round((+d - 25569) * 864e5); const t = new Date(ms); const noTime = !/\./.test(d) && !String(timeStr || '').trim();
+      return { t: new Date(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate(), noTime ? 12 : t.getUTCHours(), noTime ? 0 : t.getUTCMinutes()).getTime(), noTime };
     }
     if ((m = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(.*)$/.exec(d))) { y = +m[1]; mo = +m[2]; da = +m[3]; rest = m[4]; }
     else if ((m = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})(.*)$/.exec(d))) {
@@ -3875,18 +3880,19 @@
       if (order === 'dmy') { da = +m[1]; mo = +m[2]; } else { mo = +m[1]; da = +m[2]; }
     } else {
       const t = Date.parse(d); if (!Number.isFinite(t)) return null;
-      if (/[zZ]|[+-]\d\d:?\d\d$/.test(d) || /T\d/.test(d)) return t;
+      if (/[zZ]|[+-]\d\d:?\d\d$/.test(d) || /T\d/.test(d)) return t > Date.now() + 864e5 ? null : { t, noTime: false };
       const x = new Date(t); y = x.getFullYear(); mo = x.getMonth() + 1; da = x.getDate(); rest = /\d{1,2}:\d{2}/.test(d) ? d.slice(d.search(/\d{1,2}:\d{2}/)) : '';
     }
     if (!(mo >= 1 && mo <= 12 && da >= 1 && da <= 31)) return null;
-    if (rest && /^T/.test(rest) && /[zZ]|[+-]\d\d:?\d\d$/.test(rest)) { const t = Date.parse(`${y}-${String(mo).padStart(2, '0')}-${String(da).padStart(2, '0')}${rest}`); if (Number.isFinite(t)) return t; }
-    let hh = 12; let mm = 0; // no time given: midday, so the date never shifts
+    if (rest && /^T/.test(rest) && /[zZ]|[+-]\d\d:?\d\d$/.test(rest)) { const t = Date.parse(`${y}-${String(mo).padStart(2, '0')}-${String(da).padStart(2, '0')}${rest}`); if (Number.isFinite(t)) return t > Date.now() + 864e5 ? null : { t, noTime: false }; }
+    // No time given: stored at midday (so the date never shifts) and marked as having no time.
+    let hh = 12; let mm = 0; let noTime = true;
     const tm = /(\d{1,2})[:.h](\d{2})(?::\d{2})?\s*([ap])?\.?\s*m?\.?/i.exec(String(timeStr || '').trim() || rest);
-    if (tm) { hh = +tm[1]; mm = +tm[2]; if (tm[3]) { const pm = /p/i.test(tm[3]); if (hh === 12) hh = pm ? 12 : 0; else if (pm) hh += 12; } }
-    else { const t2 = /^(\d{1,2})\s*([ap])\.?m\.?$/i.exec(String(timeStr || '').trim()); if (t2) { hh = (+t2[1] % 12) + (/p/i.test(t2[2]) ? 12 : 0); } }
+    if (tm) { noTime = false; hh = +tm[1]; mm = +tm[2]; if (tm[3]) { const pm = /p/i.test(tm[3]); if (hh === 12) hh = pm ? 12 : 0; else if (pm) hh += 12; } }
+    else { const t2 = /^(\d{1,2})\s*([ap])\.?m\.?$/i.exec(String(timeStr || '').trim()); if (t2) { noTime = false; hh = (+t2[1] % 12) + (/p/i.test(t2[2]) ? 12 : 0); } }
     if (hh > 23 || mm > 59) return null;
     const out = new Date(y, mo - 1, da, hh, mm).getTime();
-    return out > Date.now() + 864e5 ? null : out;
+    return out > Date.now() + 864e5 ? null : { t: out, noTime };
   }
   const impNum = (v) => { const s = String(v ?? '').replace(/,(?=\d{1,2}$)/, '.').replace(/[^\d.-]/g, ''); const n = parseFloat(s); return Number.isFinite(n) ? n : null; };
   function impLength(v, unit) {
@@ -3933,11 +3939,20 @@
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
 
+  // UTF-8 normally; UTF-16 when the file says so (Excel "Unicode text"); otherwise Windows-1252, which is
+  // what Excel's plain "CSV" format writes, so "48°F" and "José" come through.
+  function decodeText(buf) {
+    const b = new Uint8Array(buf);
+    if (b[0] === 0xFF && b[1] === 0xFE) return new TextDecoder('utf-16le').decode(b);
+    if (b[0] === 0xFE && b[1] === 0xFF) return new TextDecoder('utf-16be').decode(b);
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(b); } catch { return new TextDecoder('windows-1252').decode(b); }
+  }
+
   let impState = null;
   async function openImport(file) {
     if (!file) return;
     let text;
-    try { text = await file.text(); } catch { return toast('Could not read that file'); }
+    try { text = decodeText(await file.arrayBuffer()); } catch { return toast('Could not read that file'); }
     const name = file.name || 'file';
     if (/^\s*[{[]/.test(text)) {
       try {
@@ -3972,26 +3987,58 @@
     $('#imp-len-unit').value = s.lenUnit; $('#imp-wt-unit').value = s.wtUnit; $('#imp-order').value = s.order;
     $('#imp-kept').checked = !!s.keptCol;
   }
+  // Catches are indexed by fish and minute, so finding duplicates stays quick for big files.
+  const dupKey = (sp, t) => `${impNorm(sp)}|${Math.floor(t / 60000)}`;
+  function dupIndex(list) { const m = new Map(); for (const c of list) { const k = dupKey(c.species, c.caughtAt); if (!m.has(k)) m.set(k, []); m.get(k).push(c); } return m; }
+  function findDup(idx, rec, extra) {
+    const base = Math.floor(rec.caughtAt / 60000); const sp = impNorm(rec.species);
+    for (let d = -1; d <= 1; d++) for (const c of idx.get(`${sp}|${base + d}`) || []) {
+      if (Math.abs(c.caughtAt - rec.caughtAt) < 60000 && (!c.location || !rec.location || distM(c.location, rec.location) < 200) && (!extra || extra(c))) return c;
+    }
+    return null;
+  }
+  // Where each catch's spot comes from: a saved spot it's inside, a saved spot with the same name (within 50 km),
+  // or one new spot per name in this file, placed at the first catch with GPS.
+  function planSpots(recs) {
+    const created = new Map(); let n = 0;
+    for (const c of recs) {
+      c.spotPlan = null;
+      if (c.location) { const ms = matchSpot(c.location); if (ms) { c.spotPlan = { id: ms.spot.id }; continue; } }
+      if (!c.spotName) continue;
+      const key = impNorm(c.spotName);
+      const named = spots.find((sp) => impNorm(sp.name) === key && (!c.location || distM(sp, c.location) < 50000));
+      if (named) { c.spotPlan = { id: named.id }; continue; }
+      if (created.has(key)) { c.spotPlan = { key }; continue; }
+      if (c.location) { created.set(key, { name: c.spotName, lat: c.location.lat, lon: c.location.lon }); c.spotPlan = { key }; n++; }
+    }
+    return { created, n };
+  }
   function buildImport() {
     const s = impState; const m = s.map; const out = []; const skipped = []; let dup = 0;
     const cell = (r, k) => (m[k] != null ? (r[m[k]] || '').trim() : '');
-    const label = $('#imp-label').value.trim().slice(0, 40);
-    const same = (a, b) => impNorm(a.species) === impNorm(b.species) && Math.abs(a.caughtAt - b.caughtAt) < 60000 && (!a.location || !b.location || distM(a.location, b.location) < 200);
+    if (!s.spCache) s.spCache = new Map();
+    const spOf = (raw) => { if (!s.spCache.has(raw)) s.spCache.set(raw, impSpecies(raw)); return s.spCache.get(raw); };
+    const mine = s.mineIdx || (s.mineIdx = dupIndex(catches.filter((c) => !c.demo)));
+    const fileIdx = new Map();
     s.body.forEach((r, i) => {
-      const species = impSpecies(cell(r, 'species'));
-      const at = parseWhen(cell(r, 'date'), cell(r, 'time'), s.order);
-      if (!species || !at) { skipped.push({ row: i + hi(s) + 2, why: !species ? 'no fish' : 'no date' }); return; }
+      const species = spOf(cell(r, 'species'));
+      const when = parseWhen(cell(r, 'date'), cell(r, 'time'), s.order);
+      if (!species || !when) { skipped.push({ row: i + hi(s) + 2, why: !species ? 'no fish' : 'no date' }); return; }
       const lat = impNum(cell(r, 'lat')); const lon = impNum(cell(r, 'lon'));
       const location = lat != null && lon != null && Math.abs(lat) <= 90 && Math.abs(lon) <= 180 && !(lat === 0 && lon === 0) ? { lat, lon, accuracy: null, source: 'import' } : null;
       const cnt = Math.max(1, Math.min(999, Math.round(impNum(cell(r, 'count')) || 1)));
       const info = SPECIES_INFO.get(species) || {};
-      const rec = { species, caughtAt: at, count: cnt, bait: cell(r, 'bait').slice(0, 80), lureColor: cell(r, 'lureColor').slice(0, 40), lureSize: cell(r, 'lureSize').slice(0, 40),
+      const rec = { species, caughtAt: when.t, noTime: when.noTime, count: cnt, bait: cell(r, 'bait').slice(0, 80), lureColor: cell(r, 'lureColor').slice(0, 40), lureSize: cell(r, 'lureSize').slice(0, 40),
         lengthCm: impLength(cell(r, 'length'), s.lenUnit), weightKg: impWeight(cell(r, 'weight'), s.wtUnit), released: impReleased(cell(r, 'released'), s.keptCol),
-        notes: cell(r, 'notes').slice(0, 2000), location, spotName: cell(r, 'spot').slice(0, 60), from: (label || cell(r, 'from')).slice(0, 40), kind: info.kind || 'fish' };
-      if (catches.some((c) => same(c, rec)) || out.some((c) => same(c, rec) && c.count === rec.count && c.bait === rec.bait)) { dup++; return; }
+        notes: cell(r, 'notes').slice(0, 2000), location, spotName: cell(r, 'spot').slice(0, 60), fromCol: cell(r, 'from').slice(0, 40), kind: info.kind || 'fish' };
+      // Date-only rows can't be told apart by time, so a repeat of one needs the same lure and count too.
+      const strict = rec.noTime ? (c) => c.bait === rec.bait && (c.count || 1) === rec.count : null;
+      if (findDup(mine, rec, strict) || findDup(fileIdx, rec, (c) => c.count === rec.count && c.bait === rec.bait)) { dup++; return; }
+      const k = dupKey(rec.species, rec.caughtAt); if (!fileIdx.has(k)) fileIdx.set(k, []); fileIdx.get(k).push(rec);
       out.push(rec);
     });
-    return { recs: out, skipped, dup };
+    const plan = planSpots(out);
+    return { recs: out, skipped, dup, newSpots: plan.n, created: plan.created };
   }
   const hi = (s) => s.hiRow || 0;
   function renderImportPreview() {
@@ -4001,9 +4048,11 @@
     const needs = IMP_FIELDS.filter(([k, , req]) => req && impState.map[k] == null).map(([, l]) => l.toLowerCase());
     const parts = [];
     if (needs.length) parts.push(`<p class="form-error" style="display:block">Choose the column for ${esc(needs.join(' and '))}.</p>`);
-    parts.push(`<p class="help small"><b>${plural(n, 'catch')}</b> ready (${plural(fish, 'fish')})${r.dup ? ` · ${r.dup} already in your log, skipped` : ''}${r.skipped.length ? ` · ${r.skipped.length} row${r.skipped.length === 1 ? '' : 's'} without a ${r.skipped.every((x) => x.why === 'no date') ? 'date' : r.skipped.every((x) => x.why === 'no fish') ? 'fish' : 'fish or date'}, skipped` : ''}.</p>`);
-    const fmt = (t) => new Date(t).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
-    parts.push('<ul class="lim-list imp-prev">' + r.recs.slice(0, 5).map((c) => `<li><span><b>${c.count > 1 ? c.count + ' × ' : ''}${esc(c.species)}</b><small>${esc([fmt(c.caughtAt), c.bait, U.len(c.lengthCm), U.wt(c.weightKg), c.released === true ? 'released' : c.released === false ? 'kept' : '', c.spotName || (c.location ? 'GPS' : '')].filter(Boolean).join(' · '))}</small></span></li>`).join('') + '</ul>');
+    const noTime = r.recs.filter((c) => c.noTime).length;
+    parts.push(`<p class="help small"><b>${plural(n, 'catch')}</b> ready (${plural(fish, 'fish')})${r.newSpots ? `, ${plural(r.newSpots, 'new spot')}` : ''}${r.dup ? ` · ${r.dup} already in your log, skipped` : ''}${r.skipped.length ? ` · ${r.skipped.length} row${r.skipped.length === 1 ? '' : 's'} without a ${r.skipped.every((x) => x.why === 'no date') ? 'date' : r.skipped.every((x) => x.why === 'no fish') ? 'fish' : 'fish or date'}, skipped` : ''}.</p>`);
+    if (noTime) parts.push(`<p class="help small">${noTime === n ? 'This file has dates but no times' : `${plural(noTime, 'catch')} ${noTime === 1 ? 'has' : 'have'} a date but no time`}: they're saved as \u201ctime not recorded\u201d and left out of time-of-day, bite-time and weather stats.</p>`);
+    const fmt = (c) => c.noTime ? new Date(c.caughtAt).toLocaleDateString([], { dateStyle: 'medium' }) : new Date(c.caughtAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+    parts.push('<ul class="lim-list imp-prev">' + r.recs.slice(0, 5).map((c) => `<li><span><b>${c.count > 1 ? c.count + ' × ' : ''}${esc(c.species)}</b><small>${esc([fmt(c), c.bait, U.len(c.lengthCm), U.wt(c.weightKg), c.released === true ? 'released' : c.released === false ? 'kept' : '', c.spotName || (c.location ? 'GPS' : '')].filter(Boolean).join(' · '))}</small></span></li>`).join('') + '</ul>');
     if (n > 5) parts.push(`<p class="help small">…and ${n - 5} more.</p>`);
     const custom = [...new Set(r.recs.map((c) => c.species).filter((x) => !SPECIES_INFO.has(x) && !KNOWN_SPECIES.has(x)))];
     if (custom.length) parts.push(`<p class="help small">Not in the app's fish list, kept as written: ${esc(custom.slice(0, 8).join(', '))}${custom.length > 8 ? '…' : ''}.</p>`);
@@ -4017,28 +4066,25 @@
   $('#imp-wt-unit').addEventListener('change', (e) => { impState.wtUnit = e.target.value; renderImportPreview(); });
   $('#imp-order').addEventListener('change', (e) => { impState.order = e.target.value; renderImportPreview(); });
   $('#imp-kept').addEventListener('change', (e) => { impState.keptCol = e.target.checked; renderImportPreview(); });
-  $('#imp-label').addEventListener('input', () => renderImportPreview());
   $('#imp-go').addEventListener('click', async () => {
-    const { recs } = buildImport(); if (!recs.length) return;
+    const { recs, created } = buildImport(); if (!recs.length) return;
     const btn = $('#imp-go'); btn.disabled = true; btn.textContent = 'Importing…';
     const batch = 'imp-' + Date.now(); const now = Date.now(); let newSpots = 0;
+    const label = $('#imp-label').value.trim().slice(0, 40); const madeIds = new Map();
     try {
+      for (const [key, x] of created) {
+        const sp = { id: uid(), name: x.name, lat: x.lat, lon: x.lon, radiusM: 250, notes: 'Added by an import.', createdAt: now, updatedAt: now, imported: batch };
+        await DB.putSpot(sp); spots.push(sp); madeIds.set(key, sp.id); newSpots++;
+      }
       for (const c of recs) {
-        let spotId = null;
-        if (c.location) { const ms = matchSpot(c.location); if (ms) spotId = ms.spot.id; }
-        if (!spotId && c.spotName) {
-          const named = spots.find((sp) => impNorm(sp.name) === impNorm(c.spotName));
-          if (named && (!c.location || distM(named, c.location) < 5000)) spotId = named.id;
-          else if (c.location) {
-            const sp = { id: uid(), name: c.spotName, lat: c.location.lat, lon: c.location.lon, radiusM: 250, notes: 'Added by an import.', createdAt: now, updatedAt: now, imported: batch };
-            await DB.putSpot(sp); spots.push(sp); spotId = sp.id; newSpots++;
-          }
-        }
+        const spotId = c.spotPlan ? c.spotPlan.id || madeIds.get(c.spotPlan.key) || null : null;
         const notes = !spotId && c.spotName ? [c.notes, `Spot: ${c.spotName}`].filter(Boolean).join('\n') : c.notes;
         const rec = { id: uid(), createdAt: now, updatedAt: now, caughtAt: c.caughtAt, species: c.species, bait: c.bait, lureColor: c.lureColor, lureSize: c.lureSize,
           lengthCm: c.lengthCm, weightKg: c.weightKg, released: c.released, notes, photo: null, thumb: null, extraPhotos: [], count: c.count,
           location: c.location, weather: null, weatherTries: 0, tide: undefined, marine: undefined, tideTries: 0, spotId, kind: c.kind, imported: batch };
-        if (c.from) rec.from = c.from;
+        // Without a time, hourly weather, tide and river flow would be guesses, so they aren't looked up.
+        if (c.noTime) Object.assign(rec, { noTime: true, weatherTries: 99, tide: null, marine: null, flow: null });
+        const from = label || c.fromCol; if (from) rec.from = from;
         await DB.put(rec);
       }
     } catch (err) { await reload(); btn.disabled = false; return toast('Import stopped: ' + ((err && err.message) || 'storage error')); }
