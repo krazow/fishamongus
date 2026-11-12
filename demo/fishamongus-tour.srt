@@ -1,128 +1,260 @@
 1
-00:00:00,000 --> 00:00:04,000
-A quick tour of the app.
+00:00:00,000 --> 00:00:05,000
+A full tour of the app, chapter by chapter.
 
 2
-00:00:04,000 --> 00:00:08,750
-Fishamongus! is a fishing log that lives on your phone. No account, nothing uploaded.
+00:00:05,000 --> 00:00:08,250
+Install it, and look around with sample data.
 
 3
-00:00:08,750 --> 00:00:13,000
-New here? Load a month of sample fishing to look around, and clear it in one tap.
+00:00:08,250 --> 00:00:14,750
+Fishamongus! is a fishing log that lives on your phone: what you caught, where, on what, and in what conditions. No account, nothing uploaded.
 
 4
-00:00:13,000 --> 00:00:17,750
-The Now screen shows the weather, wind, pressure trend, tide, moon and water temperature where you stand.
+00:00:14,750 --> 00:00:21,500
+New here? Load a month of sample fishing to look around. In Washington it’s set around Anderson Island. Clear it in one tap from the banner.
 
 5
-00:00:17,750 --> 00:00:22,250
-Solunar bite times are worked out on the phone from the moon, with a rating for the day.
+00:00:21,500 --> 00:00:24,750
+Conditions, bite times and suggestions for where you are.
 
 6
-00:00:22,250 --> 00:00:27,000
-It suggests the lures that have caught you the most fish in conditions like these.
+00:00:24,750 --> 00:00:31,750
+The Now screen opens first: weather, wind and gusts, the pressure trend, the tide and its strength, sunrise and sunset, water temperature and waves.
 
 7
-00:00:27,000 --> 00:00:31,750
-Tap Start fishing when your line goes in. The app times the session and tracks your lure.
+00:00:31,750 --> 00:00:38,750
+In Washington, saltwater places show nearby public shellfish beaches from the Department of Health map: open, closed or conditional, and why.
 
 8
-00:00:31,750 --> 00:00:36,000
-Switch lures with one tap, so Stats can show fish per hour for each one.
+00:00:38,750 --> 00:00:45,250
+Solunar bite times are worked out on the phone from the moon’s position, with a rating for the day and the next major or minor period.
 
 9
-00:00:36,000 --> 00:00:40,750
-Tap + to log a catch. Add a photo, then search more than 240 fish by name.
+00:00:45,250 --> 00:00:52,500
+It suggests the lures that have caught you the most fish in conditions like these – sky, pressure, tide, time of day – and shows your next planned trip.
 
 10
-00:00:40,750 --> 00:00:45,250
-Species with subspecies get a second menu – Florida bass, Westslope cutthroat and more.
+00:00:52,500 --> 00:00:55,750
+Log a catch in one tap, or just say it.
 
 11
-00:00:45,250 --> 00:00:49,750
-Your lure is already on the form, and GPS, weather and tide are filled in automatically.
+00:00:55,750 --> 00:01:02,250
+Quick catch saves your usual fish and lure in one tap, with GPS, weather and tide filled in. Add the details later if you want.
 
 12
-00:00:49,750 --> 00:00:54,500
-No scale? Enter the length and the app estimates a typical weight for that fish.
+00:01:02,250 --> 00:01:10,250
+Hands busy? Tap Say it and say what you caught – “two coho, kept, on a spoon”. It saves the fish, lure, count and kept or released, with Undo if it misheard.
 
 13
-00:00:54,500 --> 00:00:58,750
-Every catch is saved with its photo, lure, place and conditions, grouped by day.
+00:01:10,250 --> 00:01:17,000
+The microphone in the catch form fills in the fish, lure, count and released or kept for you to check before saving.
 
 14
-00:00:58,750 --> 00:01:02,750
-Swipe a catch to edit it, log the same again, or delete it.
+00:01:17,000 --> 00:01:20,250
+Time your fishing and track the lure on your line.
 
 15
-00:01:02,750 --> 00:01:07,500
-Open a catch to see everything. Sections fold away and still show their key values.
+00:01:20,250 --> 00:01:26,250
+Tap Start fishing when your line goes in. The app times the session and keeps track of the lure on your line.
 
 16
-00:01:07,500 --> 00:01:12,750
-Stats sums up your log in plain words, always with the number of fish behind it.
+00:01:26,250 --> 00:01:32,750
+Switch lures with one tap. Every catch in the session gets the right lure, and Stats can show fish per hour for each one.
 
 17
-00:01:12,750 --> 00:01:17,250
-See which lures work in each sky, pressure, wind, tide, moon and solunar period.
+00:01:32,750 --> 00:01:39,000
+End the session when you’re done. It keeps the time on the water, the lures you used and the fish you caught on each.
 
 18
-00:01:17,250 --> 00:01:22,000
-Timed sessions give fish per hour for each lure – a fairer test than raw counts.
+00:01:39,000 --> 00:01:42,250
+Everything about a catch, most of it filled in for you.
 
 19
-00:01:22,000 --> 00:01:26,750
-Save your spots. Catches made there are linked automatically, and colours show where fish came lately.
+00:01:42,250 --> 00:01:48,250
+Tap + to log a catch. Add photos, then search more than 280 fish and shellfish by name.
 
 20
-00:01:26,750 --> 00:01:31,500
-Each spot has its own stats: best lures, best conditions and recent catches.
+00:01:48,250 --> 00:01:55,750
+Fish and shellfish, freshwater and saltwater: the buttons shorten the list. Fish are grouped by type – every bass under Bass – with the kind in a second menu.
 
 21
-00:01:31,500 --> 00:01:36,250
-Plan a trip: the hourly forecast, with your best hours marked from your own history.
+00:01:55,750 --> 00:02:02,250
+The lure from your session is already on the form. GPS, weather, pressure and the matching spot are filled in automatically.
 
 22
-00:01:36,250 --> 00:01:41,000
-Trip plans add NOAA tides, sunrise and sunset, and the bite times during your trip.
+00:02:02,250 --> 00:02:08,750
+No scale? Enter the length and the app estimates a typical weight for that fish, in pounds and ounces or kilograms.
 
 23
-00:01:41,000 --> 00:01:45,750
-Tap Shellfish to log crab, shrimp, clams, oysters and more. Freshwater and Saltwater shorten the list.
+00:02:08,750 --> 00:02:15,250
+Log several of the same fish at once, and mark them kept or released. Kept fish count toward your daily limits.
 
 24
-00:01:45,750 --> 00:01:50,250
-Record sex, shell and width, plus pots and soak time. A crab you can’t keep gets a warning before you save it.
+00:02:15,250 --> 00:02:20,500
+Saved. “Log another” opens a new form with the same fish, lure and spot.
 
 25
-00:01:50,250 --> 00:01:54,750
-One tap adds the WDFW crab, clam and oyster limits. Clams count together toward the 40-clam limit.
+00:02:20,500 --> 00:02:23,750
+Crab, shrimp, clams and oysters, with the rules that go with them.
 
 26
-00:01:54,750 --> 00:01:59,250
-Stats shows what each pot and bait catches per hour of soak, and tallies your catch record card.
+00:02:23,750 --> 00:02:31,250
+Tap Shellfish to log crab, shrimp and prawns, clams, oysters, mussels, scallops, squid and crayfish. The lure menu becomes gear: pots, ring nets, clam guns, shovels.
 
 27
-00:01:59,250 --> 00:02:04,000
-Clamming trips list the daylight minus tides for the next two weeks, with the right gear list and safety links.
+00:02:31,250 --> 00:02:38,750
+Crab gets sex, hard or soft shell and shell width, and pots get a count and soak time. A crab you can’t keep under your limits is flagged before you save.
 
 28
-00:02:04,000 --> 00:02:08,250
-Keep your real lures in a tackle box and pick them with one tap when you log a catch.
+00:02:38,750 --> 00:02:46,000
+Log clams, oysters or mussels in Washington and the form shows the live status of the beaches nearby. Biotoxins aren’t destroyed by cooking.
 
 29
-00:02:08,250 --> 00:02:12,250
-Set daily limits. The app counts what you keep and warns you before you go over.
+00:02:46,000 --> 00:02:49,250
+Every catch, searchable, with the conditions it was caught in.
 
 30
-00:02:12,250 --> 00:02:16,750
-Your log stays on your phone, and automatic backups keep a copy safe.
+00:02:49,250 --> 00:02:55,250
+Every catch is saved with its photos, lure, place and conditions, grouped by day with a count for each.
 
 31
-00:02:16,750 --> 00:02:21,000
-Fishing before dawn? Night mode turns the screen dim red to protect your night vision.
+00:02:55,250 --> 00:03:01,250
+Search by fish, lure, colour, notes or who caught it, and filter by date, spot and species.
 
 32
-00:02:21,000 --> 00:02:26,500
-Open the link in Safari or Chrome, then add it to your home screen.
+00:03:01,250 --> 00:03:07,250
+Swipe a catch left to edit it, log the same again, or delete it – with Undo for a few seconds.
+
+33
+00:03:07,250 --> 00:03:13,750
+Open a catch to see everything: photos full screen, size, lure, the spot on a map, and the weather and tide when it bit.
+
+34
+00:03:13,750 --> 00:03:19,500
+Sections fold away and still show their key values, so the page stays short.
+
+35
+00:03:19,500 --> 00:03:22,750
+What actually works for you, in plain words.
+
+36
+00:03:22,750 --> 00:03:30,250
+Stats sums up your log in plain words – your best lure and condition, best time of day, fastest lure – always with the number of fish behind it.
+
+37
+00:03:30,250 --> 00:03:37,250
+See which lures work in each sky, pressure trend, wind, tide stage, moon phase and solunar period, and where your fish came from.
+
+38
+00:03:37,250 --> 00:03:43,750
+Timed sessions give fish per hour for each lure – a fairer test than raw counts, which favour the lure you use most.
+
+39
+00:03:43,750 --> 00:03:51,250
+In Washington, Stats counts the salmon, steelhead, sturgeon and halibut you’ve kept this license year, and reminds you before each card is due.
+
+40
+00:03:51,250 --> 00:03:58,500
+Switch Stats to shellfish: catch per pot-hour for each gear and bait, and your kept Dungeness for the summer and winter crab cards.
+
+41
+00:03:58,500 --> 00:04:01,750
+Your places, the shellfish beaches near them, and river flows.
+
+42
+00:04:01,750 --> 00:04:08,250
+Save your spots. Catches made there link automatically, and the colours show where fish came in the last 30 and 90 days.
+
+43
+00:04:08,250 --> 00:04:14,250
+Each spot has its own stats: best lures, best conditions and recent catches.
+
+44
+00:04:14,250 --> 00:04:20,250
+Saltwater spots in Washington show the shellfish beaches nearby, so you know before you dig.
+
+45
+00:04:20,250 --> 00:04:27,250
+On rivers, the Now screen shows the nearest USGS stream gauge: the flow in cubic feet per second and whether it’s rising or falling.
+
+46
+00:04:27,250 --> 00:04:34,000
+River spots show their gauge too. Catches made near a gauge save the flow, and Stats adds River flow as a condition.
+
+47
+00:04:34,000 --> 00:04:37,250
+Forecast, tides, bite times and a packing list for each trip.
+
+48
+00:04:37,250 --> 00:04:43,750
+Plan trips ahead. Upcoming trips are listed with their date and place, and each one keeps its last forecast for when you have no signal.
+
+49
+00:04:43,750 --> 00:04:50,750
+Choose what the trip is for – fishing, crabbing, clamming or shrimping – then where and when: a saved spot, your location or a point on the map.
+
+50
+00:04:50,750 --> 00:04:57,250
+The trip plan shows the forecast hour by hour, with your best hours marked from the conditions you’ve caught fish in.
+
+51
+00:04:57,250 --> 00:05:04,250
+Trips add NOAA tides for the day. Clamming trips also list the daylight minus tides for the next two weeks – the best times to dig.
+
+52
+00:05:04,250 --> 00:05:10,250
+First light, sunrise, sunset and the moon, plus the solunar bite times that fall during your trip.
+
+53
+00:05:10,250 --> 00:05:16,750
+Each kind of trip gets its own packing list – the crab gauge, the shovel, the headlamp for evening low tides – ready to tick off.
+
+54
+00:05:16,750 --> 00:05:23,500
+Shellfish trips show the beach status near where you’re going, with links to the Shellfish Safety Map and Washington’s rules.
+
+55
+00:05:23,500 --> 00:05:26,750
+Daily limits, kept-today counts and Washington catch record cards.
+
+56
+00:05:26,750 --> 00:05:33,250
+Set daily limits for any fish or shellfish. One tap adds Washington’s Puget Sound crab limits and the clam and oyster limits.
+
+57
+00:05:33,250 --> 00:05:40,250
+Each limit can carry its rules – males only, hard shell, minimum size, clams counted together – and the app counts what you keep each day.
+
+58
+00:05:40,250 --> 00:05:46,500
+As you log, the form shows how many you’ve kept today against your limit, and warns before you go over.
+
+59
+00:05:46,500 --> 00:05:49,750
+Tackle box, sharing, backups and night mode.
+
+60
+00:05:49,750 --> 00:05:56,250
+Keep your real lures in a tackle box – type, name, colour, size and a photo – and pick them with one tap when you log a catch.
+
+61
+00:05:56,250 --> 00:06:03,250
+Settings gives one-tap links for your usual catches. On Android, press and hold the app icon for Say a catch, Log a catch and Start fishing.
+
+62
+00:06:03,250 --> 00:06:10,250
+Merge a fishing partner’s backup, or your old phone’s, into your log. Their catches keep their name, and nothing is duplicated.
+
+63
+00:06:10,250 --> 00:06:17,250
+Your log stays on your phone. Automatic backups after each session keep a copy safe, and a backup file moves everything to a new phone.
+
+64
+00:06:17,250 --> 00:06:24,000
+Fishing before dawn? Night mode turns the whole screen dim red to protect your night vision. Large text is one tap away too.
+
+65
+00:06:24,000 --> 00:06:31,000
+Open the link in Safari or Chrome, then add it to your home screen: Share → Add to Home Screen, or the menu → Install app.
 
