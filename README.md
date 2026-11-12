@@ -1,6 +1,6 @@
 # Fishamongus! – Catch Log
 
-**[Watch the 2½-minute video tour](https://krazow.github.io/fishamongus/demo/)**
+**[Watch the full video tour (6½ minutes)](https://krazow.github.io/fishamongus/demo/)**
 
 A phone app (installable web app) for logging fish you catch. Each catch records:
 
