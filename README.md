@@ -136,6 +136,10 @@ Tides show only where they apply:
 
 Settings (units, pounds or pounds and ounces, backup, and Help) is the gear icon at the top right. The app also has a map of all your catch spots, search, an "Open spot in Maps" button for getting back to a spot, sharing, and imperial/metric units.
 
+## Windows app
+
+Fishamongus! also installs on Windows 10 and 11 as its own app: run `FishamongusSetup-4.6.exe` (no administrator needed). It opens in a Microsoft Edge app window, with Start menu and desktop shortcuts, and uninstalls from Settings → Apps. Its log is separate from your phone's; move catches across with a backup file. How it's built: [windows/README.md](windows/README.md).
+
 ## Get it on your phone (about 2 minutes)
 
 Fishamongus! is live at **https://krazow.github.io/fishamongus/**, published by GitHub Pages from the `main` branch of this repository.
