@@ -130,6 +130,10 @@
         <button type="button" class="map-locate" id="btn-map-locate" aria-label="Show where I am">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor"/><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         </button>
+        <button type="button" class="map-search-btn" id="btn-map-search" aria-label="Find a place on the map" aria-expanded="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15 15l5.5 5.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+        </button>
+        <div class="map-search" id="map-search" hidden></div>
         <div class="map-msg" id="map-msg" hidden></div>
         <p class="map-hint" id="map-hint">Tap the map to add a spot or plan a trip there</p>
       </div>
@@ -257,7 +261,8 @@
               <span></span>
             </div>
           </div>
-          <details class="manual-loc">
+          <div id="f-place"></div>
+          <details class="manual-loc" id="f-manual">
             <summary>Enter coordinates by hand</summary>
             <div class="row2">
               <input id="f-lat" aria-label="Latitude" inputmode="decimal" placeholder="Latitude">
@@ -402,6 +407,7 @@
               <button type="button" class="chip" id="sp-locate">Use GPS</button>
             </div>
           </div>
+          <div id="sp-place"></div>
           <details class="manual-loc" id="sp-manual">
             <summary>Enter coordinates by hand</summary>
             <div class="row2">
@@ -480,9 +486,14 @@
         <div class="field">
           <label for="tr-where">Where</label>
           <div class="select-wrap"><select id="tr-where"></select></div>
-          <div class="row2" id="tr-coords" hidden style="margin-top:8px">
-            <input id="tr-lat" aria-label="Latitude" inputmode="decimal" placeholder="Latitude">
-            <input id="tr-lon" aria-label="Longitude" inputmode="decimal" placeholder="Longitude">
+          <div id="tr-coords" hidden style="margin-top:8px">
+            <div id="tr-place"></div>
+            <p class="help small" id="tr-place-name" hidden></p>
+            <p class="help small ps-or">Or enter coordinates:</p>
+            <div class="row2">
+              <input id="tr-lat" aria-label="Latitude" inputmode="decimal" placeholder="Latitude">
+              <input id="tr-lon" aria-label="Longitude" inputmode="decimal" placeholder="Longitude">
+            </div>
           </div>
           <p class="help small" id="tr-where-hint" style="margin-top:6px"></p>
         </div>
@@ -740,6 +751,7 @@
           <details><summary>Can I log a catch without touching the screen much?</summary><p>Yes. On the Now screen tap <b>🎤 Say it</b> and say the fish, the lure or gear, how many and whether you kept them. The catch is saved with GPS, weather and tide, and <b>Undo</b> takes it back if it heard you wrong. Settings → Hands-free logging also gives you a one-tap link for each of your usual catches: on Android, put it on the home screen or in a Google Assistant routine. On iPhone, links opened from the Shortcuts app open in Safari, which keeps a separate log from the home-screen app, so use the 🎤 button in the app instead.</p></details>
           <details><summary>What are the catch record card reminders?</summary><p>In Washington, kept salmon, steelhead, sturgeon, halibut and Puget Sound Dungeness crab go on a catch record card. Stats counts what you've kept for each card, and in the month before a card is due (fish cards April 30, summer crab cards October 1, winter crab cards February 1) the Now screen reminds you to report it. The app's counts are a check only – record each fish in ink or in the eCRC as you keep it.</p></details>
           <details><summary>Where does the river flow come from?</summary><p>From the nearest USGS stream gauge within about 6 miles, for spots and places that aren't tidal. It shows the flow in cubic feet per second and whether it's rising or falling over the last 3 hours. Catches made near a gauge save the flow, and Stats adds a <b>River flow</b> condition once three catches have one.</p></details>
+          <details><summary>Can I find a place by name instead of using GPS?</summary><p>Yes. In a catch, a spot or a trip, type in the <b>Find a place</b> box under the location – a lake, river, boat launch, beach or town, then tap <b>Search</b>. Your saved spots come first; other places come from OpenStreetMap, nearest first. On the map, tap the magnifying glass. You can also paste coordinates (47.144, -122.675 or 47°08′38″N 122°40′30″W) or a Google Maps link. Searching other places needs a connection; your spots work offline.</p></details>
           <details><summary>Can I bring in my log from another app or a spreadsheet?</summary><p>Yes. Export your catches from the other app as a spreadsheet (CSV) – or save your own spreadsheet as CSV – then use <b>Import a log</b> in Settings (on a computer you can also drop the file onto the window). The app matches the columns by name: date and time, fish, how many, lure, length, weight, released or kept, latitude and longitude, spot and notes. Check the matches and the preview, then import. Catches already in your log are skipped, weather is filled in for catches with a GPS position, and Undo removes the whole import.</p></details>
           <details><summary>Can I add my fishing partner's catches?</summary><p>Yes. Ask them to make a backup (Settings → Backup), send you the file, then use <b>Add someone else's log</b> in Settings. Their catches are added with their name, their spots join yours when they're within 100 m, and anything already in your log is skipped. Moving to a new phone works the same way.</p></details>
           <details><summary>Why is there no tide on a catch?</summary><p>Tides come from NOAA and cover US coasts. They're recorded within about 15 mi of a NOAA tide station, or at spots set to Saltwater. Spots set to Freshwater never show tides. With no signal, the tide is added later when you're online.</p></details>
