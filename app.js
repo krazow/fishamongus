@@ -160,7 +160,7 @@
 
   // ---------------------------------------------------------------- units
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition; // speech recognition, where the browser has it
-  const APP_VERSION = '4.6 (Nov 11, 2026)';
+  const APP_VERSION = '4.7 (Nov 11, 2026)';
   // Night (dim red) mode and large text, applied before anything is drawn.
   function applyDisplay() {
     const night = store('tl.theme') === 'night'; const large = store('tl.text') === 'large';
@@ -3099,6 +3099,7 @@
     } else if (q.get('new')) form.open();
     else if (q.get('start')) startSession();
     else if (q.get('voice')) sayCatch();
+    else if (q.get('import')) importFromLink(q.get('import'));
   }
 
   // ---------------------------------------------------------------- Now (home screen)
@@ -3791,6 +3792,287 @@
       await reload(); toast(`Restored ${plural(n, 'catch')}${ns ? `, ${plural(ns, 'spot')}` : ''}${nt ? `, ${plural(nt, 'trip')}` : ''}`);
     } catch (err) { toast('Could not restore: ' + err.message); }
   });
+
+
+  // ---------------------------------------------------------------- import a log
+  // Bring in a log kept somewhere else: a spreadsheet (CSV) from another fishing app, a hand-kept log,
+  // this app's own CSV export, or a Fishamongus! backup. Columns are matched by name, you check the
+  // matches and a preview, and catches already in your log are skipped. Undo removes the whole import.
+  const IMP_FIELDS = [
+    ['date', 'Date (or date and time)', true, ['date', 'caught at', 'caught on', 'catch date', 'datetime', 'date time', 'date/time', 'timestamp', 'when', 'day', 'fecha', 'datum']],
+    ['time', 'Time', false, ['time', 'catch time', 'time caught', 'hour', 'hora']],
+    ['species', 'Fish or shellfish', true, ['species', 'fish', 'fish type', 'fish species', 'species name', 'catch', 'kind of fish', 'type', 'especie', 'art']],
+    ['count', 'How many', false, ['count', 'number', 'qty', 'quantity', 'how many', 'number of fish', 'fish count', 'amount', 'n']],
+    ['bait', 'Lure or bait', false, ['lure/bait', 'lure', 'bait', 'lure or bait', 'bait/lure', 'lure name', 'bait used', 'lure used', 'tackle', 'fly', 'gear', 'method', 'technique', 'rig']],
+    ['lureColor', 'Lure colour', false, ['lure colour', 'lure color', 'colour', 'color', 'bait color']],
+    ['lureSize', 'Lure size', false, ['lure size', 'size of lure', 'hook size']],
+    ['length', 'Length', false, ['length', 'size', 'length (in)', 'length (cm)', 'len', 'fish length', 'total length', 'tl']],
+    ['weight', 'Weight', false, ['weight', 'weight (lb)', 'weight (kg)', 'wt', 'fish weight', 'lbs', 'pounds']],
+    ['released', 'Released or kept', false, ['released', 'kept', 'catch and release', 'catch & release', 'c&r', 'cnr', 'release', 'harvested', 'kept/released', 'kept or released']],
+    ['lat', 'Latitude', false, ['latitude', 'lat', 'gps latitude', 'location latitude', 'y']],
+    ['lon', 'Longitude', false, ['longitude', 'lon', 'lng', 'long', 'gps longitude', 'location longitude', 'x']],
+    ['spot', 'Spot or place', false, ['spot', 'spot name', 'place', 'location', 'location name', 'water', 'water body', 'waterbody', 'lake', 'river', 'fishing spot', 'site', 'venue']],
+    ['notes', 'Notes', false, ['notes', 'note', 'comments', 'comment', 'description', 'remarks', 'details', 'memo']],
+    ['from', 'Whose catch', false, ['from', 'angler', 'caught by', 'fisherman', 'name', 'who']],
+  ];
+  const impNorm = (s) => String(s || '').toLowerCase().replace(/﻿/g, '').replace(/\s+/g, ' ').trim();
+  function parseCsv(text) {
+    text = text.replace(/^﻿/, '');
+    // The separator is the one splitting the first few lines the most (a title line may come first).
+    const lines = text.split(/\r?\n/).filter((l) => l.trim()).slice(0, 6);
+    const delim = [',', ';', '\t', '|'].map((d) => [d, Math.max(...lines.map((l) => l.split(d).length))]).sort((a, b) => b[1] - a[1])[0][0];
+    const rows = []; let row = []; let f = ''; let q = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (q) {
+        if (ch === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += ch;
+      } else if (ch === '"' && f === '') q = true;
+      else if (ch === delim) { row.push(f); f = ''; }
+      else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
+      else f += ch;
+    }
+    if (f !== '' || row.length) { row.push(f); rows.push(row); }
+    return rows.map((r) => r.map((c) => c.trim())).filter((r) => r.some((c) => c !== ''));
+  }
+  // Pick the column for each field: exact header names first, then headers that start with or contain one.
+  function guessColumns(head) {
+    const h = head.map(impNorm); const used = new Set(); const map = {};
+    const strip = (s) => s.replace(/\s*[([].*?[)\]]\s*/g, ' ').trim();
+    for (const pass of [0, 1, 2]) {
+      for (const [key, , , syn] of IMP_FIELDS) {
+        if (map[key] != null) continue;
+        const i = h.findIndex((x, j) => !used.has(j) && syn.some((s) => pass === 0 ? x === s : pass === 1 ? strip(x) === s : (s.length > 3 && x.includes(s))));
+        if (i >= 0) { map[key] = i; used.add(i); }
+      }
+    }
+    // "Kept" means the opposite of "Released".
+    map.keptCol = map.released != null && /^(kept|harvested)/.test(h[map.released]);
+    return map;
+  }
+  function unitFrom(header, kind) {
+    const h = impNorm(header);
+    if (kind === 'len') return /\bcm\b|centim/.test(h) ? 'cm' : /\bmm\b/.test(h) ? 'mm' : /\bin\b|inch|"/.test(h) ? 'in' : '';
+    return /\bkg\b|kilo/.test(h) ? 'kg' : /\bg\b|gram/.test(h) ? 'g' : /\boz\b|ounce/.test(h) && !/lb/.test(h) ? 'oz' : /\blbs?\b|pound/.test(h) ? 'lb' : '';
+  }
+  // Dates: ISO, US (5/3/2026) or day-first (3/5/2026) – the order is worked out from the whole column.
+  function dateOrder(values) {
+    let dmy = 0; let mdy = 0;
+    for (const v of values) { const m = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})/.exec(v || ''); if (!m) continue; if (+m[1] > 12) dmy++; if (+m[2] > 12) mdy++; }
+    if (dmy && !mdy) return 'dmy'; if (mdy && !dmy) return 'mdy';
+    return /^en-(us|ph)|^es-(us|mx)/i.test(navigator.language || 'en-US') || !navigator.language ? 'mdy' : 'dmy';
+  }
+  function parseWhen(dateStr, timeStr, order) {
+    const d = String(dateStr || '').trim(); if (!d) return null;
+    let y; let mo; let da; let rest = '';
+    let m;
+    if (/^\d{5}(\.\d+)?$/.test(d) && +d > 20000 && +d < 80000) { // a spreadsheet serial date
+      const ms = Math.round((+d - 25569) * 864e5); const t = new Date(ms);
+      return new Date(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate(), t.getUTCHours(), t.getUTCMinutes()).getTime();
+    }
+    if ((m = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(.*)$/.exec(d))) { y = +m[1]; mo = +m[2]; da = +m[3]; rest = m[4]; }
+    else if ((m = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})(.*)$/.exec(d))) {
+      y = +m[3]; if (y < 100) y += 2000; rest = m[4];
+      if (order === 'dmy') { da = +m[1]; mo = +m[2]; } else { mo = +m[1]; da = +m[2]; }
+    } else {
+      const t = Date.parse(d); if (!Number.isFinite(t)) return null;
+      if (/[zZ]|[+-]\d\d:?\d\d$/.test(d) || /T\d/.test(d)) return t;
+      const x = new Date(t); y = x.getFullYear(); mo = x.getMonth() + 1; da = x.getDate(); rest = /\d{1,2}:\d{2}/.test(d) ? d.slice(d.search(/\d{1,2}:\d{2}/)) : '';
+    }
+    if (!(mo >= 1 && mo <= 12 && da >= 1 && da <= 31)) return null;
+    if (rest && /^T/.test(rest) && /[zZ]|[+-]\d\d:?\d\d$/.test(rest)) { const t = Date.parse(`${y}-${String(mo).padStart(2, '0')}-${String(da).padStart(2, '0')}${rest}`); if (Number.isFinite(t)) return t; }
+    let hh = 12; let mm = 0; // no time given: midday, so the date never shifts
+    const tm = /(\d{1,2})[:.h](\d{2})(?::\d{2})?\s*([ap])?\.?\s*m?\.?/i.exec(String(timeStr || '').trim() || rest);
+    if (tm) { hh = +tm[1]; mm = +tm[2]; if (tm[3]) { const pm = /p/i.test(tm[3]); if (hh === 12) hh = pm ? 12 : 0; else if (pm) hh += 12; } }
+    else { const t2 = /^(\d{1,2})\s*([ap])\.?m\.?$/i.exec(String(timeStr || '').trim()); if (t2) { hh = (+t2[1] % 12) + (/p/i.test(t2[2]) ? 12 : 0); } }
+    if (hh > 23 || mm > 59) return null;
+    const out = new Date(y, mo - 1, da, hh, mm).getTime();
+    return out > Date.now() + 864e5 ? null : out;
+  }
+  const impNum = (v) => { const s = String(v ?? '').replace(/,(?=\d{1,2}$)/, '.').replace(/[^\d.-]/g, ''); const n = parseFloat(s); return Number.isFinite(n) ? n : null; };
+  function impLength(v, unit) {
+    const s = String(v || '').trim(); if (!s) return null;
+    const u = unitFrom(s, 'len') || unit; const n = impNum(s.replace(/(cm|mm|in|inches|")$/i, '')); if (n == null || n <= 0) return null;
+    const cm = u === 'cm' ? n : u === 'mm' ? n / 10 : n * 2.54;
+    return cm > 0 && cm < 1000 ? cm : null;
+  }
+  function impWeight(v, unit) {
+    const s = String(v || '').trim().toLowerCase(); if (!s) return null;
+    const lbOz = /([\d.]+)\s*(?:lbs?|pounds?|#)\s*(?:([\d.]+)\s*(?:oz|ounces?))?/.exec(s);
+    if (lbOz) return (+lbOz[1] + (lbOz[2] ? +lbOz[2] / 16 : 0)) * 0.45359237;
+    const u = unitFrom(s, 'wt') || unit; const n = impNum(s); if (n == null || n <= 0) return null;
+    const kg = u === 'kg' ? n : u === 'g' ? n / 1000 : u === 'oz' ? n / 16 * 0.45359237 : n * 0.45359237;
+    return kg > 0 && kg < 1500 ? kg : null;
+  }
+  function impReleased(v, keptCol) {
+    const s = impNorm(v); if (!s) return null;
+    let yes = /^(y|yes|true|1|x|✓|✔|released|release|c&r|cnr|catch and release|r)$/.test(s);
+    let no = /^(n|no|false|0|kept|keep|harvested|harvest|k|killed|retained)$/.test(s);
+    if (!yes && !no) return null;
+    if (/^(kept|keep|harvested|harvest|killed|retained|k)$/.test(s)) return false;
+    if (/^(released|release|c&r|cnr|catch and release|r)$/.test(s)) return true;
+    if (keptCol) { const t = yes; yes = no; no = t; }
+    return yes ? true : no ? false : null;
+  }
+  // Match a species name to the app's list (any case, "Bass, Largemouth" order, or a word in it); otherwise keep it as written.
+  const speciesIndex = (() => { let m = null; return () => { if (m) return m; m = new Map();
+    const names = [...new Set([...KNOWN_SPECIES, ...FISH_TYPES.keys(), ...SPECIES_INFO.keys()])];
+    names.forEach((n) => { m.set(impNorm(n), n); const bare = impNorm(n.replace(/\s*\(.*?\)/g, '')); if (!m.has(bare)) m.set(bare, n);
+      (n.match(/\(([^)]+)\)/g) || []).forEach((p) => { const k = impNorm(p.slice(1, -1)); if (!m.has(k)) m.set(k, n); }); });
+    return m; }; })();
+  function impSpecies(v) {
+    const s = String(v || '').trim().slice(0, 80); if (!s) return '';
+    const idx = speciesIndex(); const k = impNorm(s);
+    if (idx.has(k)) return idx.get(k);
+    const flip = /^([^,]+),\s*(.+)$/.exec(k); if (flip && idx.has(`${flip[2]} ${flip[1]}`)) return idx.get(`${flip[2]} ${flip[1]}`);
+    const sing = k.replace(/s$/, ''); if (idx.has(sing)) return idx.get(sing);
+    const mine = catches.find((c) => impNorm(c.species) === k); if (mine) return mine.species;
+    // "Pike" → "Northern Pike": a name ending in it, when only one does (or you've logged one of them before).
+    const ends = [...new Set([...idx.entries()].filter(([n]) => n.endsWith(' ' + k) || n.endsWith(' ' + sing)).map(([, v]) => v))];
+    if (ends.length === 1) return ends[0];
+    const used = ends.filter((v) => catches.some((c) => c.species === v)); if (used.length === 1) return used[0];
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  let impState = null;
+  async function openImport(file) {
+    if (!file) return;
+    let text;
+    try { text = await file.text(); } catch { return toast('Could not read that file'); }
+    const name = file.name || 'file';
+    if (/^\s*[{[]/.test(text)) {
+      try {
+        const j = JSON.parse(text);
+        if (!j || !['fishamongus', 'tightlines'].includes(j.app) || !Array.isArray(j.catches)) throw new Error();
+        if (!(await askConfirm(`${name} is a Fishamongus! backup with ${plural(j.catches.length, 'catch')}. Add them to your log? Nothing of yours is replaced, and catches already here are skipped.`, 'Add to my log'))) return;
+        const r = await mergeBackup(j, ''); await reload();
+        toast(`Added ${plural(r.catches, 'catch')}${r.spots ? `, ${plural(r.spots, 'spot')}` : ''}${r.dup ? ` · ${r.dup} already in your log` : ''}`);
+        backfillWeather().then(backfillTides).catch(() => {});
+      } catch { toast("That file isn't a spreadsheet or a Fishamongus! backup"); }
+      return;
+    }
+    const rows = parseCsv(text);
+    if (rows.length < 2) return toast(rows.length ? 'That spreadsheet has a header row but no catches' : "Couldn't find any rows in that file");
+    // The header is the first row that looks like names, within the first 5 rows (some exports start with a title line).
+    let hr = 0; let best = -1;
+    for (let i = 0; i < Math.min(5, rows.length - 1); i++) { const g = guessColumns(rows[i]); const n = IMP_FIELDS.filter(([k]) => g[k] != null).length + (g.species != null && g.date != null ? 10 : 0); if (n > best) { best = n; hr = i; } }
+    const head = rows[hr]; const body = rows.slice(hr + 1).filter((r) => r.length > 1 || r[0]);
+    const map = guessColumns(head);
+    impState = { name, head, body, map, keptCol: map.keptCol, hiRow: hr,
+      lenUnit: (map.length != null && unitFrom(head[map.length], 'len')) || (imp() ? 'in' : 'cm'),
+      wtUnit: (map.weight != null && unitFrom(head[map.weight], 'wt')) || (imp() ? 'lb' : 'kg'),
+      order: dateOrder(body.map((r) => r[map.date])) };
+    $('#imp-file').textContent = `${name} · ${plural(body.length, 'row')}`;
+    $('#imp-label').value = '';
+    renderImportMap(); renderImportPreview();
+    openSheet($('#sheet-import'));
+  }
+  function renderImportMap() {
+    const s = impState; const opts = (sel) => `<option value="">– not in this file –</option>` + s.head.map((h, i) => `<option value="${i}"${sel === i ? ' selected' : ''}>${esc(h || `Column ${i + 1}`)}${s.body[0] && s.body[0][i] ? ` (e.g. ${esc(s.body[0][i].slice(0, 24))})` : ''}</option>`).join('');
+    $('#imp-map').innerHTML = IMP_FIELDS.map(([key, label, req]) => `<div class="field imp-row"><label for="imp-${key}">${esc(label)}${req ? ' <span class="req">required</span>' : ''}</label><div class="select-wrap"><select id="imp-${key}" data-key="${key}">${opts(s.map[key])}</select></div></div>`).join('');
+    $('#imp-len-unit').value = s.lenUnit; $('#imp-wt-unit').value = s.wtUnit; $('#imp-order').value = s.order;
+    $('#imp-kept').checked = !!s.keptCol;
+  }
+  function buildImport() {
+    const s = impState; const m = s.map; const out = []; const skipped = []; let dup = 0;
+    const cell = (r, k) => (m[k] != null ? (r[m[k]] || '').trim() : '');
+    const label = $('#imp-label').value.trim().slice(0, 40);
+    const same = (a, b) => impNorm(a.species) === impNorm(b.species) && Math.abs(a.caughtAt - b.caughtAt) < 60000 && (!a.location || !b.location || distM(a.location, b.location) < 200);
+    s.body.forEach((r, i) => {
+      const species = impSpecies(cell(r, 'species'));
+      const at = parseWhen(cell(r, 'date'), cell(r, 'time'), s.order);
+      if (!species || !at) { skipped.push({ row: i + hi(s) + 2, why: !species ? 'no fish' : 'no date' }); return; }
+      const lat = impNum(cell(r, 'lat')); const lon = impNum(cell(r, 'lon'));
+      const location = lat != null && lon != null && Math.abs(lat) <= 90 && Math.abs(lon) <= 180 && !(lat === 0 && lon === 0) ? { lat, lon, accuracy: null, source: 'import' } : null;
+      const cnt = Math.max(1, Math.min(999, Math.round(impNum(cell(r, 'count')) || 1)));
+      const info = SPECIES_INFO.get(species) || {};
+      const rec = { species, caughtAt: at, count: cnt, bait: cell(r, 'bait').slice(0, 80), lureColor: cell(r, 'lureColor').slice(0, 40), lureSize: cell(r, 'lureSize').slice(0, 40),
+        lengthCm: impLength(cell(r, 'length'), s.lenUnit), weightKg: impWeight(cell(r, 'weight'), s.wtUnit), released: impReleased(cell(r, 'released'), s.keptCol),
+        notes: cell(r, 'notes').slice(0, 2000), location, spotName: cell(r, 'spot').slice(0, 60), from: (label || cell(r, 'from')).slice(0, 40), kind: info.kind || 'fish' };
+      if (catches.some((c) => same(c, rec)) || out.some((c) => same(c, rec) && c.count === rec.count && c.bait === rec.bait)) { dup++; return; }
+      out.push(rec);
+    });
+    return { recs: out, skipped, dup };
+  }
+  const hi = (s) => s.hiRow || 0;
+  function renderImportPreview() {
+    const r = buildImport(); impState.built = r;
+    const n = r.recs.length; const fish = r.recs.reduce((a, c) => a + c.count, 0);
+    const btn = $('#imp-go'); btn.disabled = !n; btn.textContent = n ? `Import ${plural(n, 'catch')}` : 'Nothing to import';
+    const needs = IMP_FIELDS.filter(([k, , req]) => req && impState.map[k] == null).map(([, l]) => l.toLowerCase());
+    const parts = [];
+    if (needs.length) parts.push(`<p class="form-error" style="display:block">Choose the column for ${esc(needs.join(' and '))}.</p>`);
+    parts.push(`<p class="help small"><b>${plural(n, 'catch')}</b> ready (${plural(fish, 'fish')})${r.dup ? ` · ${r.dup} already in your log, skipped` : ''}${r.skipped.length ? ` · ${r.skipped.length} row${r.skipped.length === 1 ? '' : 's'} without a ${r.skipped.every((x) => x.why === 'no date') ? 'date' : r.skipped.every((x) => x.why === 'no fish') ? 'fish' : 'fish or date'}, skipped` : ''}.</p>`);
+    const fmt = (t) => new Date(t).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+    parts.push('<ul class="lim-list imp-prev">' + r.recs.slice(0, 5).map((c) => `<li><span><b>${c.count > 1 ? c.count + ' × ' : ''}${esc(c.species)}</b><small>${esc([fmt(c.caughtAt), c.bait, U.len(c.lengthCm), U.wt(c.weightKg), c.released === true ? 'released' : c.released === false ? 'kept' : '', c.spotName || (c.location ? 'GPS' : '')].filter(Boolean).join(' · '))}</small></span></li>`).join('') + '</ul>');
+    if (n > 5) parts.push(`<p class="help small">…and ${n - 5} more.</p>`);
+    const custom = [...new Set(r.recs.map((c) => c.species).filter((x) => !SPECIES_INFO.has(x) && !KNOWN_SPECIES.has(x)))];
+    if (custom.length) parts.push(`<p class="help small">Not in the app's fish list, kept as written: ${esc(custom.slice(0, 8).join(', '))}${custom.length > 8 ? '…' : ''}.</p>`);
+    $('#imp-preview').innerHTML = parts.join('');
+  }
+  $('#imp-map').addEventListener('change', (e) => { const k = e.target.dataset.key; if (!k) return; impState.map[k] = e.target.value === '' ? null : Number(e.target.value);
+    if (k === 'date') impState.order = dateOrder(impState.body.map((r) => r[impState.map.date])), $('#imp-order').value = impState.order;
+    if (k === 'released') { impState.keptCol = impState.map.released != null && /^(kept|harvested)/.test(impNorm(impState.head[impState.map.released])); $('#imp-kept').checked = impState.keptCol; }
+    renderImportPreview(); });
+  $('#imp-len-unit').addEventListener('change', (e) => { impState.lenUnit = e.target.value; renderImportPreview(); });
+  $('#imp-wt-unit').addEventListener('change', (e) => { impState.wtUnit = e.target.value; renderImportPreview(); });
+  $('#imp-order').addEventListener('change', (e) => { impState.order = e.target.value; renderImportPreview(); });
+  $('#imp-kept').addEventListener('change', (e) => { impState.keptCol = e.target.checked; renderImportPreview(); });
+  $('#imp-label').addEventListener('input', () => renderImportPreview());
+  $('#imp-go').addEventListener('click', async () => {
+    const { recs } = buildImport(); if (!recs.length) return;
+    const btn = $('#imp-go'); btn.disabled = true; btn.textContent = 'Importing…';
+    const batch = 'imp-' + Date.now(); const now = Date.now(); let newSpots = 0;
+    try {
+      for (const c of recs) {
+        let spotId = null;
+        if (c.location) { const ms = matchSpot(c.location); if (ms) spotId = ms.spot.id; }
+        if (!spotId && c.spotName) {
+          const named = spots.find((sp) => impNorm(sp.name) === impNorm(c.spotName));
+          if (named && (!c.location || distM(named, c.location) < 5000)) spotId = named.id;
+          else if (c.location) {
+            const sp = { id: uid(), name: c.spotName, lat: c.location.lat, lon: c.location.lon, radiusM: 250, notes: 'Added by an import.', createdAt: now, updatedAt: now, imported: batch };
+            await DB.putSpot(sp); spots.push(sp); spotId = sp.id; newSpots++;
+          }
+        }
+        const notes = !spotId && c.spotName ? [c.notes, `Spot: ${c.spotName}`].filter(Boolean).join('\n') : c.notes;
+        const rec = { id: uid(), createdAt: now, updatedAt: now, caughtAt: c.caughtAt, species: c.species, bait: c.bait, lureColor: c.lureColor, lureSize: c.lureSize,
+          lengthCm: c.lengthCm, weightKg: c.weightKg, released: c.released, notes, photo: null, thumb: null, extraPhotos: [], count: c.count,
+          location: c.location, weather: null, weatherTries: 0, tide: undefined, marine: undefined, tideTries: 0, spotId, kind: c.kind, imported: batch };
+        if (c.from) rec.from = c.from;
+        await DB.put(rec);
+      }
+    } catch (err) { await reload(); btn.disabled = false; return toast('Import stopped: ' + ((err && err.message) || 'storage error')); }
+    await reload(); closeSheet(); impState = null;
+    toast(`Imported ${plural(recs.length, 'catch')}${newSpots ? `, ${plural(newSpots, 'new spot')}` : ''}`, { label: 'Undo', fn: async () => {
+      for (const c of catches.filter((x) => x.imported === batch)) await DB.del(c.id);
+      for (const sp of spots.filter((x) => x.imported === batch)) await DB.delSpot(sp.id);
+      await reload(); toast('Import undone');
+    } });
+    // Catches with a place get their weather (and tides by the coast) looked up in the background.
+    backfillWeather().then(backfillTides).then(backfillMarine).catch(() => {});
+  });
+  $('#f-import-log').addEventListener('change', (e) => { const f = e.target.files[0]; e.target.value = ''; openImport(f); });
+  // Drop a spreadsheet or backup anywhere on the window (computers, and the Windows app).
+  let dragDepth = 0;
+  const hasFiles = (e) => e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files');
+  window.addEventListener('dragenter', (e) => { if (!hasFiles(e)) return; e.preventDefault(); dragDepth++; document.body.classList.add('dropping'); });
+  window.addEventListener('dragleave', (e) => { if (!hasFiles(e)) return; dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) document.body.classList.remove('dropping'); });
+  window.addEventListener('dragover', (e) => { if (hasFiles(e)) e.preventDefault(); });
+  window.addEventListener('drop', (e) => {
+    if (!hasFiles(e)) return; e.preventDefault(); dragDepth = 0; document.body.classList.remove('dropping');
+    if (e.target.closest && e.target.closest('#sheet-form, #sheet-tackle')) return; // photo drops belong to those forms
+    const f = e.dataTransfer.files[0]; if (!f) return;
+    if (/\.(csv|tsv|txt|json)$/i.test(f.name) || /csv|json|text\/plain|tab-separated/.test(f.type)) openImport(f);
+    else toast('Drop a spreadsheet (.csv) or a Fishamongus! backup (.json) to import it');
+  });
+  // The Windows app passes a file opened with it (dragged onto the shortcut, or Open with) as ?import=<token>.
+  async function importFromLink(token) {
+    try {
+      const r = await fetch(`/__open/${encodeURIComponent(token)}`); if (!r.ok) throw new Error();
+      const name = decodeURIComponent(r.headers.get('X-File-Name') || 'file.csv');
+      await openImport(new File([await r.blob()], name));
+    } catch { toast("Couldn't open that file"); }
+  }
 
   // ---------------------------------------------------------------- boot
   // ---------------------------------------------------------------- first run and install guide

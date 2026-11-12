@@ -925,3 +925,16 @@ html.night .wa-chip { background: #3a0805 !important; color: var(--ink) !importa
 @media (prefers-color-scheme: dark) { .wa-unverified { background: #43350f; color: #f4d58a; } }
 html.night .wa-unverified { background: #2a0505; color: var(--ink); }
 .shell-live { display: block; margin-top: 8px; }
+
+/* Import a log */
+.imp-h { font-size: 15px; margin: 18px 0 6px; }
+.imp-row { margin-bottom: 10px; }
+.imp-row select { font-size: 15px; }
+.imp-units { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.imp-check { display: flex; gap: 10px; align-items: flex-start; min-height: 44px; padding: 10px 0; font-size: 15px; line-height: 1.35; cursor: pointer; }
+.imp-check input { width: 22px; height: 22px; flex: none; margin: 0; accent-color: var(--accent); }
+.imp-prev { margin-top: 4px; }
+.imp-prev li { padding: 8px 12px; }
+body.dropping::after { content: 'Drop to import this log'; position: fixed; inset: 12px; z-index: 200; display: grid; place-items: center;
+  border: 3px dashed currentColor; border-radius: 20px; background: color-mix(in srgb, var(--bg, #f3efe6) 88%, transparent); color: var(--ink, #12313a);
+  font-size: 22px; font-weight: 600; pointer-events: none; }

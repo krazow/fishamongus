@@ -4,16 +4,21 @@
 package main
 
 import (
+	"crypto/rand"
 	"embed"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"io/fs"
 	"mime"
 	"net"
 	"net/http"
+	neturl "net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"fishamongus/win/internal/win"
@@ -39,6 +44,12 @@ func main() {
 	}
 	addr := fmt.Sprintf("127.0.0.1:%d", win.Port)
 	url := "http://" + addr + "/"
+	// A log file opened with the app (dragged onto the shortcut, or Open with) goes to the importer.
+	if f := fileArg(); f != "" {
+		if tok := offerFile(addr, f); tok != "" {
+			url += "?import=" + tok
+		}
+	}
 
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -82,6 +93,28 @@ func handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == marker {
 			fmt.Fprint(w, "fishamongus "+version)
+			return
+		}
+		if r.URL.Path == marker+"/offer" && r.Method == http.MethodPost && isLocal(r) {
+			// Another copy of the app hands over a file to import.
+			b, err := io.ReadAll(io.LimitReader(r.Body, maxImport+1))
+			if err != nil || len(b) > maxImport {
+				http.Error(w, "too big", http.StatusRequestEntityTooLarge)
+				return
+			}
+			fmt.Fprint(w, keep(r.URL.Query().Get("name"), b))
+			return
+		}
+		if strings.HasPrefix(r.URL.Path, "/__open/") {
+			name, b, ok := take(strings.TrimPrefix(r.URL.Path, "/__open/"))
+			if !ok {
+				http.NotFound(w, r)
+				return
+			}
+			w.Header().Set("Content-Type", "application/octet-stream")
+			w.Header().Set("X-File-Name", neturl.PathEscape(name))
+			w.Header().Set("Cache-Control", "no-store")
+			_, _ = w.Write(b)
 			return
 		}
 		if strings.Contains(r.URL.Path, "/demo/") {
@@ -153,6 +186,10 @@ func uninstall() {
 		"Your catches, spots, trips and settings are stored on this computer. If you choose Delete, they're gone for good, so make a backup first (Settings → Backup) unless you have one.\n\nChoose Keep to leave them here; they come back if you install Fishamongus! again.",
 		"Delete my log", "Keep my log")
 
+	_ = win.Hidden("reg.exe", "delete", win.OpenWithKey, "/f")
+	for _, ext := range []string{".csv", ".json"} {
+		_ = win.Hidden("reg.exe", "delete", `HKCU\Software\Classes\`+ext+`\OpenWithList\`+win.ExeName, "/f")
+	}
 	_ = os.Remove(win.StartMenuLink())
 	_ = os.Remove(win.DesktopLink())
 	_ = win.Hidden("reg.exe", "delete", win.UninstKey, "/f")
@@ -168,4 +205,82 @@ func uninstall() {
 		rm += ` & rmdir /s /q "` + win.DataDir() + `"`
 	}
 	_ = startDetached(`cmd.exe /c "ping -n 3 127.0.0.1 >nul & ` + rm + `"`)
+}
+
+// ---- files opened with the app ----
+
+const maxImport = 50 << 20
+
+var (
+	offered   = map[string]offer{}
+	offeredMu sync.Mutex
+)
+
+type offer struct {
+	name string
+	data []byte
+}
+
+// fileArg is the first argument that is an existing .csv, .tsv, .txt or .json file.
+func fileArg() string {
+	for _, a := range os.Args[1:] {
+		if strings.HasPrefix(a, "-") {
+			continue
+		}
+		ext := strings.ToLower(filepath.Ext(a))
+		if ext != ".csv" && ext != ".tsv" && ext != ".txt" && ext != ".json" {
+			continue
+		}
+		if st, err := os.Stat(a); err == nil && !st.IsDir() && st.Size() <= maxImport {
+			return a
+		}
+	}
+	return ""
+}
+
+func keep(name string, b []byte) string {
+	t := make([]byte, 16)
+	_, _ = rand.Read(t)
+	tok := hex.EncodeToString(t)
+	offeredMu.Lock()
+	offered[tok] = offer{filepath.Base(name), b}
+	offeredMu.Unlock()
+	return tok
+}
+
+// take hands a file over once.
+func take(tok string) (string, []byte, bool) {
+	offeredMu.Lock()
+	defer offeredMu.Unlock()
+	o, ok := offered[tok]
+	delete(offered, tok)
+	return o.name, o.data, ok
+}
+
+func isLocal(r *http.Request) bool {
+	h, _, _ := net.SplitHostPort(r.RemoteAddr)
+	return h == "127.0.0.1" && r.Header.Get("Origin") == ""
+}
+
+// offerFile reads the file and returns a one-time token for it: kept here if this copy
+// will run the server, or handed to the copy that's already running.
+func offerFile(addr, path string) string {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	if !alreadyOurs(addr) {
+		return keep(path, b)
+	}
+	c := http.Client{Timeout: 5 * time.Second}
+	r, err := c.Post("http://"+addr+marker+"/offer?name="+neturl.QueryEscape(filepath.Base(path)), "application/octet-stream", strings.NewReader(string(b)))
+	if err != nil {
+		return ""
+	}
+	defer r.Body.Close()
+	tok, _ := io.ReadAll(io.LimitReader(r.Body, 64))
+	if r.StatusCode != http.StatusOK {
+		return ""
+	}
+	return string(tok)
 }
