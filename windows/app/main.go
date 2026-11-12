@@ -187,7 +187,7 @@ func uninstall() {
 		"Delete my log", "Keep my log")
 
 	_ = win.Hidden("reg.exe", "delete", win.OpenWithKey, "/f")
-	for _, ext := range []string{".csv", ".json"} {
+	for _, ext := range []string{".csv", ".json", ".gpx", ".kml", ".kmz"} {
 		_ = win.Hidden("reg.exe", "delete", `HKCU\Software\Classes\`+ext+`\OpenWithList\`+win.ExeName, "/f")
 	}
 	_ = os.Remove(win.StartMenuLink())
@@ -221,14 +221,14 @@ type offer struct {
 	data []byte
 }
 
-// fileArg is the first argument that is an existing .csv, .tsv, .txt or .json file.
+// fileArg is the first argument that is an existing .csv, .tsv, .txt, .json, .gpx, .kml or .kmz file.
 func fileArg() string {
 	for _, a := range os.Args[1:] {
 		if strings.HasPrefix(a, "-") {
 			continue
 		}
 		ext := strings.ToLower(filepath.Ext(a))
-		if ext != ".csv" && ext != ".tsv" && ext != ".txt" && ext != ".json" {
+		if ext != ".csv" && ext != ".tsv" && ext != ".txt" && ext != ".json" && ext != ".gpx" && ext != ".kml" && ext != ".kmz" {
 			continue
 		}
 		if st, err := os.Stat(a); err == nil && !st.IsDir() && st.Size() <= maxImport {

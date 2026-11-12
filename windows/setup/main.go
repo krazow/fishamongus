@@ -124,7 +124,7 @@ func install(dir, exe string) error {
 	_ = win.Hidden("reg.exe", "add", win.OpenWithKey, "/v", "FriendlyAppName", "/t", "REG_SZ", "/d", win.AppName, "/f")
 	_ = win.Hidden("reg.exe", "add", win.OpenWithKey+`\shell\open\command`, "/ve", "/t", "REG_SZ", "/d", cmd, "/f")
 	_ = win.Hidden("reg.exe", "add", win.OpenWithKey+`\DefaultIcon`, "/ve", "/t", "REG_SZ", "/d", icon, "/f")
-	for _, ext := range []string{".csv", ".json"} {
+	for _, ext := range []string{".csv", ".json", ".gpx", ".kml", ".kmz"} {
 		_ = win.Hidden("reg.exe", "add", win.OpenWithKey+`\SupportedTypes`, "/v", ext, "/t", "REG_SZ", "/d", "", "/f")
 		_ = win.Hidden("reg.exe", "add", `HKCU\Software\Classes\`+ext+`\OpenWithList\`+win.ExeName, "/f")
 	}

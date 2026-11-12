@@ -957,3 +957,60 @@ body.dropping::after { content: 'Drop to import this log'; position: fixed; inse
 .map-search-btn[aria-expanded="true"] { background: var(--accent); color: #fff; }
 .map-search { position: absolute; right: 64px; left: 12px; top: 12px; z-index: 1001; max-width: 460px; padding: 10px; border-radius: 14px; background: var(--surface); box-shadow: 0 4px 18px rgba(0,0,0,.28); max-height: calc(100% - 40px); overflow: auto; }
 .map-search.place-search { margin-top: 0; }
+
+/* Weather alerts */
+.alerts-card { border-left: 4px solid #c9302c; }
+.alert-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.alert details { border-radius: 10px; background: color-mix(in srgb, var(--alert-c, #c9302c) 10%, var(--surface)); }
+.alert summary { display: flex; gap: 10px; align-items: center; min-height: 48px; padding: 8px 12px; cursor: pointer; list-style: none; }
+.alert summary::-webkit-details-marker { display: none; }
+.alert summary b { display: block; font-size: 15px; }
+.alert summary small { display: block; color: var(--ink-2); font-size: 13px; }
+.alert-ic { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--alert-c, #c9302c); color: #fff; font-weight: 800; font-size: 15px; }
+.alert details > p { margin: 0; padding: 0 12px 10px; font-size: 14px; }
+.alert-text { white-space: pre-line; overflow-wrap: anywhere; }
+.sev-extreme, .sev-severe { --alert-c: #c9302c; }
+.sev-moderate { --alert-c: #d96a0b; }
+.sev-minor, .sev-unknown { --alert-c: #a77a00; }
+body.night .alerts-card, body.night .alert-ic { filter: none; }
+
+/* Route line in the session card */
+.route-line { margin: 8px 0 0; font-size: 13px; color: var(--ink-2); }
+.route-line::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--accent); vertical-align: 1px; }
+
+/* Map layers */
+.map-layers-btn { top: 196px; }
+.map-layers { position: absolute; right: 64px; top: 140px; z-index: 1001; width: min(320px, calc(100% - 80px)); padding: 10px 12px; border-radius: 14px; background: var(--surface); box-shadow: 0 4px 18px rgba(0,0,0,.28); }
+.map-layers h4 { margin: 0 0 4px; font-size: 15px; }
+.map-layers .imp-check { padding: 8px 0; }
+.map-layers .imp-check small { display: block; color: var(--ink-2); font-size: 12px; font-weight: 400; }
+.map-note { position: absolute; left: 50%; transform: translateX(-50%); bottom: 120px; z-index: 1000; max-width: calc(100% - 40px); padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--surface) 94%, transparent); box-shadow: 0 1px 6px rgba(0,0,0,.2); font-size: 13px; font-weight: 600; color: var(--ink-2); text-align: center; pointer-events: none; }
+.acc-pin { background: none; border: 0; }
+.acc { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); color: #fff; font: 800 12px/1 system-ui, sans-serif; }
+.acc-ramp { background: #1f5fa8; }
+.acc-hand { background: #2e8b57; }
+.acc-pier { background: #6b4fa0; }
+.acc-shore { background: #8a6d1f; border-radius: 50%; }
+.pop-actions .pop-link { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+
+/* Import places */
+.geo-list { list-style: none; margin: 0; padding: 0; }
+.geo-list li + li { border-top: 1px solid var(--line); }
+.geo-list .imp-check small { display: block; color: var(--ink-2); font-size: 13px; overflow-wrap: anywhere; }
+
+/* Best days ahead */
+.cal-row { display: grid; grid-auto-flow: column; grid-auto-columns: 64px; gap: 6px; overflow-x: auto; padding: 2px 2px 8px; margin: 0 -2px; scroll-snap-type: x proximity; }
+.cal-day { display: grid; justify-items: center; gap: 2px; padding: 8px 2px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; scroll-snap-align: start; min-height: 120px; position: relative; }
+.cal-day.best { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.cal-day.warn { border-color: #c9302c; }
+.cal-day.far { opacity: .8; }
+.cd-dow { font-size: 12px; font-weight: 700; color: var(--ink-2); }
+.cd-date { font-size: 18px; font-weight: 700; line-height: 1.1; }
+.cd-wx { font-size: 18px; min-height: 22px; }
+.cd-stars { font-size: 9px; letter-spacing: 1px; color: var(--accent); }
+.cd-stars i { font-style: normal; color: var(--line); }
+.cd-t { font-size: 12px; color: var(--ink-2); }
+.cd-tag { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; color: #fff; background: var(--accent); border-radius: 6px; padding: 1px 5px; }
+.cd-tag.warn { background: #c9302c; }
+.cal-why { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
+.cal-why li + li { margin-top: 2px; }

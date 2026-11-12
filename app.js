@@ -163,7 +163,7 @@
 
   // ---------------------------------------------------------------- units
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition; // speech recognition, where the browser has it
-  const APP_VERSION = '4.8 (Nov 12, 2026)';
+  const APP_VERSION = '4.9 (Nov 12, 2026)';
   // Night (dim red) mode and large text, applied before anything is drawn.
   function applyDisplay() {
     const night = store('tl.theme') === 'night'; const large = store('tl.text') === 'large';
@@ -273,6 +273,8 @@
     return 2 * R * Math.asin(Math.sqrt(h));
   }
   const fromYou = (d) => (d < 30 ? "You're here" : `${fmtDist(d)} from you`);
+  // "Here" for places you're at, otherwise "2.4 mi away".
+  function awayText(m) { return m < 60 ? 'Here' : `${fmtDist(m)} away`; }
   function fmtDist(m) {
     if (m == null) return '';
     if (m < 15) return 'here';
@@ -349,7 +351,7 @@
     const draw = () => {
       const from = near();
       list.hidden = !shown.length;
-      list.innerHTML = shown.map((p, i) => `<li><button type="button" data-i="${i}"><b>${esc(p.name)}</b><small>${esc([p.spotId ? 'Saved spot' : p.kind, p.area, from ? fmtDist(distM(from, p)) + ' away' : ''].filter(Boolean).join(' · '))}</small></button></li>`).join('');
+      list.innerHTML = shown.map((p, i) => `<li><button type="button" data-i="${i}"><b>${esc(p.name)}</b><small>${esc([p.spotId ? 'Saved spot' : p.kind, p.area, from ? awayText(distM(from, p)) : ''].filter(Boolean).join(' · '))}</small></button></li>`).join('');
     };
     async function search() {
       const q = input.value.trim(); const id = ++run; shown = []; draw();
@@ -1470,6 +1472,7 @@
       <div class="spot-head"><h3>${esc(sp.name)}</h3><p>${sp.water === 'salt' ? 'Saltwater · ' : sp.water === 'fresh' ? 'Freshwater · ' : ''}${sp.lat.toFixed(5)}, ${sp.lon.toFixed(5)} · within ${fmtDist(sp.radiusM)}${d != null ? ` · ${fromYou(d)}` : ''}</p></div>
       ${sp.notes ? `<div class="card notes-card" style="margin-bottom:12px"><h3 style="margin-bottom:6px">Notes</h3><p>${esc(sp.notes)}</p></div>` : ''}
       ${sp.water !== 'salt' && !list.some((c) => tideShown(c)) ? '<div id="spot-flow"></div>' : ''}
+      <div id="spot-alerts"></div>
       ${inWA(sp.lat, sp.lon) ? '<div id="spot-wa"></div>' : ''}
       ${list.length ? `
         <div class="tiles" style="margin-bottom:12px">
@@ -1489,6 +1492,7 @@
         <a class="btn" href="${mapsLink(sp)}" target="_blank" rel="noopener">Directions in Maps</a>
       </div>`;
     $$('#spot-body .card .sub').forEach((el) => { if (el.innerHTML === '&nbsp;') el.remove(); });
+    fillAlerts($('#spot-alerts'), { lat: sp.lat, lon: sp.lon, salt: sp.water === 'salt' || (sp.water !== 'fresh' && list.some((c) => tideShown(c))) }, { title: 'Weather alerts' });
     if ($('#spot-wa')) fillShellSafety($('#spot-wa'), { lat: sp.lat, lon: sp.lon, salt: sp.water === 'salt' || (sp.water !== 'fresh' && list.some((c) => tideShown(c))) }, { title: 'Shellfish safety nearby' }).catch(() => {});
     if ($('#spot-flow') && navigator.onLine) {
       flowNear(sp).then((f) => { const box = $('#spot-flow'); if (box && f && spotDetailId === id) box.innerHTML = `<div class="card" style="margin-bottom:12px"><div class="now-grid">${flowCell(f)}</div></div>`; }).catch(() => {});
@@ -1863,6 +1867,7 @@
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, crossOrigin: true, attribution: '© OpenStreetMap' }).addTo(map);
       layer = L.layerGroup().addTo(map);
       youLayer = L.layerGroup().addTo(map);
+      initMapLayers();
       // With nothing saved yet, start where you last were rather than on the whole country.
       const hasPts = catches.some((c) => c.location) || spots.length;
       if (!hasPts && lastLoc) { map.setView([lastLoc.lat, lastLoc.lon], 13); mapCentred = true; }
@@ -2713,6 +2718,7 @@
         ${recs.length ? recs.map((r) => `<div class="rec"><b>${esc(r.lure)}</b><small>${esc(r.reasons.join('; '))}</small></div>`).join('') : (hist.list.length ? '<p class="sub" style="margin:0">Not enough matching catches yet.</p>' : '')}</div>
       ${speciesCard}
       ${gearCard}
+      ${t.end > Date.now() ? '<div id="trip-alerts"></div>' : ''}
       ${inWA(t.lat, t.lon) ? '<div id="trip-wa"></div>' : ''}
       <div class="card" style="margin-bottom:12px"><h3>Regulations</h3>
         <p style="margin:0 0 8px">${t.type === 'crabbing' ? 'Carry your license with its crab endorsement and, in Puget Sound, your catch record card. Check seasons and open days – they change every year and some areas are closed.'
@@ -2729,6 +2735,7 @@
       ${t.notes ? `<div class="card notes-card" style="margin-bottom:12px"><h3 style="margin-bottom:6px">Notes</h3><p>${esc(t.notes)}</p></div>` : ''}
       <p class="help small">${t.forecast && t.forecast.fetchedAt ? `Forecast updated ${fmtDate(t.forecast.fetchedAt)}, ${fmtTime(t.forecast.fetchedAt)}.` : ''}${showTide ? ' Tide predictions from NOAA.' : ''}</p>`;
     if (showTide) bindChart(t.tide.ev, dayStart(t.start), 'trip-tide');
+    if ($('#trip-alerts')) { const sp0 = t.spotId ? spotById(t.spotId) : null; fillAlerts($('#trip-alerts'), { lat: t.lat, lon: t.lon, salt: ['crabbing', 'clamming', 'shrimping'].includes(t.type) || (sp0 ? sp0.water === 'salt' : showTide) }, { title: 'Weather alerts for this trip', window: { start: t.start, end: t.end } }); }
     if ($('#trip-wa')) {
       const sp = t.spotId ? spotById(t.spotId) : null; const shellTrip = ['crabbing', 'clamming', 'shrimping'].includes(t.type);
       fillShellSafety($('#trip-wa'), { lat: t.lat, lon: t.lon, salt: shellTrip || (sp ? sp.water === 'salt' : showTide) }, { title: 'Shellfish safety' }).catch(() => {});
@@ -2843,10 +2850,11 @@
       $('#tr-where').innerHTML = (opts.length ? `<optgroup label="Saved spots">${opts.map(({ sp }) => `<option value="${sp.id}">${esc(sp.name)}</option>`).join('')}</optgroup>` : '') +
         `<option value="${GPS}">My current location</option><option value="${OTHER_PT}">Another place (search or coordinates)…</option>`;
       if (t) { $('#tr-where').value = t.spotId && spotById(t.spotId) ? t.spotId : OTHER_PT; $('#tr-lat').value = t.lat; $('#tr-lon').value = t.lon; }
+      else if (pre && pre.spotId && spotById(pre.spotId)) $('#tr-where').value = pre.spotId;
       else if (pre && pre.lat != null) { $('#tr-where').value = OTHER_PT; $('#tr-lat').value = round(pre.lat, 6); $('#tr-lon').value = round(pre.lon, 6); }
       else { const near = opts.filter((o) => o.d != null).sort((a, b) => a.d - b.d)[0]; $('#tr-where').value = near ? near.sp.id : opts.length ? opts[0].sp.id : GPS; }
-      const start = t ? new Date(t.start) : (() => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(6, 0, 0, 0); return d; })();
-      const end = t ? new Date(t.end) : new Date(start.getTime() + 5 * HOUR_MS);
+      const start = t ? new Date(t.start) : pre && pre.start ? new Date(pre.start) : (() => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(6, 0, 0, 0); return d; })();
+      const end = t ? new Date(t.end) : pre && pre.end ? new Date(pre.end) : new Date(start.getTime() + 5 * HOUR_MS);
       $('#tr-date').value = toLocalInput(start).slice(0, 10); $('#tr-start').value = toLocalInput(start).slice(11); $('#tr-end').value = toLocalInput(end).slice(11);
       $('#tr-notes').value = t ? t.notes || '' : '';
       $('#tr-type').value = t ? t.type || 'fishing' : (pre && pre.type) || 'fishing';
@@ -2910,7 +2918,7 @@
     s.updatedAt = Date.now(); await DB.putSession(s);
     const i = sessions.findIndex((x) => x.id === s.id); if (i >= 0) sessions[i] = s; else sessions.unshift(s);
   }
-  function paintSessionViews() { renderNow(); paintSessionBar(); }
+  function paintSessionViews() { renderNow(); paintSessionBar(); syncRouteWatch(); if (map && routeLayer) drawRoutes(); }
   async function startSession() {
     if (activeSession()) return;
     const now = Date.now(); const last = catches[0];
@@ -3290,6 +3298,7 @@
         <div><b title="${esc(sp ? sp.name : '')}">${sp ? esc(sp.name) : '–'}</b><span>Spot</span></div>
       </div>
       ${keptLine()}
+      ${routeOn() ? `<p class="route-line" id="ses-route">${esc(routeText(s))}</p>` : ''}
       <button type="button" class="ses-lure" id="ses-lure"><span><small>On your line</small><b>${l ? esc(l.bait) + (lureDesc(l) ? ' · ' + esc(lureDesc(l)) : '') : 'Not set yet'}</b></span><em>${l ? 'Change' : 'Set lure'}</em></button>
       ${quick}</div>`;
   }
@@ -3373,7 +3382,7 @@
   }
   function renderNow() {
     if (!$('#view-now')) return;
-    renderNowSession(); renderNowCrc(); renderNowCond(); renderNowWA(); renderNowSolunar(); renderNowRecs(); renderNowTrip();
+    renderNowSession(); renderNowCrc(); renderNowAlerts(); renderNowCond(); renderNowWA(); renderNowSolunar(); renderNowCal(); renderNowRecs(); renderNowTrip();
   }
   $('#view-now').addEventListener('click', (e) => {
     if (e.target.closest('#ses-start')) return startSession();
@@ -3612,9 +3621,11 @@
 
   // ---------------------------------------------------------------- display (night mode, large text)
   function paintDisplay() {
-    $$('#seg-theme button').forEach((b) => b.classList.toggle('on', b.dataset.theme === (store('tl.theme') === 'night' ? 'night' : 'auto')));
+    $$('#seg-theme button').forEach((b) => b.classList.toggle('on', b.dataset.theme === (store('tl.theme') === 'night' ? 'night' : 'auto'))); paintRouteSeg();
     $$('#seg-text button').forEach((b) => b.classList.toggle('on', b.dataset.text === (store('tl.text') === 'large' ? 'large' : 'normal')));
   }
+  function paintRouteSeg() { return $$('#seg-route button').forEach((b) => b.classList.toggle('on', b.dataset.route === (routeOn() ? '1' : '0'))); }
+  $('#seg-route').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; store('tl.route', b.dataset.route); paintRouteSeg(); syncRouteWatch(); renderNow(); });
   $('#seg-theme').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; store('tl.theme', b.dataset.theme); applyDisplay(); paintDisplay(); });
   $('#seg-text').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; store('tl.text', b.dataset.text); applyDisplay(); paintDisplay(); if (map) setTimeout(() => map.invalidateSize(), 50); });
 
@@ -4073,6 +4084,7 @@
   let impState = null;
   async function openImport(file) {
     if (!file) return;
+    if (/\.(gpx|kml|kmz)$/i.test(file.name || '')) return openGeoImport(file);
     let text;
     try { text = decodeText(await file.arrayBuffer()); } catch { return toast('Could not read that file'); }
     const name = file.name || 'file';
@@ -4230,8 +4242,8 @@
     if (!hasFiles(e)) return; e.preventDefault(); dragDepth = 0; document.body.classList.remove('dropping');
     if (e.target.closest && e.target.closest('#sheet-form, #sheet-tackle')) return; // photo drops belong to those forms
     const f = e.dataTransfer.files[0]; if (!f) return;
-    if (/\.(csv|tsv|txt|json)$/i.test(f.name) || /csv|json|text\/plain|tab-separated/.test(f.type)) openImport(f);
-    else toast('Drop a spreadsheet (.csv) or a Fishamongus! backup (.json) to import it');
+    if (/\.(csv|tsv|txt|json|gpx|kml|kmz)$/i.test(f.name) || /csv|json|text\/plain|tab-separated|gpx|kml/.test(f.type)) openImport(f);
+    else toast('Drop a spreadsheet (.csv), a Fishamongus! backup (.json) or a GPX/KML file to import it');
   });
   // The Windows app passes a file opened with it (dragged onto the shortcut, or Open with) as ?import=<token>.
   async function importFromLink(token) {
@@ -4241,6 +4253,378 @@
       await openImport(new File([await r.blob()], name));
     } catch { toast("Couldn't open that file"); }
   }
+
+
+  // ================================================================ 4.9: alerts, routes, GPX/KML, access points, charts, best days
+  // ---------------------------------------------------------------- weather alerts (National Weather Service)
+  // Active watches, warnings and advisories for a place: the zones the point falls in, plus, by the water,
+  // the marine zone (small craft advisories, gale warnings) found at or just off the point.
+  var NWS = 'https://api.weather.gov';
+  function inUS(lat, lon) { return (lat > 24 && lat < 50 && lon > -125.5 && lon < -66) || (lat > 51 && lat < 72 && lon > -180 && lon < -129) || (lat > 18 && lat < 23 && lon > -161 && lon < -154) || (lat > 17.5 && lat < 18.7 && lon > -67.5 && lon < -64.5); }
+  var alertCache = new Map();
+  async function nwsJson(path) {
+    const r = await fetch(NWS + path, { headers: { Accept: 'application/geo+json' } });
+    if (!r.ok) throw new Error('Weather alerts unavailable (' + r.status + ')');
+    return r.json();
+  }
+  async function marineZone(lat, lon) {
+    const k = `${lat.toFixed(2)},${lon.toFixed(2)}`;
+    let cache = {}; try { cache = JSON.parse(store('tl.mzone') || '{}'); } catch {}
+    if (k in cache) return cache[k];
+    const offs = [[0, 0], [0.02, 0], [-0.02, 0], [0, 0.03], [0, -0.03], [0.02, 0.03], [-0.02, -0.03], [0.02, -0.03], [-0.02, 0.03], [0.05, 0], [-0.05, 0], [0, 0.07], [0, -0.07]];
+    let id = null;
+    for (const [a, b] of offs) {
+      const j = await nwsJson(`/zones?type=marine&point=${(lat + a).toFixed(4)},${(lon + b).toFixed(4)}`);
+      const f = (j.features || [])[0]; if (f && f.properties) { id = f.properties.id; break; }
+    }
+    cache[k] = id; const keys = Object.keys(cache); if (keys.length > 200) delete cache[keys[0]];
+    store('tl.mzone', JSON.stringify(cache)); return id;
+  }
+  async function alertsFor({ lat, lon, salt }) {
+    if (!inUS(lat, lon) || !navigator.onLine) return [];
+    const key = `${lat.toFixed(2)},${lon.toFixed(2)},${salt ? 1 : 0}`; const hit = alertCache.get(key);
+    if (hit && Date.now() - hit.at < 10 * 60000) return hit.list;
+    const reqs = [nwsJson(`/alerts/active?point=${lat.toFixed(4)},${lon.toFixed(4)}`)];
+    if (salt) reqs.push(marineZone(lat, lon).then((z) => (z ? nwsJson(`/alerts/active/zone/${z}`) : { features: [] })));
+    const res = await Promise.allSettled(reqs);
+    if (res.every((r) => r.status === 'rejected')) throw res[0].reason;
+    const seen = new Set(); const list = [];
+    res.forEach((r) => { if (r.status !== 'fulfilled') return; (r.value.features || []).forEach((f) => {
+      const p = f.properties; if (!p || seen.has(p.id) || p.status !== 'Actual' || p.messageType === 'Cancel') return; seen.add(p.id);
+      const ends = Date.parse(p.ends || p.expires); if (Number.isFinite(ends) && ends < Date.now()) return;
+      list.push({ id: p.id, event: p.event, severity: p.severity || 'Unknown', headline: p.headline || '', desc: p.description || '', instr: p.instruction || '',
+        onset: Date.parse(p.onset || p.effective) || Date.now(), ends: Number.isFinite(ends) ? ends : null, area: p.areaDesc || '', sender: p.senderName || 'National Weather Service' });
+    }); });
+    const rank = { Extreme: 0, Severe: 1, Moderate: 2, Minor: 3, Unknown: 4 };
+    list.sort((a, b) => (rank[a.severity] ?? 4) - (rank[b.severity] ?? 4) || a.onset - b.onset);
+    alertCache.set(key, { at: Date.now(), list }); return list;
+  }
+  function alertWhen(a) {
+    const now = Date.now(); const at = (ms) => `${dayStart(ms) === dayStart(now) ? '' : fmtDay(ms) + ', '}${fmtTime(ms)}`;
+    return [a.onset > now + 10 * 60000 ? `from ${at(a.onset)}` : 'in effect', a.ends ? `until ${at(a.ends)}` : ''].filter(Boolean).join(' ');
+  }
+  function alertsInWindow(list, w) { return (w ? list.filter((a) => !(a.ends && a.ends < w.start) && !(a.onset > w.end)) : list); }
+  function alertsHtml(list, { title = 'Weather alerts', lat, lon, window: w } = {}) {
+    const l = alertsInWindow(list, w); if (!l.length) return '';
+    return `<div class="card alerts-card"><h3>${esc(title)}</h3><ul class="alert-list">${l.map((a) => `<li class="alert sev-${esc(a.severity.toLowerCase())}"><details>
+      <summary><span class="alert-ic" aria-hidden="true">!</span><span><b>${esc(a.event)}</b><small>${esc(alertWhen(a))}</small></span></summary>
+      ${a.headline ? `<p>${esc(a.headline)}</p>` : ''}${a.desc ? `<p class="alert-text">${esc(a.desc)}</p>` : ''}${a.instr ? `<p class="alert-text"><b>What to do:</b> ${esc(a.instr)}</p>` : ''}
+      <p class="note">${esc(a.sender)}${lat != null ? ` · <a href="https://forecast.weather.gov/MapClick.php?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}" target="_blank" rel="noopener">Forecast at weather.gov</a>` : ''}</p></details></li>`).join('')}</ul></div>`;
+  }
+  async function fillAlerts(box, place, opts = {}) {
+    if (!box) return [];
+    try { const list = await alertsFor(place); if (box.isConnected) box.innerHTML = alertsHtml(list, { ...opts, lat: place.lat, lon: place.lon }); return list; }
+    catch { if (box.isConnected) box.innerHTML = ''; return []; }
+  }
+  function placeIsSalt(lat, lon, spotId, tide) { const sp = spotId ? spotById(spotId) : null; return sp ? sp.water === 'salt' || (sp.water !== 'fresh' && !!(tide && tideShown({ tide, spotId: sp.id }))) : !!(tide && tideShown({ tide })); }
+  var nowAlertsKey = '';
+  function renderNowAlerts() {
+    const box = $('#now-alerts'); if (!box) return;
+    const st = nowState; if (!st || !st.loc) { box.innerHTML = ''; nowAlertsKey = ''; return; }
+    const pl = nowPlace(st.loc); const salt = placeIsSalt(st.loc.lat, st.loc.lon, pl.spotId, st.tide);
+    const key = `${st.at}|${salt}`; if (key === nowAlertsKey) return; nowAlertsKey = key;
+    fillAlerts(box, { lat: st.loc.lat, lon: st.loc.lon, salt }, { title: 'Weather alerts here' }).then((l) => { nowAlertList = l; renderNowCal(); });
+  }
+  var nowAlertList = [];
+
+  // ---------------------------------------------------------------- your route during a session
+  // While a session runs and the app is open, GPS points are kept every few metres (or every few minutes standing
+  // still). Phones pause web apps in the background, so the route covers the time the app is on screen.
+  function routeOn() { return store('tl.route') !== '0'; }
+  var routeWatch = null; var routeSavedAt = 0; var routeWake = null; var routeSaveTimer = null;
+  function syncRouteWatch() {
+    const s = activeSession(); const want = !!s && routeOn() && !document.hidden && 'geolocation' in navigator;
+    if (want && routeWatch == null) {
+      try { routeWatch = navigator.geolocation.watchPosition(onRoutePos, () => {}, { enableHighAccuracy: true, maximumAge: 15000, timeout: 120000 }); } catch { routeWatch = null; }
+    } else if (!want && routeWatch != null) {
+      navigator.geolocation.clearWatch(routeWatch); routeWatch = null; if (s && s.track) saveSession(s).catch(() => {});
+    }
+    if (!want && routeWake) { routeWake.release().catch(() => {}); routeWake = null; }
+  }
+  async function onRoutePos(p) {
+    const s = activeSession(); if (!s) { syncRouteWatch(); return; }
+    const { latitude: lat, longitude: lon, accuracy } = p.coords; if (!(accuracy <= 60)) return;
+    const tr = s.track || (s.track = []); const last = tr[tr.length - 1]; const t = p.timestamp || Date.now();
+    if (last && distM({ lat: last[0], lon: last[1] }, { lat, lon }) < Math.max(12, accuracy * 0.6) && t - last[2] < 5 * 60000) return;
+    tr.push([round(lat, 6), round(lon, 6), t, Math.round(accuracy)]);
+    if (tr.length > 20000) tr.splice(0, tr.length - 20000);
+    // Saved at most 10 seconds after each new point, so little is lost if the phone closes the app.
+    if (Date.now() - routeSavedAt > 10000) { routeSavedAt = Date.now(); await saveSession(s); }
+    else if (!routeSaveTimer) routeSaveTimer = setTimeout(() => { routeSaveTimer = null; routeSavedAt = Date.now(); const cur = activeSession(); if (cur) saveSession(cur).catch(() => {}); }, 10000);
+    const el = $('#ses-route'); if (el) el.textContent = routeText(s);
+    if (map && mapLayerOn('routes')) drawRoutes();
+  }
+  function routeLen(tr) { return (tr || []).reduce((a, p, i) => (i ? a + distM({ lat: tr[i - 1][0], lon: tr[i - 1][1] }, { lat: p[0], lon: p[1] }) : 0), 0); }
+  function routeText(s) { const n = (s.track || []).length; return n < 2 ? 'Recording your route… keep Fishamongus! open while you move' : `Route: ${fmtDist(routeLen(s.track))} recorded · keep the app open while you move`; }
+  document.addEventListener('visibilitychange', () => syncRouteWatch());
+  // Points since the last save are written when the app is hidden or closed.
+  window.addEventListener('pagehide', () => { const s = activeSession(); if (s && s.track && s.track.length) saveSession(s).catch(() => {}); });
+
+  // ---------------------------------------------------------------- GPX export and GPX / KML / KMZ import
+  function xmlEsc(s) { return String(s ?? '').replace(/[<>&"']/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' }[c])); }
+  function buildGpx() {
+    const iso = (ms) => new Date(ms).toISOString();
+    const wpts = [
+      ...spots.map((sp) => `<wpt lat="${sp.lat}" lon="${sp.lon}"><name>${xmlEsc(sp.name)}</name>${sp.notes ? `<desc>${xmlEsc(sp.notes)}</desc>` : ''}<type>Spot</type></wpt>`),
+      ...catches.filter((c) => c.location && !c.demo).map((c) => `<wpt lat="${c.location.lat}" lon="${c.location.lon}">${c.noTime ? '' : `<time>${iso(c.caughtAt)}</time>`}<name>${xmlEsc(`${nFish(c) > 1 ? nFish(c) + ' × ' : ''}${c.species}`)}</name><desc>${xmlEsc([c.bait, U.len(c.lengthCm), U.wt(c.weightKg), c.noTime ? fmtDate(c.caughtAt) : ''].filter(Boolean).join(' · '))}</desc><type>Catch</type></wpt>`),
+    ];
+    const trks = sessions.filter((s) => s.track && s.track.length > 1).map((s) => `<trk><name>${xmlEsc(`Session ${fmtDate(s.start)}`)}</name><desc>${xmlEsc(`${plural(fishIn(sessionCatches(s)), 'fish')} · ${fmtDist(routeLen(s.track))}`)}</desc><trkseg>${s.track.map((p) => `<trkpt lat="${p[0]}" lon="${p[1]}"><time>${iso(p[2])}</time></trkpt>`).join('')}</trkseg></trk>`);
+    return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Fishamongus!" xmlns="http://www.topografix.com/GPX/1/1">\n<metadata><name>Fishamongus! spots, catches and routes</name><time>${new Date().toISOString()}</time></metadata>\n${wpts.join('\n')}\n${trks.join('\n')}\n</gpx>\n`;
+  }
+  // A KMZ is a zip with a KML inside: read the zip's directory and inflate the first .kml.
+  async function kmlFromKmz(buf) {
+    const b = new Uint8Array(buf); const dv = new DataView(buf);
+    let eocd = -1; for (let i = b.length - 22; i >= Math.max(0, b.length - 66000); i--) if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    if (eocd < 0) throw new Error('not a zip');
+    let p = dv.getUint32(eocd + 16, true); const n = dv.getUint16(eocd + 10, true);
+    for (let k = 0; k < n; k++) {
+      if (dv.getUint32(p, true) !== 0x02014b50) break;
+      const method = dv.getUint16(p + 10, true); const size = dv.getUint32(p + 20, true); const nameLen = dv.getUint16(p + 28, true);
+      const extra = dv.getUint16(p + 30, true); const comment = dv.getUint16(p + 32, true); const local = dv.getUint32(p + 42, true);
+      const name = new TextDecoder().decode(b.subarray(p + 46, p + 46 + nameLen));
+      if (/\.kml$/i.test(name)) {
+        const start = local + 30 + dv.getUint16(local + 26, true) + dv.getUint16(local + 28, true); const data = b.subarray(start, start + size);
+        if (method === 0) return new TextDecoder().decode(data);
+        if (method === 8 && typeof DecompressionStream === 'function') return new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+        throw new Error('This KMZ is compressed in a way the browser can’t open. Save it as KML instead.');
+      }
+      p += 46 + nameLen + extra + comment;
+    }
+    throw new Error('No KML inside the KMZ');
+  }
+  function placesFromXml(text) {
+    const x = new DOMParser().parseFromString(text, 'application/xml');
+    if (x.querySelector('parsererror')) throw new Error('That file isn’t valid GPX or KML');
+    const kid = (el, tag) => { const c = [...el.children].find((ch) => ch.localName === tag); return c ? c.textContent.trim() : ''; };
+    const out = []; let lines = 0;
+    const all = (tag) => [...x.getElementsByTagNameNS('*', tag)];
+    all('wpt').forEach((w) => out.push({ name: kid(w, 'name'), desc: kid(w, 'desc') || kid(w, 'cmt'), lat: +w.getAttribute('lat'), lon: +w.getAttribute('lon') }));
+    lines += all('trk').length + all('rte').length;
+    all('Placemark').forEach((pm) => {
+      const pt = pm.getElementsByTagNameNS('*', 'Point')[0];
+      if (!pt) { if (pm.getElementsByTagNameNS('*', 'LineString').length || pm.getElementsByTagNameNS('*', 'Polygon').length) lines++; return; }
+      const c = (pt.getElementsByTagNameNS('*', 'coordinates')[0] || {}).textContent || '';
+      const [lo, la] = c.trim().split(/[\s,]+/).map(Number);
+      const desc = kid(pm, 'description').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      out.push({ name: kid(pm, 'name'), desc, lat: la, lon: lo });
+    });
+    return { places: out.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon) && Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180 && !(p.lat === 0 && p.lon === 0)), lines };
+  }
+  var geoState = null;
+  async function openGeoImport(file) {
+    let parsed;
+    try {
+      const buf = await file.arrayBuffer();
+      const text = /\.kmz$/i.test(file.name) || new Uint8Array(buf.slice(0, 2)).join() === '80,75' ? await kmlFromKmz(buf) : decodeText(buf);
+      parsed = placesFromXml(text);
+    } catch (e) { toast((e && e.message) || 'Couldn’t read that file'); return; }
+    const { places, lines } = parsed;
+    if (!places.length) { toast(lines ? 'That file has routes or areas but no single places. Only places can be imported as spots.' : 'No places found in that file'); return; }
+    geoState = places.slice(0, 1000).map((p, i) => {
+      const name = (p.name || `Waypoint ${i + 1}`).slice(0, 60);
+      const dup = spots.find((sp) => distM(sp, p) < 30 || (impNorm(sp.name) === impNorm(name) && distM(sp, p) < 300));
+      return { ...p, name, desc: (p.desc || '').slice(0, 500), dup, on: !dup };
+    });
+    $('#geo-file').textContent = `${file.name} · ${plural(places.length, 'place')}${lines ? ` · ${lines} route${lines === 1 ? '' : 's'} or area${lines === 1 ? '' : 's'} not imported` : ''}`;
+    paintGeoImport(); openSheet($('#sheet-geo'));
+  }
+  function paintGeoImport() {
+    const from = lastLoc;
+    $('#geo-list').innerHTML = geoState.map((p, i) => `<li><label class="imp-check"><input type="checkbox" data-geo="${i}"${p.on ? ' checked' : ''}><span><b>${esc(p.name)}</b><small>${esc([p.dup ? `Already saved as ${p.dup.name}` : '', p.desc.slice(0, 80), from ? awayText(distM(from, p)) : `${p.lat.toFixed(4)}, ${p.lon.toFixed(4)}`].filter(Boolean).join(' · '))}</small></span></label></li>`).join('');
+    const n = geoState.filter((p) => p.on).length; const btn = $('#geo-go'); btn.disabled = !n; btn.textContent = n ? `Add ${plural(n, 'spot')}` : 'Nothing selected';
+  }
+  $('#geo-list').addEventListener('change', (e) => { const i = e.target.dataset.geo; if (i == null) return; geoState[+i].on = e.target.checked; paintGeoImport(); });
+  $('#geo-all').addEventListener('click', () => { const on = !geoState.every((p) => p.on || p.dup); geoState.forEach((p) => { if (!p.dup) p.on = on; }); paintGeoImport(); });
+  $('#geo-go').addEventListener('click', async () => {
+    const pick = geoState.filter((p) => p.on); if (!pick.length) return;
+    const batch = 'geo-' + Date.now(); const now = Date.now();
+    for (const p of pick) { const sp = { id: uid(), name: p.name, lat: round(p.lat, 6), lon: round(p.lon, 6), radiusM: 250, water: 'auto', notes: p.desc, createdAt: now, updatedAt: now, imported: batch }; await DB.putSpot(sp); }
+    await reload(); closeSheet(); geoState = null;
+    toast(`Added ${plural(pick.length, 'spot')}`, { label: 'Undo', fn: async () => { for (const sp of spots.filter((x) => x.imported === batch)) await DB.delSpot(sp.id); await reload(); toast('Spots removed'); } });
+  });
+  $('#btn-export-gpx').addEventListener('click', async () => {
+    if (!spots.length && !catches.some((c) => c.location && !c.demo) && !sessions.some((s) => s.track && s.track.length > 1)) { toast('Nothing to export yet: no spots, catches with a location, or routes'); return; }
+    const ok = await deliverFile(new Blob([buildGpx()], { type: 'application/gpx+xml' }), `fishamongus-${new Date().toISOString().slice(0, 10)}.gpx`);
+    if (ok) toast('GPX file ready: spots, catches and session routes');
+  });
+
+  // ---------------------------------------------------------------- map layers: launches & access, NOAA charts, routes
+  var MAP_LAYERS_DEFAULT = { access: true, charts: false, routes: true };
+  function mapLayerPrefs() { try { return { ...MAP_LAYERS_DEFAULT, ...JSON.parse(store('tl.mapLayers') || '{}') }; } catch { return { ...MAP_LAYERS_DEFAULT }; } }
+  function mapLayerOn(k) { return !!mapLayerPrefs()[k]; }
+  var accessLayer = null; var chartLayer = null; var routeLayer = null; var accessData = null; var accessLoading = null;
+  var WDFW_GEO = 'https://geodataservices.wdfw.wa.gov/arcgis/rest/services/';
+  var ACCESS_SRC = [
+    { k: 'ramp', path: 'ApplicationServices/Facilities/FeatureServer/5', label: 'Boat ramp' },
+    { k: 'hand', path: 'ApplicationServices/Facilities/FeatureServer/4', label: 'Hand launch' },
+    { k: 'pier', path: 'ApplicationServices/Facilities/FeatureServer/3', label: 'Fishing pier' },
+    { k: 'shore', path: 'FP_FishMaps/ShoreFishingSites/MapServer/0', label: 'Shore fishing' },
+  ];
+  var WA_BOX = { s: 45.4, n: 49.1, w: -125, e: -116.8 };
+  // WDFW's boat ramps, hand launches, fishing piers and shore-fishing sites, fetched once and kept for a week.
+  async function loadAccess() {
+    if (accessData) return accessData;
+    try { const c = JSON.parse(store('tl.access') || 'null'); if (c && Date.now() - c.at < 7 * 86400000 && c.v === 1) return (accessData = c.list); } catch {}
+    if (accessLoading) return accessLoading;
+    accessLoading = (async () => {
+      const lists = await Promise.all(ACCESS_SRC.map(async (src) => {
+        const u = new URL(WDFW_GEO + src.path + '/query');
+        u.search = new URLSearchParams({ f: 'json', where: '1=1', outFields: '*', returnGeometry: 'true', outSR: '4326', resultRecordCount: '2000' });
+        const r = await fetch(u); if (!r.ok) throw new Error('WDFW map service error'); const j = await r.json(); if (j.error) throw new Error(j.error.message || 'WDFW map service error');
+        return (j.features || []).filter((f) => f.geometry && Number.isFinite(f.geometry.y)).map((f) => {
+          const a = f.attributes || {}; const nameKey = Object.keys(a).find((k) => /name$/i.test(k) && a[k] && typeof a[k] === 'string');
+          return { k: src.k, lat: round(f.geometry.y, 5), lon: round(f.geometry.x, 5), name: nameKey ? String(a[nameKey]).trim().slice(0, 60) : '', note: String(a.Description || a.Comments || '').trim().slice(0, 160) };
+        });
+      }));
+      const list = lists.flat();
+      // Unnamed ramps and launches borrow the lake name of a WDFW shore site next to them.
+      const shore = list.filter((x) => x.k === 'shore' && x.name);
+      list.forEach((x) => { if (x.name) return; const s = shore.map((y) => [y, distM(x, y)]).sort((a, b) => a[1] - b[1])[0]; if (s && s[1] < 800) x.name = s[0].name; });
+      store('tl.access', JSON.stringify({ v: 1, at: Date.now(), list })); accessData = list; return list;
+    })().finally(() => { accessLoading = null; });
+    return accessLoading;
+  }
+  var ACCESS_ICON = { ramp: 'B', hand: 'H', pier: 'P', shore: 'S' };
+  function accessTitle(x) { const src = ACCESS_SRC.find((s) => s.k === x.k); return x.name ? (x.k === 'shore' ? `${x.name} – shore fishing` : `${x.name} – ${src.label.toLowerCase()}`) : `${src.label} (WDFW)`; }
+  async function drawAccess() {
+    if (!map || !accessLayer) return; accessLayer.clearLayers();
+    if (!mapLayerOn('access')) return;
+    const b = map.getBounds && map.getBounds(); const z = map.getZoom();
+    const view = b ? { s: b.getSouth(), n: b.getNorth(), w: b.getWest(), e: b.getEast() } : null;
+    if (view && (view.n < WA_BOX.s || view.s > WA_BOX.n || view.e < WA_BOX.w || view.w > WA_BOX.e)) { mapNote('Boat launches and access points cover Washington (WDFW data).'); return; }
+    if (z < 9) { mapNote('Zoom in to see boat launches and access points.'); return; }
+    let list; try { list = await loadAccess(); } catch { mapNote('Couldn’t load boat launches from WDFW. Check your connection.'); return; }
+    mapNote('');
+    const inView = view ? list.filter((x) => x.lat >= view.s && x.lat <= view.n && x.lon >= view.w && x.lon <= view.e) : list;
+    inView.slice(0, 400).forEach((x) => {
+      const title = accessTitle(x); const label = ACCESS_SRC.find((s) => s.k === x.k).label;
+      L.marker([x.lat, x.lon], { icon: L.divIcon({ className: 'acc-pin', html: `<span class="acc acc-${x.k}" title="${esc(title)}">${ACCESS_ICON[x.k]}</span>`, iconSize: [24, 24], iconAnchor: [12, 12] }), keyboard: true, title })
+        .bindPopup(`<div class="pop"><b>${esc(title)}</b><br>${esc(label)} · WDFW${x.note ? `<br><small>${esc(x.note)}</small>` : ''}<div class="pop-actions"><a class="pop-link" href="https://www.google.com/maps/dir/?api=1&destination=${x.lat},${x.lon}" target="_blank" rel="noopener">Directions</a><button type="button" data-map-spot="${x.lat},${x.lon}" data-name="${esc(x.name || '')}" data-place="${esc(title)}">New spot here</button><button type="button" data-map-trip="${x.lat},${x.lon}" data-place="${esc(x.name ? title : '')}">Plan a trip here</button></div></div>`)
+        .addTo(accessLayer);
+    });
+  }
+  var mapNoteTimer = null;
+  function mapNote(text) { const el = $('#map-note'); if (!el) return; el.textContent = text; el.hidden = !text; clearTimeout(mapNoteTimer); if (text) mapNoteTimer = setTimeout(() => { el.hidden = true; }, 6000); }
+  function syncCharts() {
+    if (!map) return;
+    if (mapLayerOn('charts')) {
+      if (!chartLayer) chartLayer = L.tileLayer.wms('https://gis.charttools.noaa.gov/arcgis/rest/services/MCS/NOAAChartDisplay/MapServer/exts/MaritimeChartService/WMSServer', {
+        layers: '0,1,2,3,4,5,6,7', format: 'image/png', transparent: true, version: '1.3.0', opacity: 0.9, maxZoom: 19, attribution: 'NOAA charts (not for navigation)' });
+      if (!map.hasLayer || !map.hasLayer(chartLayer)) chartLayer.addTo(map);
+    } else if (chartLayer && map.removeLayer) map.removeLayer(chartLayer);
+  }
+  function drawRoutes() {
+    if (!map || !routeLayer) return; routeLayer.clearLayers(); if (!mapLayerOn('routes')) return;
+    sessions.filter((s) => s.track && s.track.length > 1).sort((a, b) => b.start - a.start).slice(0, 40).forEach((s) => {
+      const live = !s.end;
+      L.polyline(s.track.map((p) => [p[0], p[1]]), { color: live ? '#e8611a' : '#13707f', weight: live ? 4 : 3, opacity: live ? 0.95 : 0.7 })
+        .bindPopup(`<div class="pop"><b>${live ? 'This session' : `Session ${esc(fmtDate(s.start))}`}</b><br>${esc(`${durText(sessionEnd(s) - s.start)} · ${plural(fishIn(sessionCatches(s)), 'fish')} · ${fmtDist(routeLen(s.track))}`)}</div>`).addTo(routeLayer);
+    });
+  }
+  function syncMapLayers() { syncCharts(); drawAccess(); drawRoutes(); }
+  function initMapLayers() {
+    accessLayer = L.layerGroup().addTo(map); routeLayer = L.layerGroup().addTo(map);
+    map.on('moveend', () => { if (mapLayerOn('access')) drawAccess(); });
+    const panel = $('#map-layers'); const btn = $('#btn-map-layers');
+    const paint = () => { const p = mapLayerPrefs(); $$('#map-layers input[data-layer]').forEach((i) => { i.checked = !!p[i.dataset.layer]; }); };
+    btn.addEventListener('click', () => { const open = panel.hidden; panel.hidden = !open; btn.setAttribute('aria-expanded', String(open)); if (open) paint(); });
+    panel.addEventListener('change', (e) => { const k = e.target.dataset.layer; if (!k) return; const p = mapLayerPrefs(); p[k] = e.target.checked; store('tl.mapLayers', JSON.stringify(p)); syncMapLayers(); });
+    if (L.DomEvent) { L.DomEvent.disableClickPropagation(panel); L.DomEvent.disableScrollPropagation(panel); }
+    syncMapLayers();
+  }
+
+  // ---------------------------------------------------------------- best days ahead
+  // Two weeks of days rated from bite times (solunar), the forecast (wind, storms, heavy rain), weather alerts,
+  // tides by the coast, and, once you have enough catches, how close each day's conditions are to the ones you catch fish in.
+  var calState = (() => { try { return JSON.parse(store('tl.cal') || 'null'); } catch { return null; } })();
+  var calBusy = false;
+  async function refreshCal(force) {
+    const st = nowState; if (!st || !st.loc || calBusy || !navigator.onLine) return;
+    const key = `${st.loc.lat.toFixed(2)},${st.loc.lon.toFixed(2)}`;
+    if (!force && calState && calState.key === key && Date.now() - calState.at < 3 * HOUR_MS && calState.from === dayStart(Date.now())) return;
+    calBusy = true;
+    try {
+      const from = dayStart(Date.now());
+      const fc = await fetchHourly({ lat: st.loc.lat, lon: st.loc.lon, start: from, end: from + 14 * 86400000 });
+      let ev = null; const tt = st.tripTide;
+      if (tt && !tt.none && tt.stationId) { try { ev = await noaaHiLo(tt.stationId, Date.now()); } catch {} }
+      calState = { key, at: Date.now(), from, hours: fc.hours, ev, tide: tt && !tt.none ? { stationId: tt.stationId, stationName: tt.stationName, state: tt.state, distM: tt.distM } : null };
+      store('tl.cal', JSON.stringify(calState));
+    } catch {} finally { calBusy = false; renderNowCal(); }
+  }
+  var THUNDER = new Set([95, 96, 99]);
+  function calDays() {
+    const st = nowState; const cs = calState; if (!st || !st.loc || !cs) return null;
+    const { lat, lon } = st.loc; const pl = nowPlace(st.loc); const salt = placeIsSalt(lat, lon, pl.spotId, st.tide);
+    const coefs = cs.ev ? new Map(dailyCoefs(cs.ev).map((d) => [d.day, d.coef])) : new Map();
+    const base = { lat, lon, spotId: pl.spotId, type: 'fishing' };
+    const hist = tripHistory({ ...base, start: Date.now(), end: Date.now() + HOUR_MS });
+    const days = [];
+    for (let i = 0; i < 14; i++) {
+      const d0 = cs.from + i * 86400000; if (d0 + 86400000 < Date.now()) continue;
+      const sun = sunTimes(d0 + 12 * HOUR_MS, lat, lon);
+      const w0 = sun.sunrise ? sun.sunrise - HOUR_MS : d0 + 5 * HOUR_MS; const w1 = sun.sunset ? sun.sunset + HOUR_MS : d0 + 21 * HOUR_MS;
+      const hours = (cs.hours || []).filter((h) => h.t >= w0 && h.t < w1);
+      const t = { ...base, start: w0, end: w1, tide: salt && cs.ev ? { ...cs.tide, ev: cs.ev, coef: coefs.get(dayStart(d0)) ?? null } : null };
+      const sol = SOL.day(d0 + 12 * HOUR_MS, lat, lon);
+      const mine = hist.list.length >= 5 && hours.length ? bestHours(t, hours, hist) : null;
+      const top = mine ? mine.topIdx.map((k) => mine.scores[k]).filter((v) => v != null) : [];
+      const fit = top.length ? top.reduce((a, v) => a + v, 0) / top.length : null;
+      const maxWind = hours.length ? Math.max(...hours.map((h) => h.windKmh || 0)) : null; const maxGust = hours.length ? Math.max(...hours.map((h) => h.gustKmh || 0)) : null;
+      const rain = hours.filter((h) => (h.precipMm || 0) >= 1).length; const storm = hours.some((h) => THUNDER.has(h.code));
+      const hi = hours.length ? Math.max(...hours.map((h) => h.tempC ?? -99)) : null; const lo = hours.length ? Math.min(...hours.map((h) => h.tempC ?? 99)) : null;
+      const alert = alertsInWindow(nowAlertList || [], { start: w0, end: w1 }).find((a) => ['Extreme', 'Severe', 'Moderate'].includes(a.severity)) || null;
+      const minus = salt && cs.ev ? minusLows(cs.ev, lat, lon, dayStart(d0), 1) : [];
+      const bestHour = mine && mine.topIdx.length ? hours[Math.min(...mine.topIdx)].t : (sol.majors && sol.majors.find((p) => p.s >= w0 && p.s < w1) || {}).s || sun.sunrise || d0 + 6 * HOUR_MS;
+      const why = [];
+      if (sol.rating >= 3) why.push(`${sol.ratingText} bite times`);
+      if (fit != null && fit >= 1.3) why.push('Your best conditions');
+      if (salt && coefs.get(dayStart(d0)) >= 80) why.push('Big tides');
+      if (minus.length) why.push(`Minus tide ${fmtTime(minus[0].t)}`);
+      if (storm) why.push('Thunderstorms'); else if (maxGust >= 45 || maxWind >= 30) why.push(`Windy (gusts ${U.wind(maxGust)})`);
+      if (rain >= 4) why.push('Rainy');
+      if (alert) why.push(alert.event);
+      days.push({ d0, sol, fit, hours: hours.length, maxWind, maxGust, rain, storm, hi, lo, alert, bestHour, why, code: hours.length ? Number(ranked(countBy(hours.filter((h) => h.isDay !== false && h.code != null), (h) => String(h.code)))[0]?.[0] ?? NaN) : null, far: i >= 7 });
+    }
+    // Score: bite times count for up to 1.5 points, your conditions for up to 2 (once there's enough history), and bad weather takes points off.
+    const fits = days.map((x) => x.fit).filter((v) => v != null); const fMin = Math.min(...fits); const fMax = Math.max(...fits);
+    days.forEach((x) => {
+      let s = 1 + (x.sol.rating - 1) / 3 * 1.5;
+      if (x.fit != null && fMax > fMin) s += (x.fit - fMin) / (fMax - fMin) * 2; else s += 1;
+      if (x.storm) s -= 1.5; if (x.maxGust >= 45 || x.maxWind >= 30) s -= 1.2; else if (x.maxWind >= 22) s -= 0.4; if (x.rain >= 4) s -= 0.5;
+      if (x.alert) s = Math.min(s, 1.5);
+      x.stars = Math.max(1, Math.min(5, Math.round(s + 0.5)));
+    });
+    const best = days.filter((x) => !x.alert && !x.storm).slice().sort((a, b) => b.stars - a.stars || (b.fit ?? 0) - (a.fit ?? 0) || b.sol.rating - a.sol.rating).slice(0, 3).filter((x) => x.stars >= 3);
+    best.forEach((x) => { x.best = true; });
+    return { days, hist, salt, place: pl.name };
+  }
+  function renderNowCal() {
+    const box = $('#now-cal'); if (!box) return;
+    if (!nowState || !nowState.loc) { box.innerHTML = ''; return; }
+    if (!calState || calState.key !== `${nowState.loc.lat.toFixed(2)},${nowState.loc.lon.toFixed(2)}`) { box.innerHTML = ''; refreshCal(); return; }
+    const r = calDays(); if (!r || !r.days.length) { box.innerHTML = ''; return; }
+    const wxIc = (code) => (code == null ? '' : wxLabel({ code, isDay: true }).icon || '');
+    const basis = ['bite times', 'the forecast', r.salt && calState.ev ? 'tides' : '', r.hist.list.length >= 5 ? `${plural(r.hist.list.length, 'catch')} ${r.hist.label}` : ''].filter(Boolean);
+    box.innerHTML = `<div class="card cal-card"><h3>Best days ahead</h3>
+      <p class="sub">${esc(r.place)} · from ${esc(basis.slice(0, -1).join(', ') + (basis.length > 1 ? ' and ' : '') + basis[basis.length - 1])}. Tap a day to plan a trip.</p>
+      <div class="cal-row" role="list">${r.days.map((x) => `<button type="button" role="listitem" class="cal-day${x.best ? ' best' : ''}${x.alert || x.storm ? ' warn' : ''}${x.far ? ' far' : ''}" data-cal-day="${x.d0}" data-cal-hour="${x.bestHour}"
+        aria-label="${esc(`${fmtDay(x.d0)}: ${x.stars} out of 5${x.why.length ? '. ' + x.why.join(', ') : ''}`)}">
+        <span class="cd-dow">${esc(relDayShort(x.d0))}</span><span class="cd-date">${new Date(x.d0).getDate()}</span>
+        <span class="cd-wx" aria-hidden="true">${wxIc(x.code)}</span>
+        <span class="cd-stars" aria-hidden="true">${'●'.repeat(x.stars)}<i>${'●'.repeat(5 - x.stars)}</i></span>
+        ${x.hi != null && x.hours ? `<span class="cd-t">${esc(U.temp(x.hi))}</span>` : '<span class="cd-t">–</span>'}
+        ${x.best ? '<span class="cd-tag">Best</span>' : x.alert || x.storm ? '<span class="cd-tag warn">Alert</span>' : ''}
+      </button>`).join('')}</div>
+      ${(() => { const b = r.days.filter((x) => x.best); return b.length ? `<ul class="cal-why">${b.map((x) => `<li><b>${esc(fmtDay(x.d0))}</b> – ${esc(x.why.filter((w) => !/^Windy|Rainy|Thunder/.test(w)).join(', ') || 'Good bite times and calm weather')}</li>`).join('')}</ul>` : '<p class="help small" style="margin:8px 0 0">No standout days in the next two weeks.</p>'; })()}
+      ${r.days.some((x) => x.far) ? '<p class="help small" style="margin:6px 0 0">Forecasts more than a week out are less certain.</p>' : ''}</div>`;
+  }
+  function relDayShort(ms) { const d = Math.round((dayStart(ms) - dayStart(Date.now())) / 86400000); return d === 0 ? 'Today' : d === 1 ? 'Tmrw' : new Date(ms).toLocaleDateString(undefined, { weekday: 'short' }); }
+  $('#view-now').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-cal-day]'); if (!b || !nowState || !nowState.loc) return;
+    const start = Math.floor(Number(b.dataset.calHour) / HOUR_MS) * HOUR_MS; const pl = nowPlace(nowState.loc);
+    tripForm.open(null, { lat: nowState.loc.lat, lon: nowState.loc.lon, spotId: pl.spotId, start, end: start + 4 * HOUR_MS });
+  });
 
   // ---------------------------------------------------------------- boot
   // ---------------------------------------------------------------- first run and install guide
