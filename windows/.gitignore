@@ -1,0 +1,4 @@
+app/web/
+setup/payload/
+*.syso
+dist/
