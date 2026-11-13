@@ -1,0 +1,41 @@
+# Captures the new screens for the video tour on a GitHub runner (live map tiles, WDFW layers and NOAA charts).
+name: Capture video screens
+on:
+  push:
+    branches: [video-capture]
+permissions:
+  contents: write
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with: { ref: video-49, path: app }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Fonts (Inter as the default, colour emoji)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq fonts-inter fonts-noto-color-emoji > /dev/null
+          mkdir -p ~/.config/fontconfig
+          cat > ~/.config/fontconfig/fonts.conf <<'XML'
+          <?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+          <fontconfig>
+            <alias><family>sans-serif</family><prefer><family>Inter</family><family>Noto Color Emoji</family></prefer></alias>
+            <alias><family>system-ui</family><prefer><family>Inter</family></prefer></alias>
+          </fontconfig>
+          XML
+          fc-cache -f > /dev/null; fc-match sans-serif
+      - name: Playwright
+        run: |
+          npm init -y > /dev/null && npm i -s playwright@1.49.1
+          npx playwright install --with-deps chromium > /dev/null
+      - name: Capture
+        run: node capture3.js ./app ./shots 2>&1 | tee shots-log.txt
+      - name: Save
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p /tmp/s && cp -r shots/. /tmp/s/ 2>/dev/null; cp shots-log.txt /tmp/s/ 2>/dev/null || true
+          git checkout --orphan out && git rm -rfq . && git clean -fdq -e app && rm -rf app && cp -r /tmp/s/. . && git add -A && git commit -qm "Video screens ${GITHUB_SHA::7}" && git push -f origin out:video-shots
