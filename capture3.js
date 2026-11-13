@@ -96,7 +96,7 @@ async function mocks(page) {
   await step('map open', async () => { await mapOpen(); });
   await step('map search', async () => { await page.evaluate(() => window.scrollTo(0, 0)); await page.click('#btn-map-search'); await W(200); await page.fill('#map-search input', 'Oro Bay'); await page.click('#map-search .ps-go'); await W(1200); });
   await shot('mapsearch', 'Search the map', 'The magnifying glass finds a place on the map: the map moves there, with New spot here and Plan a trip here.', 6.5);
-  await step('map go american', async () => { await page.click('#btn-map-search'); await W(200); await mapGo('American Lake', 0); await page.evaluate(() => document.querySelector('.leaflet-popup-close-button')?.click()); await W(500);
+  await step('map go american', async () => { await page.click('#btn-map-search'); await W(200); await mapGo('American Lake', 1); await page.evaluate(() => document.querySelector('.leaflet-popup-close-button')?.click()); await W(500);
     await page.click('#btn-map-layers'); await W(600); });
   await shot('layers', 'Map layers', 'The layers button adds Washington’s boat ramps, hand launches, fishing piers and shore-fishing sites from WDFW, NOAA nautical charts, and your session routes.', 8);
   await step('acc popup', async () => { await page.click('#btn-map-layers'); await W(400); await page.waitForSelector('.acc-pin', { timeout: 20000 }); await W(1500);
