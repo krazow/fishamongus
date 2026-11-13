@@ -4560,6 +4560,8 @@
   }
   function syncMapLayers() { syncCharts(); drawAccess(); drawRoutes(); }
   function initMapLayers() {
+    // Popups open clear of the Tides button and fish filter (top left) and the map buttons (right).
+    if (L.Popup && L.Popup.mergeOptions) L.Popup.mergeOptions({ autoPanPaddingTopLeft: L.point(16, 120), autoPanPaddingBottomRight: L.point(64, 70) });
     accessLayer = L.layerGroup().addTo(map); routeLayer = L.layerGroup().addTo(map);
     map.on('moveend', () => { if (mapLayerOn('access')) drawAccess(); });
     const panel = $('#map-layers'); const btn = $('#btn-map-layers');
