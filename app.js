@@ -162,13 +162,13 @@
   // The Android and Windows apps carry their own copy of the map library, so maps work offline from the start.
   const LEAFLET_BASE = 'https://unpkg.com/leaflet@1.9.4/dist/';
   // "phone" on phones and tablets, "computer" elsewhere, in the few places the app talks about where your log is kept.
-  const DEVICE = matchMedia('(pointer: coarse)').matches ? 'phone' : 'computer';
+  const DEVICE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || matchMedia('(pointer: coarse)').matches ? 'phone' : 'computer';
   document.querySelectorAll('.dev-word').forEach((el) => { el.textContent = DEVICE; });
   function store(key, val) { try { if (val === undefined) return localStorage.getItem(key); localStorage.setItem(key, val); } catch { return null; } }
 
   // ---------------------------------------------------------------- units
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition; // speech recognition, where the browser has it
-  const APP_VERSION = '4.9.1 (Nov 13, 2026)';
+  const APP_VERSION = '4.9.2 (Nov 13, 2026)';
   // Night (dim red) mode and large text, applied before anything is drawn.
   function applyDisplay() {
     const night = store('tl.theme') === 'night'; const large = store('tl.text') === 'large';

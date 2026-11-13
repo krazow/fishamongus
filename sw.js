@@ -1,6 +1,6 @@
 // Fishamongus! service worker: keeps the app working with no signal.
 // Bump VERSION whenever you change any app file so phones pick up the update.
-const VERSION = 'tl-v31';
+const VERSION = 'tl-v32';
 const TILES = 'tl-tiles';          // map tiles you've looked at, kept across app updates
 const MAX_TILES = 1500;            // about 30 MB
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest',

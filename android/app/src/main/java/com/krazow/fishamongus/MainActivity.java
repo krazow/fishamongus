@@ -71,7 +71,7 @@ public class MainActivity extends Activity {
         web.setWebViewClient(new WebViewClient() {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest req) {
-                return assets.shouldInterceptRequest(req.getUrl());
+                return serve(req.getUrl());
             }
 
             @Override
@@ -86,7 +86,7 @@ public class MainActivity extends Activity {
             ServiceWorkerController.getInstance().setServiceWorkerClient(new ServiceWorkerClient() {
                 @Override
                 public WebResourceResponse shouldInterceptRequest(WebResourceRequest req) {
-                    return assets.shouldInterceptRequest(req.getUrl());
+                    return serve(req.getUrl());
                 }
             });
         }
@@ -129,6 +129,12 @@ public class MainActivity extends Activity {
         if (state != null) web.restoreState(state);
         else web.loadUrl(HOME);
         handleOpenIntent(getIntent());
+    }
+
+    // App files from the APK; a folder address ("/www/") gets its index.html, as on a web server.
+    private WebResourceResponse serve(Uri u) {
+        if (HOST.equals(u.getHost()) && u.getPath() != null && u.getPath().endsWith("/")) u = u.buildUpon().path(u.getPath() + "index.html").build();
+        return assets.shouldInterceptRequest(u);
     }
 
     private boolean hasLocation() {
