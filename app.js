@@ -181,7 +181,7 @@
   // The map fills the screen below the List / Map bar. Banners above it (no signal, sample data) move that bar down,
   // so the map's top follows the bar instead of a fixed height.
   function fitMapTop() {
-    const wrap = document.getElementById('map-wrap'); const bar = document.querySelector('.spots-bar');
+    const wrap = document.getElementById('map-wrap'); const seg = document.getElementById('seg-spots'); const bar = seg && seg.closest('.spots-bar');
     if (!wrap || !bar || wrap.hidden) return;
     const top = Math.round(bar.getBoundingClientRect().bottom);
     // Leaflet re-measures the map on a window resize; only sent when the top really moved, so this can't loop.
