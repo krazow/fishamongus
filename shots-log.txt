@@ -1,0 +1,16 @@
+n01.jpg alerts Weather alerts
+n02.jpg cal Best days ahead
+n03.jpg caltrip Plan the best day
+n04.jpg route Your route
+n05.jpg placesearch Find a place by name
+n06.jpg placepicked Named for you
+n07.jpg mapsearch Search the map
+n08.jpg layers Map layers
+n09.jpg access Boat launches and access
+n10.jpg charts NOAA nautical charts
+n11.jpg import Import a log
+n12.jpg importmap Check the columns
+n13.jpg imported Imported
+n14.jpg gpx Places from your GPS
+n15.jpg windows On Windows
+shots 15 fails [] errors []

@@ -1,0 +1,108 @@
+[
+ {
+  "file": "n01.jpg",
+  "key": "alerts",
+  "title": "Weather alerts",
+  "sub": "National Weather Service warnings and advisories for where you are, including marine ones like a small craft advisory on the water off your spot. Tap one for the details.",
+  "dur": 8
+ },
+ {
+  "file": "n02.jpg",
+  "key": "cal",
+  "title": "Best days ahead",
+  "sub": "Two weeks rated from bite times, the forecast, alerts, tides and the conditions you catch fish in. Storms, strong wind and alerts mark a day down; the best three are picked out with the reasons.",
+  "dur": 9
+ },
+ {
+  "file": "n03.jpg",
+  "key": "caltrip",
+  "title": "Plan the best day",
+  "sub": "Tap a day to plan a trip for its best hours, at the place you’re looking at.",
+  "dur": 6.5
+ },
+ {
+  "file": "n04.jpg",
+  "key": "route",
+  "title": "Your route",
+  "sub": "While a session runs and the app is open, your route is recorded and saved with it. Keep the app on screen while you move: phones pause web apps in the background.",
+  "dur": 8
+ },
+ {
+  "file": "n05.jpg",
+  "key": "placesearch",
+  "title": "Find a place by name",
+  "sub": "Type a lake, river, boat launch or town and tap Search. Your saved spots come first, then places from OpenStreetMap, nearest first. Coordinates and map links work too.",
+  "dur": 8
+ },
+ {
+  "file": "n06.jpg",
+  "key": "placepicked",
+  "title": "Named for you",
+  "sub": "Pick one and the spot gets its place and name. Save it, and catches made there link to it.",
+  "dur": 6.5
+ },
+ {
+  "file": "n07.jpg",
+  "key": "mapsearch",
+  "title": "Search the map",
+  "sub": "The magnifying glass finds a place on the map: the map moves there, with New spot here and Plan a trip here.",
+  "dur": 6.5
+ },
+ {
+  "file": "n08.jpg",
+  "key": "layers",
+  "title": "Map layers",
+  "sub": "The layers button adds Washington’s boat ramps, hand launches, fishing piers and shore-fishing sites from WDFW, NOAA nautical charts, and your session routes.",
+  "dur": 8
+ },
+ {
+  "file": "n09.jpg",
+  "key": "access",
+  "title": "Boat launches and access",
+  "sub": "Tap a launch, pier or shore-fishing site for directions, or save it as a spot or plan a trip there. B is a boat ramp, H a hand launch, P a pier, S shore fishing.",
+  "dur": 8
+ },
+ {
+  "file": "n10.jpg",
+  "key": "charts",
+  "title": "NOAA nautical charts",
+  "sub": "On the water, NOAA’s charts add depths, channels, buoys and hazards – and the orange line is the route from your session. The charts are for planning, not navigation.",
+  "dur": 8.5
+ },
+ {
+  "file": "n11.jpg",
+  "key": "import",
+  "title": "Import a log",
+  "sub": "Bring in catches from another app or your own spreadsheet. Settings → Import a log matches the columns by name and shows a preview; catches already in your log are skipped.",
+  "dur": 8.5
+ },
+ {
+  "file": "n12.jpg",
+  "key": "importmap",
+  "title": "Check the columns",
+  "sub": "Change any match, the units and how dates are written. Weather is filled in afterwards for catches with a GPS position, and Undo removes the whole import.",
+  "dur": 7.5
+ },
+ {
+  "file": "n13.jpg",
+  "key": "imported",
+  "title": "Imported",
+  "sub": "Done – the catches join your log with their place, lure and size.",
+  "dur": 5.5
+ },
+ {
+  "file": "n14.jpg",
+  "key": "gpx",
+  "title": "Places from your GPS",
+  "sub": "GPX, KML and KMZ files from a GPS, fish finder or Google Earth bring their places in as spots. Export spots, catches and routes as GPX from Settings.",
+  "dur": 8
+ },
+ {
+  "file": "n15.jpg",
+  "key": "windows",
+  "title": "On Windows",
+  "sub": "The Windows app installs from one file with no administrator rights, opens in its own window and works offline, maps included. Drop a spreadsheet or GPX file on it to import.",
+  "dur": 8,
+  "wide": true
+ }
+]
