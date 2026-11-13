@@ -18,6 +18,7 @@ const NOM = {
     { lat: '47.1586', lon: '-122.6981', category: 'leisure', type: 'park', name: 'Oro Bay Marina Park', address: { county: 'Pierce County', state: 'Washington', country: 'United States', country_code: 'us' } }],
   'american lake': [{ lat: '47.1310', lon: '-122.5640', category: 'water', type: 'lake', name: 'American Lake', address: { city: 'Lakewood', county: 'Pierce County', state: 'Washington', country: 'United States', country_code: 'us' } },
     { lat: '47.1203', lon: '-122.5617', category: 'leisure', type: 'slipway', name: 'American Lake Park boat launch', address: { city: 'Lakewood', county: 'Pierce County', state: 'Washington', country: 'United States', country_code: 'us' } }],
+  'oro bay boat launch': [{ lat: '47.1437', lon: '-122.6702', category: 'leisure', type: 'slipway', name: 'Oro Bay boat launch', address: { county: 'Pierce County', state: 'Washington', country: 'United States', country_code: 'us' } }],
   'lake josephine': [{ lat: '47.1607', lon: '-122.6457', category: 'water', type: 'lake', name: 'Lake Josephine', address: { county: 'Pierce County', state: 'Washington', country: 'United States', country_code: 'us' } },
     { lat: '45.0182', lon: '-93.1497', category: 'water', type: 'lake', name: 'Lake Josephine', address: { city: 'Roseville', county: 'Ramsey County', state: 'Minnesota', country: 'United States', country_code: 'us' } }],
 };
@@ -102,9 +103,9 @@ async function mocks(page) {
   await step('acc popup', async () => { await page.click('#btn-map-layers'); await W(400); await page.waitForSelector('.acc-pin', { timeout: 20000 }); await W(1500);
     const pins = await page.$$('.acc-pin'); const box = await page.$eval('#map', (m) => { const r = m.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
     let best = null, bd = 1e9; for (const p of pins) { const b = await p.boundingBox(); if (!b) continue; const d = Math.hypot(b.x - box[0], b.y - box[1]); if (d < bd) { bd = d; best = p; } }
-    if (best) await best.evaluate((e) => e.click()); await W(1500); });
+    if (best) { const b = await best.boundingBox(); await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2); } await W(1500); });
   await shot('access', 'Boat launches and access', 'Tap a launch, pier or shore-fishing site for directions, or save it as a spot or plan a trip there. B is a boat ramp, H a hand launch, P a pier, S shore fishing.', 8);
-  await step('charts', async () => { await page.evaluate(() => document.querySelector('.leaflet-popup-close-button')?.click()); await mapGo('Oro Bay', 0); await page.evaluate(() => document.querySelector('.leaflet-popup-close-button')?.click());
+  await step('charts', async () => { await page.evaluate(() => document.querySelector('.leaflet-popup-close-button')?.click()); await mapGo('Oro Bay boat launch', 0); await page.evaluate(() => document.querySelector('.leaflet-popup-close-button')?.click());
     await page.click('#btn-map-layers'); await W(300); await page.check('#map-layers input[data-layer="charts"]'); await W(300); await page.click('#btn-map-layers'); await W(6000); });
   await shot('charts', 'NOAA nautical charts', 'On the water, NOAA’s charts add depths, channels, buoys and hazards – and the orange line is the route from your session. The charts are for planning, not navigation.', 8.5);
   await step('charts off', async () => { await page.click('#btn-map-layers'); await W(300); await page.uncheck('#map-layers input[data-layer="charts"]'); await page.click('#btn-map-layers'); await W(500); });
