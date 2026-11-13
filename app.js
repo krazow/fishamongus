@@ -177,7 +177,17 @@
   }
   applyDisplay();
   // One clear line when there's no signal, instead of a message on every card.
-  function paintOffline() { const off = !navigator.onLine; $('#offline-bar').hidden = !off; document.body.classList.toggle('is-offline', off); }
+  function paintOffline() { const off = !navigator.onLine; $('#offline-bar').hidden = !off; document.body.classList.toggle('is-offline', off); fitMapTop(); }
+  // The map fills the screen below the List / Map bar. Banners above it (no signal, sample data) move that bar down,
+  // so the map's top follows the bar instead of a fixed height.
+  function fitMapTop() {
+    const wrap = document.getElementById('map-wrap'); const bar = document.querySelector('.spots-bar');
+    if (!wrap || !bar || wrap.hidden) return;
+    const top = Math.round(bar.getBoundingClientRect().bottom);
+    // Leaflet re-measures the map on a window resize; only sent when the top really moved, so this can't loop.
+    if (top > 0 && wrap.style.top !== top + 'px') { wrap.style.top = top + 'px'; setTimeout(() => window.dispatchEvent(new Event('resize')), 30); }
+  }
+  window.addEventListener('resize', () => fitMapTop());
   window.addEventListener('online', paintOffline); window.addEventListener('offline', paintOffline);
   const settings = { wtOz: store('tl.wtOz') === '1', units: store('tl.units') || (/^en-(US|LR|MM)/.test(navigator.language) ? 'imperial' : 'metric') };
   const imp = () => settings.units === 'imperial';
@@ -1420,6 +1430,7 @@
     spotsMode = m; store('tl.spotsMode', m);
     $$('#seg-spots button').forEach((b) => b.classList.toggle('on', b.dataset.mode === m));
     $('#spots-list').hidden = m !== 'list'; $('#map-wrap').hidden = m !== 'map';
+    if (m === 'map') { window.scrollTo(0, 0); requestAnimationFrame(fitMapTop); }
     if (m === 'map' && $('#view-spots').classList.contains('active')) showMap();
   }
   $('#seg-spots').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setSpotsMode(b.dataset.mode); });
@@ -3727,7 +3738,7 @@
     for (const x of sessions.filter((y) => y.demo)) await DB.delSession(x.id); for (const x of trips.filter((y) => y.demo)) await DB.delTrip(x.id);
     await reload(); toast('Sample data removed');
   }
-  function paintDemoBar() { $('#demo-bar').hidden = !(catches.some((c) => c.demo) || spots.some((x) => x.demo) || trips.some((x) => x.demo)); }
+  function paintDemoBar() { $('#demo-bar').hidden = !(catches.some((c) => c.demo) || spots.some((x) => x.demo) || trips.some((x) => x.demo)); fitMapTop(); }
   $('#demo-clear').addEventListener('click', clearDemo);
   $('#demo-try-log').addEventListener('click', loadDemo);
 
