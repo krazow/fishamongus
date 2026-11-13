@@ -848,7 +848,7 @@ html.night .map-legend i { filter: grayscale(1) sepia(1) hue-rotate(-50deg) satu
 .safety-note a { font-weight: 650; }
 #shell-extras .field { margin-bottom: 14px; }
 html.night .safety-note { background: #2a0505; border-left-color: var(--ink); }
-.stats-kind { margin: 0 0 2px; }
+.stats-kind { margin: 0 0 2px; grid-template-columns: repeat(3, 1fr); }
 
 /* Clam tides */
 .clam-box { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }

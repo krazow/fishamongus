@@ -168,7 +168,7 @@
 
   // ---------------------------------------------------------------- units
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition; // speech recognition, where the browser has it
-  const APP_VERSION = '4.9.2 (Nov 13, 2026)';
+  const APP_VERSION = '4.9.3 (Nov 13, 2026)';
   // Night (dim red) mode and large text, applied before anything is drawn.
   function applyDisplay() {
     const night = store('tl.theme') === 'night'; const large = store('tl.text') === 'large';
@@ -177,7 +177,17 @@
   }
   applyDisplay();
   // One clear line when there's no signal, instead of a message on every card.
-  function paintOffline() { const off = !navigator.onLine; $('#offline-bar').hidden = !off; document.body.classList.toggle('is-offline', off); }
+  function paintOffline() { const off = !navigator.onLine; $('#offline-bar').hidden = !off; document.body.classList.toggle('is-offline', off); fitMapTop(); }
+  // The map fills the screen below the List / Map bar. Banners above it (no signal, sample data) move that bar down,
+  // so the map's top follows the bar instead of a fixed height.
+  function fitMapTop() {
+    const wrap = document.getElementById('map-wrap'); const seg = document.getElementById('seg-spots'); const bar = seg && seg.closest('.spots-bar');
+    if (!wrap || !bar || wrap.hidden) return;
+    const top = Math.round(bar.getBoundingClientRect().bottom);
+    // Leaflet re-measures the map on a window resize; only sent when the top really moved, so this can't loop.
+    if (top > 0 && wrap.style.top !== top + 'px') { wrap.style.top = top + 'px'; setTimeout(() => window.dispatchEvent(new Event('resize')), 30); }
+  }
+  window.addEventListener('resize', () => fitMapTop());
   window.addEventListener('online', paintOffline); window.addEventListener('offline', paintOffline);
   const settings = { wtOz: store('tl.wtOz') === '1', units: store('tl.units') || (/^en-(US|LR|MM)/.test(navigator.language) ? 'imperial' : 'metric') };
   const imp = () => settings.units === 'imperial';
@@ -379,7 +389,7 @@
     host.querySelector('.ps-go').addEventListener('click', search);
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); search(); } });
     list.addEventListener('click', (e) => { const b = e.target.closest('[data-i]'); if (!b) return; const p = shown[+b.dataset.i]; shown = []; draw(); say(''); input.value = ''; onPick(p); });
-    return { reset() { run++; shown = []; draw(); say(''); input.value = ''; }, focus() { input.focus(); } };
+    return { reset() { run++; shown = []; draw(); say(''); input.value = ''; }, focus() { input.focus({ preventScroll: true }); } };
   }
   const thumbUrls = new Map();
   function thumbUrl(c) {
@@ -395,6 +405,8 @@
     [catches, spots, trips, sessions, tackle] = await Promise.all([DB.all(), DB.allSpots(), DB.allTrips(), DB.allSessions(), DB.allTackle()]);
     tackle.sort((a, b) => (a.name || a.bait).localeCompare(b.name || b.bait));
     sessions.sort((a, b) => b.start - a.start);
+    // Route points not yet written to storage are kept in memory; put them back on the live session.
+    if (typeof routeMem !== 'undefined' && routeMem) { const live = sessions.find((x) => x.id === routeMem.id && !x.end); if (live && routeMem.track.length > (live.track || []).length) live.track = routeMem.track.slice(); }
     catches.sort((a, b) => b.caughtAt - a.caughtAt);
     spots.sort((a, b) => a.name.localeCompare(b.name));
     renderList(); renderSummary(); renderSpots(); updateBackupNudge(); if (map) renderMap();
@@ -1420,6 +1432,7 @@
     spotsMode = m; store('tl.spotsMode', m);
     $$('#seg-spots button').forEach((b) => b.classList.toggle('on', b.dataset.mode === m));
     $('#spots-list').hidden = m !== 'list'; $('#map-wrap').hidden = m !== 'map';
+    if (m === 'map') { window.scrollTo(0, 0); requestAnimationFrame(fitMapTop); }
     if (m === 'map' && $('#view-spots').classList.contains('active')) showMap();
   }
   $('#seg-spots').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setSpotsMode(b.dataset.mode); });
@@ -1887,7 +1900,8 @@
       } });
       function toggleMapSearch(open) {
         mapSearchBox.hidden = !open; $('#btn-map-search').setAttribute('aria-expanded', String(open));
-        if (open) { mapPlace.reset(); setTimeout(() => mapPlace.focus(), 50); }
+        // The panel sits at the top of the map, so the page goes back to the top first (or the List/Map bar would cover it).
+        if (open) { window.scrollTo(0, 0); mapPlace.reset(); setTimeout(() => mapPlace.focus(), 50); }
       }
       $('#btn-map-search').addEventListener('click', () => toggleMapSearch(mapSearchBox.hidden));
       mapSearchBox.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); toggleMapSearch(false); } });
@@ -3726,7 +3740,7 @@
     for (const x of sessions.filter((y) => y.demo)) await DB.delSession(x.id); for (const x of trips.filter((y) => y.demo)) await DB.delTrip(x.id);
     await reload(); toast('Sample data removed');
   }
-  function paintDemoBar() { $('#demo-bar').hidden = !(catches.some((c) => c.demo) || spots.some((x) => x.demo) || trips.some((x) => x.demo)); }
+  function paintDemoBar() { $('#demo-bar').hidden = !(catches.some((c) => c.demo) || spots.some((x) => x.demo) || trips.some((x) => x.demo)); fitMapTop(); }
   $('#demo-clear').addEventListener('click', clearDemo);
   $('#demo-try-log').addEventListener('click', loadDemo);
 
@@ -4350,7 +4364,7 @@
   // While a session runs and the app is open, GPS points are kept every few metres (or every few minutes standing
   // still). Phones pause web apps in the background, so the route covers the time the app is on screen.
   function routeOn() { return store('tl.route') !== '0'; }
-  var routeWatch = null; var routeSavedAt = 0; var routeWake = null; var routeSaveTimer = null;
+  var routeWatch = null; var routeSavedAt = 0; var routeWake = null; var routeSaveTimer = null; var routeMem = null;
   function syncRouteWatch() {
     const s = activeSession(); const want = !!s && routeOn() && !document.hidden && 'geolocation' in navigator;
     if (want && routeWatch == null) {
@@ -4367,6 +4381,7 @@
     if (last && distM({ lat: last[0], lon: last[1] }, { lat, lon }) < Math.max(12, accuracy * 0.6) && t - last[2] < 5 * 60000) return;
     tr.push([round(lat, 6), round(lon, 6), t, Math.round(accuracy)]);
     if (tr.length > 20000) tr.splice(0, tr.length - 20000);
+    routeMem = { id: s.id, track: tr };
     // Saved at most 10 seconds after each new point, so little is lost if the phone closes the app.
     if (Date.now() - routeSavedAt > 10000) { routeSavedAt = Date.now(); await saveSession(s); }
     else if (!routeSaveTimer) routeSaveTimer = setTimeout(() => { routeSaveTimer = null; routeSavedAt = Date.now(); const cur = activeSession(); if (cur) saveSession(cur).catch(() => {}); }, 10000);
@@ -4505,8 +4520,10 @@
   }
   var ACCESS_ICON = { ramp: 'B', hand: 'H', pier: 'P', shore: 'S' };
   function accessTitle(x) { const src = ACCESS_SRC.find((s) => s.k === x.k); return x.name ? (x.k === 'shore' ? `${x.name} – shore fishing` : `${x.name} – ${src.label.toLowerCase()}`) : `${src.label} (WDFW)`; }
+  // While one of these popups is open the markers aren't redrawn: opening it can pan the map, and a redraw would close it.
+  var accessPopupOpen = false;
   async function drawAccess() {
-    if (!map || !accessLayer) return; accessLayer.clearLayers();
+    if (!map || !accessLayer || accessPopupOpen) return; accessLayer.clearLayers();
     if (!mapLayerOn('access')) return;
     const b = map.getBounds && map.getBounds(); const z = map.getZoom();
     const view = b ? { s: b.getSouth(), n: b.getNorth(), w: b.getWest(), e: b.getEast() } : null;
@@ -4519,6 +4536,7 @@
       const title = accessTitle(x); const label = ACCESS_SRC.find((s) => s.k === x.k).label;
       L.marker([x.lat, x.lon], { icon: L.divIcon({ className: 'acc-pin', html: `<span class="acc acc-${x.k}" title="${esc(title)}">${ACCESS_ICON[x.k]}</span>`, iconSize: [24, 24], iconAnchor: [12, 12] }), keyboard: true, title })
         .bindPopup(`<div class="pop"><b>${esc(title)}</b><br>${esc(label)} · WDFW${x.note ? `<br><small>${esc(x.note)}</small>` : ''}<div class="pop-actions"><a class="pop-link" href="https://www.google.com/maps/dir/?api=1&destination=${x.lat},${x.lon}" target="_blank" rel="noopener">Directions</a><button type="button" data-map-spot="${x.lat},${x.lon}" data-name="${esc(x.name || '')}" data-place="${esc(title)}">New spot here</button><button type="button" data-map-trip="${x.lat},${x.lon}" data-place="${esc(x.name ? title : '')}">Plan a trip here</button></div></div>`)
+        .on('popupopen', () => { accessPopupOpen = true; }).on('popupclose', () => { accessPopupOpen = false; })
         .addTo(accessLayer);
     });
   }
@@ -4542,6 +4560,8 @@
   }
   function syncMapLayers() { syncCharts(); drawAccess(); drawRoutes(); }
   function initMapLayers() {
+    // Popups open clear of the Tides button and fish filter (top left) and the map buttons (right).
+    if (L.Popup && L.Popup.mergeOptions) L.Popup.mergeOptions({ autoPanPaddingTopLeft: L.point(16, 120), autoPanPaddingBottomRight: L.point(64, 70) });
     accessLayer = L.layerGroup().addTo(map); routeLayer = L.layerGroup().addTo(map);
     map.on('moveend', () => { if (mapLayerOn('access')) drawAccess(); });
     const panel = $('#map-layers'); const btn = $('#btn-map-layers');
