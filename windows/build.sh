@@ -8,6 +8,11 @@ FV=$(echo "$VER.0.0.0" | cut -d. -f1-4)
 rm -rf app/web setup/payload dist && mkdir -p app/web/icons setup/payload dist
 cp "$SRC"/index.html "$SRC"/app.js "$SRC"/styles.css "$SRC"/sw.js "$SRC"/manifest.webmanifest app/web/
 cp "$SRC"/icons/* app/web/icons/
+# With LEAFLET_DIR (a folder holding leaflet.js, leaflet.css and images/), maps work offline from the first launch.
+if [ -n "$LEAFLET_DIR" ] && [ -f "$LEAFLET_DIR/leaflet.js" ]; then
+  mkdir -p app/web/vendor/leaflet && cp -r "$LEAFLET_DIR"/* app/web/vendor/leaflet/
+  sed -i "s#https://unpkg.com/leaflet@1.9.4/dist/#vendor/leaflet/#" app/web/app.js
+fi
 python3 tools/mkrsrc.py tools/fishamongus.ico app/rsrc_windows_amd64.syso "Fishamongus!" "$FV"
 python3 tools/mkrsrc.py tools/fishamongus.ico setup/rsrc_windows_amd64.syso "Fishamongus! Setup" "$FV" "Fishamongus! Setup"
 export GOOS=windows GOARCH=amd64 CGO_ENABLED=0

@@ -1,0 +1,92 @@
+# Builds the Android app (APK) and the Windows installer from the web app in this repository.
+# Both carry the map library, so maps work offline from the first launch.
+# Signing: with the secrets ANDROID_KEYSTORE_B64, ANDROID_KEYSTORE_PASSWORD and ANDROID_KEY_ALIAS set, the APK is
+# signed here and published as a release. Without them, the unsigned APK is pushed to the `builds` branch to be signed.
+name: Build Android and Windows apps
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['app.js', 'index.html', 'styles.css', 'sw.js', 'manifest.webmanifest', 'icons/**', 'android/**', 'windows/**', '.github/workflows/build-apps.yml']
+permissions:
+  contents: write
+concurrency:
+  group: build-apps
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.10.2' }
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.24' }
+      - name: Version
+        id: v
+        run: echo "ver=$(grep -o "APP_VERSION = '[0-9.]*" app.js | grep -o '[0-9.]*$')" >> "$GITHUB_OUTPUT"
+      - name: Map library (Leaflet 1.9.4)
+        run: |
+          mkdir -p /tmp/leaflet && cd /tmp/leaflet && npm pack leaflet@1.9.4 --silent && tar xzf leaflet-1.9.4.tgz
+          ls /tmp/leaflet/package/dist
+      - name: Android web files
+        run: |
+          W=android/app/src/main/assets/www
+          rm -rf "$W" && mkdir -p "$W/icons" "$W/vendor/leaflet"
+          cp index.html app.js styles.css sw.js manifest.webmanifest "$W"/
+          cp icons/* "$W/icons/"
+          cp -r /tmp/leaflet/package/dist/* "$W/vendor/leaflet/"
+          sed -i "s#https://unpkg.com/leaflet@1.9.4/dist/#vendor/leaflet/#" "$W/app.js"
+          grep -c "vendor/leaflet/" "$W/app.js"
+      - name: Build APK
+        working-directory: android
+        run: |
+          set -o pipefail
+          gradle --no-daemon --console=plain assembleRelease 2>&1 | tee /tmp/build.log
+      - name: Align (and sign when the key is set up)
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          mkdir -p dist
+          "$BT/zipalign" -f -p 4 android/app/build/outputs/apk/release/app-release-unsigned.apk "dist/Fishamongus-${{ steps.v.outputs.ver }}-unsigned.apk"
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > /tmp/ks.p12
+            "$BT/apksigner" sign --ks /tmp/ks.p12 --ks-pass env:KS_PASS --ks-key-alias "$KS_ALIAS" --out "dist/Fishamongus-${{ steps.v.outputs.ver }}.apk" "dist/Fishamongus-${{ steps.v.outputs.ver }}-unsigned.apk"
+            "$BT/apksigner" verify --verbose "dist/Fishamongus-${{ steps.v.outputs.ver }}.apk"
+            rm "dist/Fishamongus-${{ steps.v.outputs.ver }}-unsigned.apk" /tmp/ks.p12
+          fi
+          ls -la dist
+      - name: Windows installer
+        run: |
+          set -o pipefail
+          LEAFLET_DIR=/tmp/leaflet/package/dist sh windows/build.sh 2>&1 | tee -a /tmp/build.log
+          cp windows/dist/FishamongusSetup-*.exe dist/
+      - name: Release (signed builds)
+        if: ${{ hashFiles('dist/Fishamongus-*[0-9].apk') != '' }}
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          V=${{ steps.v.outputs.ver }}
+          gh release delete "v$V" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "v$V" dist/Fishamongus-$V.apk dist/FishamongusSetup-$V.exe --target "$GITHUB_SHA" --title "Fishamongus! $V" --notes-file android/RELEASE_NOTES.md
+      - name: Push unsigned build to the builds branch
+        if: ${{ hashFiles('dist/Fishamongus-*-unsigned.apk') != '' }}
+        run: |
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p /tmp/b/unsigned /tmp/b/.github/workflows && cp dist/* /tmp/b/unsigned/ && cp android/RELEASE_NOTES.md /tmp/b/
+          cp .github/workflows/release-apk.yml /tmp/b/.github/workflows/
+          git checkout --orphan builds-new && git rm -rfq . && git clean -fdq
+          cp -r /tmp/b/. . && git add -A && git commit -qm "Unsigned build ${{ steps.v.outputs.ver }} from ${GITHUB_SHA::7}"
+          git push -f origin builds-new:builds
+      # Build logs can't be read from outside GitHub here, so a failed build leaves its log on the build-logs branch.
+      - name: Save the log when the build fails
+        if: failure()
+        run: |
+          cp /tmp/build.log /tmp/fail.log 2>/dev/null || echo "no log" > /tmp/fail.log
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan logs-new && git rm -rfq . && git clean -fdq
+          tail -c 200000 /tmp/fail.log > build.log && git add build.log && git commit -qm "Failed build log ${GITHUB_SHA::7}" && git push -f origin logs-new:build-logs
