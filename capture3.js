@@ -23,6 +23,7 @@ const NOM = {
     { lat: '45.0182', lon: '-93.1497', category: 'water', type: 'lake', name: 'Lake Josephine', address: { city: 'Roseville', county: 'Ramsey County', state: 'Minnesota', country: 'United States', country_code: 'us' } }],
 };
 async function mocks(page) {
+  if (process.env.LEAFLET_DIR) await page.route(/unpkg\.com\/leaflet@1\.9\.4\/dist\/(.*)/, (r) => { const f = r.request().url().split('/dist/')[1]; r.fulfill({ contentType: f.endsWith('.css') ? 'text/css' : f.endsWith('.js') ? 'text/javascript' : 'image/png', body: fs.readFileSync(process.env.LEAFLET_DIR + f) }); });
   await page.route(/marine-api\.open-meteo/, (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(marine(new URL(r.request().url()))) }));
   await page.route(/\/\/api\.open-meteo\.com/, (r) => { const j = meteo(new URL(r.request().url())); const sh = (a) => (Array.isArray(a) ? a.map((v) => (typeof v === 'number' ? Math.round((v - 7) * 10) / 10 : v)) : a);
     if (j.hourly && j.hourly.temperature_2m) { j.hourly.temperature_2m = sh(j.hourly.temperature_2m); if (j.hourly.apparent_temperature) j.hourly.apparent_temperature = sh(j.hourly.apparent_temperature);
