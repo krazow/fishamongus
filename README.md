@@ -142,9 +142,14 @@ Tides show only where they apply:
 
 Settings (units, pounds or pounds and ounces, backup, and Help) is the gear icon at the top right. The app also has a map of all your catch spots, search, an "Open spot in Maps" button for getting back to a spot, sharing, and imperial/metric units.
 
-## Windows app
+## Android and Windows apps
 
-Fishamongus! also installs on Windows 10 and 11 as its own app: run `FishamongusSetup-4.7.exe` (no administrator needed). It opens in a Microsoft Edge app window, with Start menu and desktop shortcuts, and uninstalls from Settings → Apps. Its log is separate from your phone's; move catches across with a backup or spreadsheet file: drop it onto the window, drag it onto the Fishamongus! shortcut, or right-click it → Open with → Fishamongus!. How it's built: [windows/README.md](windows/README.md).
+Download both from the latest release: **https://github.com/krazow/fishamongus/releases/latest**
+
+- **Android 7.0 or newer:** open `Fishamongus-<version>.apk` on the phone. Android asks once to allow installs from your browser or file manager. It works offline from the first launch, maps included; installing a newer APK updates it and keeps your log. Spreadsheets, backups and GPX/KML files can be opened with Fishamongus! from a file manager or email.
+- **Windows 10 and 11:** run `FishamongusSetup-<version>.exe` (no administrator needed). It opens in a Microsoft Edge app window, with Start menu and desktop shortcuts, and uninstalls from Settings → Apps. SmartScreen may warn because the file isn't code-signed: More info → Run anyway. How it's built: [windows/README.md](windows/README.md).
+
+Each install keeps its own log on that device; move catches between them with a backup or spreadsheet file. Both are built by GitHub Actions ([build-apps.yml](.github/workflows/build-apps.yml)) on every change, with the map library bundled.
 
 ## Get it on your phone (about 2 minutes)
 
