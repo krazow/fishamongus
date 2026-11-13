@@ -159,11 +159,16 @@
   const fmtFull = (ms) => new Date(ms).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
   const isTouch = matchMedia('(pointer: coarse)').matches;
 
+  // The Android and Windows apps carry their own copy of the map library, so maps work offline from the start.
+  const LEAFLET_BASE = 'https://unpkg.com/leaflet@1.9.4/dist/';
+  // "phone" on phones and tablets, "computer" elsewhere, in the few places the app talks about where your log is kept.
+  const DEVICE = matchMedia('(pointer: coarse)').matches ? 'phone' : 'computer';
+  document.querySelectorAll('.dev-word').forEach((el) => { el.textContent = DEVICE; });
   function store(key, val) { try { if (val === undefined) return localStorage.getItem(key); localStorage.setItem(key, val); } catch { return null; } }
 
   // ---------------------------------------------------------------- units
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition; // speech recognition, where the browser has it
-  const APP_VERSION = '4.9 (Nov 12, 2026)';
+  const APP_VERSION = '4.9.1 (Nov 13, 2026)';
   // Night (dim red) mode and large text, applied before anything is drawn.
   function applyDisplay() {
     const night = store('tl.theme') === 'night'; const large = store('tl.text') === 'large';
@@ -1851,8 +1856,8 @@
     if (window.L) return Promise.resolve();
     if (leafletLoading) return leafletLoading;
     leafletLoading = new Promise((res, rej) => {
-      const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(css);
-      const s = document.createElement('script'); s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = LEAFLET_BASE + 'leaflet.css'; document.head.appendChild(css);
+      const s = document.createElement('script'); s.src = LEAFLET_BASE + 'leaflet.js';
       s.onload = res; s.onerror = () => { leafletLoading = null; rej(new Error('offline')); }; document.head.appendChild(s);
     });
     return leafletLoading;
@@ -3757,7 +3762,16 @@
   });
 
   // Returns false when the person cancels the share sheet.
+  // In the Android app, files are saved through Android's "Save to" screen (its web view can't download).
+  const ANDROID = window.FishamongusAndroid || null;
+  const androidSaves = new Map();
+  window.__androidSaved = (id, ok) => { const f = androidSaves.get(id); androidSaves.delete(id); if (f) f(!!ok); };
   async function deliverFile(blob, name) {
+    if (ANDROID && ANDROID.saveFile) {
+      const b64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1] || ''); r.onerror = rej; r.readAsDataURL(blob); });
+      const id = 's' + Date.now() + Math.random().toString(36).slice(2, 6);
+      return new Promise((res) => { androidSaves.set(id, res); ANDROID.saveFile(id, name, blob.type || 'application/octet-stream', b64); });
+    }
     const file = new File([blob], name, { type: blob.type });
     if (isTouch && navigator.canShare && navigator.canShare({ files: [file] })) {
       try { await navigator.share({ files: [file], title: name }); return true; } catch (e) { if (e.name === 'AbortError') return false; }
@@ -3810,8 +3824,8 @@
     el.hidden = snoozed || !backupDue();
     if (el.hidden) return;
     const n = realOnly(catches).length;
-    $('#backup-nudge-text').textContent = !last ? `${n === 1 ? 'Your catch is' : `Your ${n} catches are`} saved only on this phone. Back ${n === 1 ? 'it' : 'them'} up to iCloud Drive, Google Drive or your computer so ${n === 1 ? "it's" : "they're"} safe.`
-      : mode === 'off' ? `${plural(since, 'catch')} since your last backup on ${fmtDate(last)}. Your log is only on this phone.`
+    $('#backup-nudge-text').textContent = !last ? `${n === 1 ? 'Your catch is' : `Your ${n} catches are`} saved only on this ${DEVICE}. Back ${n === 1 ? 'it' : 'them'} up to iCloud Drive, Google Drive or your computer so ${n === 1 ? "it's" : "they're"} safe.`
+      : mode === 'off' ? `${plural(since, 'catch')} since your last backup on ${fmtDate(last)}. Your log is only on this ${DEVICE}.`
         : `Time for your ${mode === 'session' ? 'after-session' : mode} backup${since ? `: ${plural(since, 'new catch')} since ${fmtDate(last)}` : ` (last one ${fmtDate(last)})`}. One tap saves it.`;
   }
   $('#backup-nudge-later').addEventListener('click', () => { store('tl.backupSnooze', String(Date.now() + (abMode() === 'weekly' || abMode() === 'off' ? 3 : 1) * 86400000)); updateBackupNudge(); });
@@ -4246,6 +4260,11 @@
     else toast('Drop a spreadsheet (.csv), a Fishamongus! backup (.json) or a GPX/KML file to import it');
   });
   // The Windows app passes a file opened with it (dragged onto the shortcut, or Open with) as ?import=<token>.
+  // The Android app hands over a file opened with it (from a file manager, email or chat) to the importer.
+  window.__androidOpen = (name, b64) => {
+    try { const bin = atob(b64); const bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i); openImport(new File([bytes], name)); }
+    catch { toast("Couldn't open that file"); }
+  };
   async function importFromLink(token) {
     try {
       const r = await fetch(`/__open/${encodeURIComponent(token)}`); if (!r.ok) throw new Error();
@@ -4628,7 +4647,7 @@
 
   // ---------------------------------------------------------------- boot
   // ---------------------------------------------------------------- first run and install guide
-  const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const standalone = () => !!ANDROID || matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   let installEvent = null;
   window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvent = e; updateInstallNudge(); });

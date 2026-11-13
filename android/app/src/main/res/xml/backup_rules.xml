@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android's own backup includes the app's web storage, so a phone restore brings the log back. -->
+<full-backup-content />
