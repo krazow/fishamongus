@@ -379,7 +379,7 @@
     host.querySelector('.ps-go').addEventListener('click', search);
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); search(); } });
     list.addEventListener('click', (e) => { const b = e.target.closest('[data-i]'); if (!b) return; const p = shown[+b.dataset.i]; shown = []; draw(); say(''); input.value = ''; onPick(p); });
-    return { reset() { run++; shown = []; draw(); say(''); input.value = ''; }, focus() { input.focus(); } };
+    return { reset() { run++; shown = []; draw(); say(''); input.value = ''; }, focus() { input.focus({ preventScroll: true }); } };
   }
   const thumbUrls = new Map();
   function thumbUrl(c) {
@@ -1887,7 +1887,8 @@
       } });
       function toggleMapSearch(open) {
         mapSearchBox.hidden = !open; $('#btn-map-search').setAttribute('aria-expanded', String(open));
-        if (open) { mapPlace.reset(); setTimeout(() => mapPlace.focus(), 50); }
+        // The panel sits at the top of the map, so the page goes back to the top first (or the List/Map bar would cover it).
+        if (open) { window.scrollTo(0, 0); mapPlace.reset(); setTimeout(() => mapPlace.focus(), 50); }
       }
       $('#btn-map-search').addEventListener('click', () => toggleMapSearch(mapSearchBox.hidden));
       mapSearchBox.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); toggleMapSearch(false); } });
