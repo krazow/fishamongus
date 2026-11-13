@@ -1,0 +1,53 @@
+# Smoke test: install the APK on an Android 14 emulator with the network off, open the app, the log and the map,
+# and save screenshots and the WebView console log to the apk-test-results branch.
+name: Test APK on an emulator
+on:
+  push:
+    branches: [apk-test]
+permissions:
+  contents: write
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            mkdir -p out
+            adb install -r app.apk
+            adb shell svc wifi disable || true
+            adb shell svc data disable || true
+            adb shell cmd connectivity airplane-mode enable || true
+            adb shell pm grant com.krazow.fishamongus android.permission.ACCESS_FINE_LOCATION || true
+            adb shell pm grant com.krazow.fishamongus android.permission.ACCESS_COARSE_LOCATION || true
+            adb shell wm size > out/size.txt
+            adb logcat -c
+            adb shell am start -W -n com.krazow.fishamongus/.MainActivity > out/start.txt
+            sleep 20
+            adb exec-out screencap -p > out/1-start.png
+            adb shell input keyevent KEYCODE_BACK; sleep 1
+            adb shell am start -n com.krazow.fishamongus/.MainActivity; sleep 3
+            adb exec-out screencap -p > out/2-after-back.png
+            adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1 || true; adb pull /sdcard/ui.xml out/ui1.xml || true
+            sh test-taps.sh || true
+            adb logcat -d -s chromium:V cr_Console:V AndroidRuntime:E ActivityManager:W > out/logcat.txt || true
+            adb logcat -d | grep -iE "fishamongus|FATAL|crash|Console" | tail -300 > out/logcat-app.txt || true
+            adb shell dumpsys package com.krazow.fishamongus | grep -E "versionName|granted=true" > out/package.txt || true
+      - name: Save results
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p /tmp/r && cp -r out/. /tmp/r/ 2>/dev/null || echo "no output" > /tmp/r/none.txt
+          git checkout --orphan results && git rm -rfq . && git clean -fdq && cp -r /tmp/r/. . && git add -A && git commit -qm "APK test results ${GITHUB_SHA::7}" && git push -f origin results:apk-test-results
