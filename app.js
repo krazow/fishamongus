@@ -405,6 +405,8 @@
     [catches, spots, trips, sessions, tackle] = await Promise.all([DB.all(), DB.allSpots(), DB.allTrips(), DB.allSessions(), DB.allTackle()]);
     tackle.sort((a, b) => (a.name || a.bait).localeCompare(b.name || b.bait));
     sessions.sort((a, b) => b.start - a.start);
+    // Route points not yet written to storage are kept in memory; put them back on the live session.
+    if (typeof routeMem !== 'undefined' && routeMem) { const live = sessions.find((x) => x.id === routeMem.id && !x.end); if (live && routeMem.track.length > (live.track || []).length) live.track = routeMem.track.slice(); }
     catches.sort((a, b) => b.caughtAt - a.caughtAt);
     spots.sort((a, b) => a.name.localeCompare(b.name));
     renderList(); renderSummary(); renderSpots(); updateBackupNudge(); if (map) renderMap();
@@ -4362,7 +4364,7 @@
   // While a session runs and the app is open, GPS points are kept every few metres (or every few minutes standing
   // still). Phones pause web apps in the background, so the route covers the time the app is on screen.
   function routeOn() { return store('tl.route') !== '0'; }
-  var routeWatch = null; var routeSavedAt = 0; var routeWake = null; var routeSaveTimer = null;
+  var routeWatch = null; var routeSavedAt = 0; var routeWake = null; var routeSaveTimer = null; var routeMem = null;
   function syncRouteWatch() {
     const s = activeSession(); const want = !!s && routeOn() && !document.hidden && 'geolocation' in navigator;
     if (want && routeWatch == null) {
@@ -4379,6 +4381,7 @@
     if (last && distM({ lat: last[0], lon: last[1] }, { lat, lon }) < Math.max(12, accuracy * 0.6) && t - last[2] < 5 * 60000) return;
     tr.push([round(lat, 6), round(lon, 6), t, Math.round(accuracy)]);
     if (tr.length > 20000) tr.splice(0, tr.length - 20000);
+    routeMem = { id: s.id, track: tr };
     // Saved at most 10 seconds after each new point, so little is lost if the phone closes the app.
     if (Date.now() - routeSavedAt > 10000) { routeSavedAt = Date.now(); await saveSession(s); }
     else if (!routeSaveTimer) routeSaveTimer = setTimeout(() => { routeSaveTimer = null; routeSavedAt = Date.now(); const cur = activeSession(); if (cur) saveSession(cur).catch(() => {}); }, 10000);
@@ -4517,8 +4520,10 @@
   }
   var ACCESS_ICON = { ramp: 'B', hand: 'H', pier: 'P', shore: 'S' };
   function accessTitle(x) { const src = ACCESS_SRC.find((s) => s.k === x.k); return x.name ? (x.k === 'shore' ? `${x.name} – shore fishing` : `${x.name} – ${src.label.toLowerCase()}`) : `${src.label} (WDFW)`; }
+  // While one of these popups is open the markers aren't redrawn: opening it can pan the map, and a redraw would close it.
+  var accessPopupOpen = false;
   async function drawAccess() {
-    if (!map || !accessLayer) return; accessLayer.clearLayers();
+    if (!map || !accessLayer || accessPopupOpen) return; accessLayer.clearLayers();
     if (!mapLayerOn('access')) return;
     const b = map.getBounds && map.getBounds(); const z = map.getZoom();
     const view = b ? { s: b.getSouth(), n: b.getNorth(), w: b.getWest(), e: b.getEast() } : null;
@@ -4531,6 +4536,7 @@
       const title = accessTitle(x); const label = ACCESS_SRC.find((s) => s.k === x.k).label;
       L.marker([x.lat, x.lon], { icon: L.divIcon({ className: 'acc-pin', html: `<span class="acc acc-${x.k}" title="${esc(title)}">${ACCESS_ICON[x.k]}</span>`, iconSize: [24, 24], iconAnchor: [12, 12] }), keyboard: true, title })
         .bindPopup(`<div class="pop"><b>${esc(title)}</b><br>${esc(label)} · WDFW${x.note ? `<br><small>${esc(x.note)}</small>` : ''}<div class="pop-actions"><a class="pop-link" href="https://www.google.com/maps/dir/?api=1&destination=${x.lat},${x.lon}" target="_blank" rel="noopener">Directions</a><button type="button" data-map-spot="${x.lat},${x.lon}" data-name="${esc(x.name || '')}" data-place="${esc(title)}">New spot here</button><button type="button" data-map-trip="${x.lat},${x.lon}" data-place="${esc(x.name ? title : '')}">Plan a trip here</button></div></div>`)
+        .on('popupopen', () => { accessPopupOpen = true; }).on('popupclose', () => { accessPopupOpen = false; })
         .addTo(accessLayer);
     });
   }
