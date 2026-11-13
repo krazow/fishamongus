@@ -91,10 +91,10 @@ async function mocks(page) {
   await shot('placepicked', 'Named for you', 'Pick one and the spot gets its place and name. Save it, and catches made there link to it.', 6.5);
   await step('save spot', async () => { await page.click('#spot-form button[type="submit"]').catch(() => page.click('#sp-save')); await W(800); await closeAll(); });
 
-  const mapOpen = async () => { await go('spots'); await page.click('#seg-spots [data-mode="map"]'); await page.waitForSelector('.leaflet-container', { timeout: 20000 }); await W(2500); };
-  const mapGo = async (q, pick = 0) => { await page.click('#btn-map-search'); await W(300); await page.fill('#map-search input', q); await page.click('#map-search .ps-go'); await W(1200); await page.click(`#map-search .ps-results button >> nth=${pick}`); await W(3500); };
+  const mapOpen = async () => { await go('spots'); await page.click('#seg-spots [data-mode="map"]'); await page.waitForSelector('.leaflet-container', { timeout: 20000 }); await page.evaluate(() => window.scrollTo(0, 0)); await W(2500); };
+  const mapGo = async (q, pick = 0) => { await page.evaluate(() => window.scrollTo(0, 0)); await page.click('#btn-map-search'); await W(300); await page.fill('#map-search input', q); await page.click('#map-search .ps-go'); await W(1200); await page.click(`#map-search .ps-results button >> nth=${pick}`); await W(3500); };
   await step('map open', async () => { await mapOpen(); });
-  await step('map search', async () => { await page.click('#btn-map-search'); await W(200); await page.fill('#map-search input', 'Oro Bay'); await page.click('#map-search .ps-go'); await W(1200); });
+  await step('map search', async () => { await page.evaluate(() => window.scrollTo(0, 0)); await page.click('#btn-map-search'); await W(200); await page.fill('#map-search input', 'Oro Bay'); await page.click('#map-search .ps-go'); await W(1200); });
   await shot('mapsearch', 'Search the map', 'The magnifying glass finds a place on the map: the map moves there, with New spot here and Plan a trip here.', 6.5);
   await step('map go american', async () => { await page.click('#btn-map-search'); await W(200); await mapGo('American Lake', 0); await page.evaluate(() => document.querySelector('.leaflet-popup-close-button')?.click()); await W(500);
     await page.click('#btn-map-layers'); await W(600); });
@@ -102,7 +102,7 @@ async function mocks(page) {
   await step('acc popup', async () => { await page.click('#btn-map-layers'); await W(400); await page.waitForSelector('.acc-pin', { timeout: 20000 }); await W(1500);
     const pins = await page.$$('.acc-pin'); const box = await page.$eval('#map', (m) => { const r = m.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
     let best = null, bd = 1e9; for (const p of pins) { const b = await p.boundingBox(); if (!b) continue; const d = Math.hypot(b.x - box[0], b.y - box[1]); if (d < bd) { bd = d; best = p; } }
-    if (best) await best.click(); await W(1200); });
+    if (best) await best.evaluate((e) => e.click()); await W(1500); });
   await shot('access', 'Boat launches and access', 'Tap a launch, pier or shore-fishing site for directions, or save it as a spot or plan a trip there. B is a boat ramp, H a hand launch, P a pier, S shore fishing.', 8);
   await step('charts', async () => { await page.evaluate(() => document.querySelector('.leaflet-popup-close-button')?.click()); await mapGo('Oro Bay', 0); await page.evaluate(() => document.querySelector('.leaflet-popup-close-button')?.click());
     await page.click('#btn-map-layers'); await W(300); await page.check('#map-layers input[data-layer="charts"]'); await W(300); await page.click('#btn-map-layers'); await W(6000); });
