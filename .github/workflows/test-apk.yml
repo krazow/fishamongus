@@ -42,6 +42,16 @@ jobs:
             adb exec-out screencap -p > out/2-after-back.png
             adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1 || true; adb pull /sdcard/ui.xml out/ui1.xml || true
             sh test-taps.sh || true
+            adb logcat -d -s chromium:V > out/logcat-offline.txt || true
+            # Online: network back on, a GPS fix near Oro Bay, and the Now screen with live data.
+            adb shell cmd connectivity airplane-mode disable || true
+            adb shell svc wifi enable || true
+            adb shell svc data enable || true
+            adb emu geo fix -122.6750 47.1440 || true
+            sleep 8
+            adb shell am force-stop com.krazow.fishamongus
+            adb shell am start -n com.krazow.fishamongus/.MainActivity; sleep 6
+            sh test-online.sh || true
             adb logcat -d -s chromium:V cr_Console:V AndroidRuntime:E ActivityManager:W > out/logcat.txt || true
             adb logcat -d | grep -iE "fishamongus|FATAL|crash|Console" | tail -300 > out/logcat-app.txt || true
             adb shell dumpsys package com.krazow.fishamongus | grep -E "versionName|granted=true" > out/package.txt || true
