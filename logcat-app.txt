@@ -1,0 +1,300 @@
+11-13 22:23:02.826   517   908 I ImeTracker: com.krazow.fishamongus:82c4f81b: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+11-13 22:23:02.826   517   908 I ImeTracker: com.krazow.fishamongus:82c4f81b: onCancelled at PHASE_SERVER_SHOULD_HIDE
+11-13 22:23:02.916  1546  1546 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.krazow.fishamongus fieldId=0 fieldName=null extras=null}, false)
+11-13 22:23:04.217   834   834 I SafetyLabelChangedBroadcastReceiver: received broadcast packageName: com.krazow.fishamongus, current user: UserHandle{0}, packageChangeEvent: NEW_INSTALL, intent user: UserHandle{0}
+11-13 22:23:05.831  1414  3172 W FontLog : No resolver, short-circuit {Noto Color Emoji Compat, wdth 100.0, wght 400, ital 0.0, bestEffort false} for com.krazow.fishamongus to failure [CONTEXT service_id=132 ]
+11-13 22:23:10.026  1641  1641 I AiAiEcho: AppFetcherImplV2 updateApps package:[com.krazow.fishamongus], userId:[0], reason:[package is added.].
+11-13 22:23:12.085   517   572 W ActivityManager: Scheduling restart of crashed service com.google.android.gm/androidx.work.impl.background.systemjob.SystemJobService in 1000ms for connection
+11-13 22:23:12.085   517   572 W ActivityManager: Scheduling restart of crashed service com.google.android.gm/com.android.email.job.UpgradeJob$UpgradeJobService in 10999ms for connection
+11-13 22:23:13.862  3947  4147 I org.webrtc.Logging: CrashStartupListener: Checking conference crashes for 0 account(s).
+11-13 22:23:16.212  1463  3850 I BlockstoreStorage: Clearing Blockstore Data for package com.krazow.fishamongus [CONTEXT service_id=258 ]
+11-13 22:23:16.282  1414  3684 I FontLog : Package com.krazow.fishamongus has no metadata [CONTEXT service_id=132 ]
+11-13 22:23:23.395   832   863 V WindowManagerShell: Transition requested: android.os.BinderProxy@ddfd514 TransitionRequestInfo { type = CLOSE, triggerTask = TaskInfo{userId=0 taskId=8 displayId=0 isRunning=false baseIntent=Intent { flg=0x10000000 cmp=com.krazow.fishamongus/.MainActivity } baseActivity=null topActivity=null origActivity=null realActivity=ComponentInfo{com.krazow.fishamongus/com.krazow.fishamongus.MainActivity} numActivities=0 lastActiveTime=44962 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 defaultMinSize=220 token=WCT{android.window.IWindowContainerToken$Stub$Proxy@cb201bd} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 128 - 0, 0) topActivityInfo=null launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=false isVisible=true isVisibleRequested=true isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden}, remoteTransition = null, displayChange = null }
+11-13 22:23:24.844   517   537 V WindowManager: Sent Transition #7 createdAt=11-13 22:23:23.393 via request=TransitionRequestInfo { type = CLOSE, triggerTask = TaskInfo{userId=0 taskId=8 displayId=0 isRunning=false baseIntent=Intent { flg=0x10000000 cmp=com.krazow.fishamongus/.MainActivity } baseActivity=null topActivity=null origActivity=null realActivity=ComponentInfo{com.krazow.fishamongus/com.krazow.fishamongus.MainActivity} numActivities=0 lastActiveTime=44962 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 defaultMinSize=220 token=WCT{RemoteToken{deb8175 Task{a1ea2e2 #8 type=standard A=10192:com.krazow.fishamongus}}} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 128 - 0, 0) topActivityInfo=null launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=false isVisible=true isVisibleRequested=true isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden}, remoteTransition = null, displayChange = null }
+11-13 22:23:24.844   517   537 V WindowManager:     info={id=7 t=CLOSE f=0x0 trk=0 r=[0@Point(0, 0)] c=[{WCT{RemoteToken{b5e917b Task{c5875bc #1 type=home}}} m=TO_FRONT f=SHOW_WALLPAPER leash=Surface(name=Task=1)/@0xe219ed2 sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0},{WCT{RemoteToken{deb8175 Task{a1ea2e2 #8 type=standard A=10192:com.krazow.fishamongus}}} m=CLOSE f=NONE leash=Surface(name=Task=8)/@0x4876e5f sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0},{null m=TO_FRONT f=IS_WALLPAPER leash=Surface(name=WallpaperWindowToken{5b280ae token=android.os.Binder@9c22529})/@0x436ce7c sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0}]}
+11-13 22:23:24.874   517  1909 V SplashScreenExceptionList: SplashScreen checking exception for package com.krazow.fishamongus (target sdk:34) -> false
+11-13 22:23:24.874   517  1909 I ActivityTaskManager: Add Task{a1ea2e2 #8 type=standard A=10192:com.krazow.fishamongus} to hidden list because adding Task{fc5e037 #9 type=standard A=10192:com.krazow.fishamongus}
+11-13 22:23:24.875   517  1909 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=com.krazow.fishamongus/.MainActivity} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=0
+11-13 22:23:24.943   832   863 V WindowManagerShell: Transition requested: android.os.BinderProxy@c6ccb7b TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=9 displayId=0 isRunning=true baseIntent=Intent { flg=0x10000000 cmp=com.krazow.fishamongus/.MainActivity } baseActivity=ComponentInfo{com.krazow.fishamongus/com.krazow.fishamongus.MainActivity} topActivity=ComponentInfo{com.krazow.fishamongus/com.krazow.fishamongus.MainActivity} origActivity=null realActivity=ComponentInfo{com.krazow.fishamongus/com.krazow.fishamongus.MainActivity} numActivities=1 lastActiveTime=70262 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 defaultMinSize=220 token=WCT{android.window.IWindowContainerToken$Stub$Proxy@c744d98} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 128 - 0, 0) topActivityInfo=ActivityInfo{8b989f1 com.krazow.fishamongus.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=false isVisible=false isVisibleRequested=false isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden}, remoteTransition = null, displayChange = null }
+11-13 22:23:25.092   517   906 D CoreBackPreview: Window{35805a3 u0 Splash Screen com.krazow.fishamongus}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@5db58ff, mPriority=0, mIsAnimationCallback=false}
+11-13 22:23:25.381   517   537 V WindowManager: Sent Transition #8 createdAt=11-13 22:23:24.858 via request=TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=9 displayId=0 isRunning=true baseIntent=Intent { flg=0x10000000 cmp=com.krazow.fishamongus/.MainActivity } baseActivity=ComponentInfo{com.krazow.fishamongus/com.krazow.fishamongus.MainActivity} topActivity=ComponentInfo{com.krazow.fishamongus/com.krazow.fishamongus.MainActivity} origActivity=null realActivity=ComponentInfo{com.krazow.fishamongus/com.krazow.fishamongus.MainActivity} numActivities=1 lastActiveTime=70262 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 defaultMinSize=220 token=WCT{RemoteToken{19f894f Task{fc5e037 #9 type=standard A=10192:com.krazow.fishamongus}}} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 128 - 0, 0) topActivityInfo=ActivityInfo{eddb8dc com.krazow.fishamongus.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=false isVisible=false isVisibleRequested=false isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden}, remoteTransition = null, displayChange = null }
+11-13 22:23:25.390   517   537 V WindowManager:     info={id=8 t=OPEN f=0x0 trk=0 r=[0@Point(0, 0)] c=[{WCT{RemoteToken{19f894f Task{fc5e037 #9 type=standard A=10192:com.krazow.fishamongus}}} m=OPEN f=NONE leash=Surface(name=Task=9)/@0x8abf829 sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0},{WCT{RemoteToken{b5e917b Task{c5875bc #1 type=home}}} m=TO_BACK f=SHOW_WALLPAPER leash=Surface(name=Task=1)/@0xe219ed2 sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0}]}
+11-13 22:23:25.865   517   908 D CoreBackPreview: Window{538033e u0 com.krazow.fishamongus/com.krazow.fishamongus.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@744f8be, mPriority=0, mIsAnimationCallback=false}
+11-13 22:23:26.280   517   537 I ActivityTaskManager: Displayed com.krazow.fishamongus/.MainActivity for user 0: +1s426ms
+11-13 22:23:26.565   517   821 W InputManager-JNI: Input channel object '35805a3 Splash Screen com.krazow.fishamongus (client)' was disposed without first being removed with the input manager!
+11-13 22:23:26.860   517  2484 I ImeTracker: com.krazow.fishamongus:3caeeb64: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+11-13 22:23:26.860   517  2484 I ImeTracker: com.krazow.fishamongus:3caeeb64: onCancelled at PHASE_SERVER_SHOULD_HIDE
+11-13 22:23:27.017  1546  1546 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.krazow.fishamongus fieldId=0 fieldName=null extras=null}, false)
+11-13 22:23:27.051   517  1950 D CoreBackPreview: Window{a3742ee u0 com.krazow.fishamongus/com.krazow.fishamongus.MainActivity}: Setting back callback null
+11-13 22:23:27.128   517  1948 W InputManager-JNI: Input channel object 'a3742ee com.krazow.fishamongus/com.krazow.fishamongus.MainActivity (client)' was disposed without first being removed with the input manager!
+11-13 22:23:35.655  1546  1546 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x12000000 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.krazow.fishamongus fieldId=0 fieldName=null extras=null}, false)
+11-13 22:23:46.609  2906  2906 I chromium: [INFO:CONSOLE(0)] "The FetchEvent for "https://tile.openstreetmap.org/13/1293/3123.png" resulted in a network error response: the promise was resolved with an error response object.", source:  (0)
+11-13 22:23:46.612  2906  2906 I chromium: [INFO:CONSOLE(0)] "The FetchEvent for "https://tile.openstreetmap.org/13/1293/3124.png" resulted in a network error response: the promise was resolved with an error response object.", source:  (0)
+11-13 22:23:46.612  2906  2906 I chromium: [INFO:CONSOLE(0)] "The FetchEvent for "https://tile.openstreetmap.org/13/1292/3123.png" resulted in a network error response: the promise was resolved with an error response object.", source:  (0)
+11-13 22:23:46.612  2906  2906 I chromium: [INFO:CONSOLE(0)] "The FetchEvent for "https://tile.openstreetmap.org/13/1294/3123.png" resulted in a network error response: the promise was resolved with an error response object.", source:  (0)
+11-13 22:23:46.612  2906  2906 I chromium: [INFO:CONSOLE(0)] "The FetchEvent for "https://tile.openstreetmap.org/13/1292/3124.png" resulted in a network error response: the promise was resolved with an error response object.", source:  (0)
+11-13 22:23:46.612  2906  2906 I chromium: [INFO:CONSOLE(0)] "The FetchEvent for "https://tile.openstreetmap.org/13/1294/3124.png" resulted in a network error response: the promise was resolved with an error response object.", source:  (0)
+11-13 22:23:46.612  2906  2906 I chromium: [INFO:CONSOLE(0)] "The FetchEvent for "https://tile.openstreetmap.org/13/1293/3122.png" resulted in a network error response: the promise was resolved with an error response object.", source:  (0)
+11-13 22:23:46.815  2906  2906 I chromium: [INFO:CONSOLE(0)] "The FetchEvent for "https://tile.openstreetmap.org/13/1293/3125.png" resulted in a network error response: the promise was resolved with an error response object.", source:  (0)
+11-13 22:23:46.823  2906  2906 I chromium: [INFO:CONSOLE(0)] "The FetchEvent for "https://tile.openstreetmap.org/13/1292/3122.png" resulted in a network error response: the promise was resolved with an error response object.", source:  (0)
+11-13 22:23:46.823  2906  2906 I chromium: [INFO:CONSOLE(0)] "The FetchEvent for "https://tile.openstreetmap.org/13/1294/3122.png" resulted in a network error response: the promise was resolved with an error response object.", source:  (0)
+11-13 22:23:46.824  2906  2906 I chromium: [INFO:CONSOLE(0)] "The FetchEvent for "https://tile.openstreetmap.org/13/1292/3125.png" resulted in a network error response: the promise was resolved with an error response object.", source:  (0)
+11-13 22:23:46.824  2906  2906 I chromium: [INFO:CONSOLE(0)] "The FetchEvent for "https://tile.openstreetmap.org/13/1294/3125.png" resulted in a network error response: the promise was resolved with an error response object.", source:  (0)
+11-13 22:23:46.859   517   907 D ContentCapturePerUserService: Notified activity assist data for activity: Token{31b69a4 ActivityRecord{f03dc80 u0 com.krazow.fishamongus/.MainActivity t9}} without a session Id
+11-13 22:24:04.993   517   593 I ActivityManager: Force stopping com.krazow.fishamongus appid=10192 user=0: from pid 5200
+11-13 22:24:04.997   517   593 I ActivityManager: Killing 2906:com.krazow.fishamongus/u0a192 (adj 0): stop com.krazow.fishamongus due to from pid 5200
+11-13 22:24:05.011   517   593 W ActivityTaskManager: Force removing ActivityRecord{f03dc80 u0 com.krazow.fishamongus/.MainActivity t9 f}}: app died, no saved state
+11-13 22:24:05.014   832   863 V WindowManagerShell: Transition requested: android.os.BinderProxy@1228dc0 TransitionRequestInfo { type = CLOSE, triggerTask = TaskInfo{userId=0 taskId=9 displayId=0 isRunning=false baseIntent=Intent { flg=0x10000000 cmp=com.krazow.fishamongus/.MainActivity } baseActivity=null topActivity=null origActivity=null realActivity=ComponentInfo{com.krazow.fishamongus/com.krazow.fishamongus.MainActivity} numActivities=0 lastActiveTime=70316 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 defaultMinSize=220 token=WCT{android.window.IWindowContainerToken$Stub$Proxy@5670af9} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 128 - 0, 0) topActivityInfo=null launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isVisible=true isVisibleRequested=true isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden}, remoteTransition = null, displayChange = null }
+11-13 22:24:05.045   517  2483 I ImeTracker: com.krazow.fishamongus:bccc29a5: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_REMOVE_CLIENT
+11-13 22:24:05.045   517  2483 I ImeTracker: com.krazow.fishamongus:bccc29a5: onCancelled at PHASE_SERVER_SHOULD_HIDE
+11-13 22:24:05.045   517   908 D AutofillSession: handling death of Token{31b69a4 ActivityRecord{f03dc80 u0 com.krazow.fishamongus/.MainActivity t9 f} isExiting}} when saving=false
+11-13 22:24:05.046   517  1443 I WindowManager: WIN DEATH: Window{538033e u0 com.krazow.fishamongus/com.krazow.fishamongus.MainActivity}
+11-13 22:24:05.046   517  1443 W InputManager-JNI: Input channel object '538033e com.krazow.fishamongus/com.krazow.fishamongus.MainActivity (client)' was disposed without first being removed with the input manager!
+11-13 22:24:05.047   517   762 D ConnectivityService: releasing NetworkRequest [ REQUEST id=76, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED Uid: 10192 RequestorUid: 10192 RequestorPkg: com.krazow.fishamongus UnderlyingNetworks: Null] ] (release request)
+11-13 22:24:05.183   517   541 W WindowManager: Failed to deliver inset control state change to w=Window{538033e u0 com.krazow.fishamongus/com.krazow.fishamongus.MainActivity EXITING}
+11-13 22:24:05.251   517  1895 V ActivityManager: Got obituary of 2906:com.krazow.fishamongus
+11-13 22:24:05.325  1051  1051 D CarrierSvcBindHelper: onHandleForceStop: [com.krazow.fishamongus]
+11-13 22:24:05.375   517   903 V SplashScreenExceptionList: SplashScreen checking exception for package com.krazow.fishamongus (target sdk:34) -> false
+11-13 22:24:05.378   517   903 I ActivityTaskManager: Add Task{fc5e037 #9 type=standard A=10192:com.krazow.fishamongus} to hidden list because adding Task{53b58ed #10 type=standard A=10192:com.krazow.fishamongus}
+11-13 22:24:05.381   517   903 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=com.krazow.fishamongus/.MainActivity} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=0
+11-13 22:24:05.465   517  1909 D CoreBackPreview: Window{9ec3a21 u0 Splash Screen com.krazow.fishamongus}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@586ed91, mPriority=0, mIsAnimationCallback=false}
+11-13 22:24:05.467   517   541 W WindowManager: Failed to deliver inset control state change to w=Window{538033e u0 com.krazow.fishamongus/com.krazow.fishamongus.MainActivity EXITING}
+11-13 22:24:05.637   517   549 I ActivityManager: Start proc 5224:com.krazow.fishamongus/u0a192 for next-top-activity {com.krazow.fishamongus/com.krazow.fishamongus.MainActivity}
+11-13 22:24:05.640  5224  5224 I zow.fishamongus: Using CollectorTypeCC GC.
+11-13 22:24:05.643  5224  5224 W zow.fishamongus: Unexpected CPU variant for x86: x86_64.
+11-13 22:24:05.643  5224  5224 W zow.fishamongus: Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, tremont, kabylake, default
+11-13 22:24:05.644  5224  5224 E zow.fishamongus: Not starting debugger since process cannot load the jdwp agent.
+11-13 22:24:05.753   517   537 V WindowManager: Sent Transition #9 createdAt=11-13 22:24:05.011 via request=TransitionRequestInfo { type = CLOSE, triggerTask = TaskInfo{userId=0 taskId=9 displayId=0 isRunning=false baseIntent=Intent { flg=0x10000000 cmp=com.krazow.fishamongus/.MainActivity } baseActivity=null topActivity=null origActivity=null realActivity=ComponentInfo{com.krazow.fishamongus/com.krazow.fishamongus.MainActivity} numActivities=0 lastActiveTime=70316 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 defaultMinSize=220 token=WCT{RemoteToken{19f894f Task{fc5e037 #9 type=standard A=10192:com.krazow.fishamongus}}} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 128 - 0, 0) topActivityInfo=null launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isVisible=true isVisibleRequested=true isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden}, remoteTransition = null, displayChange = null }
+11-13 22:24:05.754   517   537 V WindowManager:     info={id=9 t=CLOSE f=0x0 trk=0 r=[0@Point(0, 0)] c=[{WCT{RemoteToken{c7fa916 Task{53b58ed #10 type=standard A=10192:com.krazow.fishamongus}}} m=OPEN f=MOVE_TO_TOP leash=Surface(name=Task=10)/@0xf19bad8 sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0},{WCT{RemoteToken{19f894f Task{fc5e037 #9 type=standard A=10192:com.krazow.fishamongus}}} m=CLOSE f=NONE leash=Surface(name=Task=9)/@0x8abf829 sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0},{null m=TO_FRONT f=IS_WALLPAPER leash=Surface(name=WallpaperWindowToken{5b280ae token=android.os.Binder@9c22529})/@0x436ce7c sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0}]}
+11-13 22:24:05.812  5224  5224 D nativeloader: Configuring clns-6 for other apk /data/app/~~8NY46_XDrv0t4YZx2QeJHA==/com.krazow.fishamongus-8znMiZ76KCQDzntVfTCFEg==/base.apk. target_sdk_version=34, uses_libraries=, library_path=/data/app/~~8NY46_XDrv0t4YZx2QeJHA==/com.krazow.fishamongus-8znMiZ76KCQDzntVfTCFEg==/lib/x86_64, permitted_path=/data:/mnt/expand:/data/user/0/com.krazow.fishamongus
+11-13 22:24:05.829  5224  5224 V GraphicsEnvironment: ANGLE GameManagerService for com.krazow.fishamongus: false
+11-13 22:24:05.829  5224  5224 V GraphicsEnvironment: com.krazow.fishamongus is not listed in per-application setting
+11-13 22:24:05.887   517   592 W WindowManager: Exception thrown during dispatchAppVisibility Window{538033e u0 com.krazow.fishamongus/com.krazow.fishamongus.MainActivity EXITING}
+11-13 22:24:05.898   517   592 W WindowManager: Failed to deliver inset control state change to w=Window{538033e u0 com.krazow.fishamongus/com.krazow.fishamongus.MainActivity EXITING}
+11-13 22:24:06.087  5224  5224 W zow.fishamongus: Entry not found
+11-13 22:24:06.184  5224  5264 I cr_VariationsUtils: Failed reading seed file "/data/user/0/com.krazow.fishamongus/app_webview/variations_seed_new"
+11-13 22:24:06.185  5224  5264 I cr_VariationsUtils: Failed reading seed file "/data/user/0/com.krazow.fishamongus/app_webview/variations_seed"
+11-13 22:24:06.265   517   549 I ActivityManager: Start proc 5278:com.google.android.webview:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0/u0i1 for  {com.krazow.fishamongus/org.chromium.content.app.SandboxedProcessService0:0}
+11-13 22:24:06.350   517  1948 D ConnectivityService: requestNetwork for uid/pid:10192/5224 activeRequest: null callbackRequest: 122 [NetworkRequest [ REQUEST id=123, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED Uid: 10192 RequestorUid: 10192 RequestorPkg: com.krazow.fishamongus UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647
+11-13 22:24:06.351   517   753 D WifiNetworkFactory: got request NetworkRequest [ REQUEST id=123, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED Uid: 10192 RequestorUid: 10192 RequestorPkg: com.krazow.fishamongus UnderlyingNetworks: Null] ]
+11-13 22:24:06.351   517   753 D UntrustedWifiNetworkFactory: got request NetworkRequest [ REQUEST id=123, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED Uid: 10192 RequestorUid: 10192 RequestorPkg: com.krazow.fishamongus UnderlyingNetworks: Null] ]
+11-13 22:24:06.352   517   753 D OemPaidWifiNetworkFactory: got request NetworkRequest [ REQUEST id=123, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED Uid: 10192 RequestorUid: 10192 RequestorPkg: com.krazow.fishamongus UnderlyingNetworks: Null] ]
+11-13 22:24:06.352   517   753 D MultiInternetWifiNetworkFactory: got request NetworkRequest [ REQUEST id=123, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED Uid: 10192 RequestorUid: 10192 RequestorPkg: com.krazow.fishamongus UnderlyingNetworks: Null] ]
+11-13 22:24:06.516   517  1948 D CoreBackPreview: Window{3f6a894 u0 com.krazow.fishamongus/com.krazow.fishamongus.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@75f5ec4, mPriority=0, mIsAnimationCallback=false}
+11-13 22:24:06.984   517   537 I ActivityTaskManager: Displayed com.krazow.fishamongus/.MainActivity for user 0: +1s632ms
+11-13 22:24:07.014   517  1948 D CoreBackPreview: Window{9ec3a21 u0 Splash Screen com.krazow.fishamongus EXITING}: Setting back callback null
+11-13 22:24:07.044   517  2496 W InputManager-JNI: Input channel object '9ec3a21 Splash Screen com.krazow.fishamongus (client)' was disposed without first being removed with the input manager!
+11-13 22:24:07.168   517  1909 I ImeTracker: com.krazow.fishamongus:8887aef3: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+11-13 22:24:07.169   517  1909 I ImeTracker: com.krazow.fishamongus:8887aef3: onCancelled at PHASE_SERVER_SHOULD_HIDE
+11-13 22:24:07.185  1546  1546 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.krazow.fishamongus fieldId=0 fieldName=null extras=null}, false)
+11-13 22:24:07.619  1810  2232 W A       : Can't format flag AndroidGsaVelourJars__velour_crashtest_jar__name to integer.
+11-13 22:24:09.442  1810  2232 W A       : Can't format flag AndroidGsaVelourJars__velour_crashtest_jar__name to integer.
+11-13 22:24:12.052  1810  2231 W A       : Can't format flag AndroidGsaVelourJars__velour_crashtest_jar__name to integer.
+11-13 22:24:14.134  1810  2231 W A       : Can't format flag AndroidGsaVelourJars__velour_crashtest_jar__name to integer.
+11-13 22:24:18.091   517   572 W ActivityManager: Scheduling restart of crashed service com.google.android.settings.intelligence/.modules.routines.impl.RoutinesJobIntentService in 1000ms for connection
+11-13 22:24:18.163   517   572 W ActivityManager: Scheduling restart of crashed service com.google.android.settings.intelligence/.modules.routines.impl.ComputeNewInferencesJobService in 10928ms for connection
+11-13 22:24:18.163   517   572 W ActivityManager: Scheduling restart of crashed service com.google.android.settings.intelligence/.modules.routines.impl.PruneDatabaseJobService in 20928ms for connection
+11-13 22:24:21.140  4777  4869 V DynamiteModule: Dynamite loader version >= 2, using loadModule2NoCrashUtils
+11-13 22:24:25.382  1546  1546 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x12000000 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.krazow.fishamongus fieldId=0 fieldName=null extras=null}, false)
+11-13 22:24:33.219  1810  2231 W A       : Can't format flag AndroidGsaVelourJars__velour_crashtest_jar__name to integer.
+11-13 22:24:48.841  1810  2218 W A       : Can't format flag AndroidGsaVelourJars__velour_crashtest_jar__name to integer.
+11-13 22:24:51.081  1810  2220 W A       : Can't format flag AndroidGsaVelourJars__velour_crashtest_jar__name to integer.
+11-13 22:24:52.778  1810  2232 W A       : Can't format flag AndroidGsaVelourJars__velour_crashtest_jar__name to integer.
+11-13 22:24:54.021  1414  5931 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:24:54.057  1414  5931 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:24:56.362   517  1951 D ContentCapturePerUserService: Notified activity assist data for activity: Token{3ab4322 ActivityRecord{212371f u0 com.krazow.fishamongus/.MainActivity t10}} without a session Id
+11-13 22:25:01.879   517   821 D ContentCapturePerUserService: Notified activity assist data for activity: Token{3ab4322 ActivityRecord{212371f u0 com.krazow.fishamongus/.MainActivity t10}} without a session Id
+11-13 22:25:03.241  1414  6045 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:03.480  1414  6045 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:03.489  1414  6045 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:03.503  1414  6106 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:03.581  1414  6045 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:03.642  1414  6101 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:03.714  1414  5931 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:03.769  1414  5931 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:03.833  1414  5931 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:03.958  1414  5931 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:04.025  1414  5931 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:04.338  1414  5931 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:04.412  1414  6102 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:04.417  1414  6045 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:04.444  1414  6045 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:04.510  1414  6045 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:04.522  1414  6102 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:04.626  1414  6139 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:04.664  1414  6102 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:04.728  1414  6045 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:04.793  1414  6139 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:04.832  1414  6102 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:04.912  1414  6045 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:04.965  1414  6102 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:04.979  1414  6139 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:05.021  1414  6136 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:05.068  1414  6139 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:05.106  1414  6134 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:05.155  1414  6134 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:05.214  1414  6134 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:05.278  1414  6102 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:05.317  1414  6102 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:05.342  1414  5931 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:05.371  1414  6045 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:05.425  1414  6134 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:05.435  1414  6133 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:05.477  1414  6133 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:05.510  1414  6102 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:05.558  1414  6102 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:05.767  1414  6138 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:05.898  1414  6134 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:05.922  1414  6137 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:06.066  1414  6137 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:06.111  1414  6137 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:06.198  1414  6137 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:06.304  1414  6137 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:06.468  1414  6136 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:06.551  1414  6136 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:06.642  1414  6136 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:06.958  1414  6137 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:07.257  1414  6137 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:07.337  1414  6137 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:07.401  1414  6105 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:07.432  1414  6137 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:07.563  1414  5931 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:07.723  1414  5931 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:07.777  1414  6141 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:07.895  1414  6103 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:07.947  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:07.974  1414  6141 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:08.089  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:08.156  1414  6136 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:08.324  1414  6103 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:08.488  1414  6103 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:08.583  1414  5931 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:08.682  1414  5931 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:08.708  1414  6141 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:08.746  1414  5931 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:08.788  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:08.811  1414  6139 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:08.818  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:08.842  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:08.852  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:08.890  1414  6136 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:08.902  1414  6139 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:08.958  1414  6136 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:09.415  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:09.517  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:09.540  1414  6139 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:09.558  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:09.592  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:09.642  1414  5931 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:09.675  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:09.689  1414  6139 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:09.730  1414  6137 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:09.750  1414  6136 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:09.794  1414  6139 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:09.999  1414  6141 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.140  1414  6136 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.158  1414  6136 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.200  1414  6139 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.220  1414  6139 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.291  1414  5931 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.306  1414  6136 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.334  1414  5931 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.345  1810  2231 W A       : Can't format flag AndroidGsaVelourJars__velour_crashtest_jar__name to integer.
+11-13 22:25:10.385  1414  6105 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.477  1414  6141 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.492  1414  6141 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.498  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.503  1810  2220 W A       : Can't format flag AndroidGsaVelourJars__velour_crashtest_jar__name to integer.
+11-13 22:25:10.526  1414  6045 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.585  1414  6132 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.597  1414  6132 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.617  1414  6132 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.633  1414  6136 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.656  1414  6136 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.695  1414  6136 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.719  1414  6141 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.725  1414  6134 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.733  1414  6134 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.758  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.792  1414  6136 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.830  1414  6132 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.871  1414  6132 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.880  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.896  1414  6138 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.927  1414  6138 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.957  1414  6103 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.990  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:10.997  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.010  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.052  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.063  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.073  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.114  1414  6103 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.137  1414  6103 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.172  1414  6136 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.184  1414  6103 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.223  1414  6103 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.238  1414  6188 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.245  1414  6103 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.256  1414  6101 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.262  1414  6138 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.271  1414  6188 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.364  1414  6132 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.379  1414  6132 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.427  1414  6103 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.500  1414  6132 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.541  1414  6132 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.555  1414  6132 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.575  1414  6188 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.598  1414  6103 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.638  1414  6103 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.720  1414  6103 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.759  1414  6142 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.772  1414  6100 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.786  1414  6138 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:11.922  1414  6138 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:12.009  1414  6138 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:12.120  1414  6138 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:12.176  1414  6142 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:12.264  1414  6142 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:12.337  1414  6188 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:12.474  1414  6137 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:12.511  1414  6101 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:12.564  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:12.620  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:12.644  1414  6156 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+11-13 22:25:12.786   517  2449 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.chimera.GmsApiService in 1000ms for connection
+11-13 22:25:12.786   517  2449 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.chimera.GmsBoundBrokerService in 11000ms for connection
+11-13 22:25:12.787   517  2449 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.chimera.container.ExternalFileApkService in 20999ms for start-requested
+11-13 22:25:12.787   517  2449 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.chimera.GmsIntentOperationService in 30999ms for start-requested
+11-13 22:25:12.788   517  2449 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.icing.service.IndexService in 40998ms for connection
+11-13 22:25:12.788   517  2449 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.icing.service.AppIndexingService in 50998ms for connection
+11-13 22:25:12.823   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.chimera.PersistentIntentOperationService in 1000ms for start-requested
+11-13 22:25:12.826   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/com.google.android.location.internal.server.GoogleLocationService in 50960ms for start-requested
+11-13 22:25:12.826   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.chimera.PersistentBoundBrokerService in 60960ms for connection
+11-13 22:25:12.826   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.thunderbird.EmergencyPersistentService in 70960ms for start-requested
+11-13 22:25:12.826   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.nearby.exposurenotification.service.ExposureMatchingService in 80960ms for start-requested
+11-13 22:25:12.826   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/com.google.android.location.internal.GoogleLocationManagerService in 90959ms for start-requested
+11-13 22:25:12.826   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.gcm.nts.SchedulerService in 100959ms for start-requested
+11-13 22:25:12.826   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.clearcut.debug.ClearcutDebugDumpService in 110959ms for start-requested
+11-13 22:25:12.827   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.location.geocode.GeocodeService in 120959ms for connection
+11-13 22:25:12.827   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.chimera.PersistentApiService in 130959ms for connection
+11-13 22:25:12.827   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.common.stats.GmsCoreStatsService in 140959ms for start-requested
+11-13 22:25:12.827   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/com.google.android.contextmanager.service.ContextManagerService in 150959ms for start-requested
+11-13 22:25:12.827   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.nearby.messages.service.NearbyMessagesService in 160959ms for start-requested
+11-13 22:25:12.827   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/com.google.android.location.network.NetworkLocationService in 170959ms for connection
+11-13 22:25:12.827   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.location.persistent.LocationPersistentService in 180958ms for start-requested
+11-13 22:25:12.828   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.fido.fido2.pollux.CableAuthenticatorService in 190958ms for start-requested
+11-13 22:25:12.828   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.presencemanager.service.PresenceManagerPresenceReportService in 200958ms for start-requested
+11-13 22:25:12.828   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/com.google.android.location.fused.FusedLocationService in 210958ms for connection
+11-13 22:25:12.828   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.geotimezone.GeoTimeZoneService in 220958ms for connection
+11-13 22:25:12.828   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.gcm.GcmService in 230958ms for start-requested
+11-13 22:25:12.828   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.chimera.PersistentDirectBootAwareApiService in 240958ms for connection
+11-13 22:25:12.828   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/com.google.android.location.internal.server.HardwareArProviderService in 250958ms for connection
+11-13 22:25:12.828   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.nearby.sharing.ReceiveSurfaceService in 260958ms for start-requested
+11-13 22:25:12.828   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.auth.setup.devicesignals.LockScreenService in 270958ms for start-requested
+11-13 22:25:12.828   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.deviceconnection.service.DeviceConnectionWatcherService in 280958ms for start-requested
+11-13 22:25:12.828   517   593 W ActivityManager: Scheduling restart of crashed service com.google.android.gms/.auth.account.authenticator.GoogleAccountAuthenticatorService in 290958ms for connection
+11-13 22:25:12.893   517   548 W ActivityManager: Rescheduling restart of crashed service com.google.android.gms/.chimera.container.ExternalFileApkService in 894ms for other
+11-13 22:25:12.893   517   548 W ActivityManager: Rescheduling restart of crashed service com.google.android.gms/.chimera.GmsIntentOperationService in 15768ms for other
+11-13 22:25:12.893   517   548 W ActivityManager: Rescheduling restart of crashed service com.google.android.gms/.icing.service.IndexService in 25768ms for other

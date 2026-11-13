@@ -1,0 +1,7 @@
+Starting: Intent { cmp=com.krazow.fishamongus/.MainActivity }
+Status: ok
+LaunchState: COLD
+Activity: com.krazow.fishamongus/.MainActivity
+TotalTime: 3789
+WaitTime: 3811
+Complete
