@@ -1,8 +1,12 @@
 plugins { id 'com.android.application' }
 
 // The version comes from APP_VERSION in app.js, e.g. 4.9.1 → versionCode 40901.
-def appVersion = (file('../../app.js').text =~ /APP_VERSION = '([0-9.]+)/)[0][1]
-def parts = (appVersion.tokenize('.') + ['0', '0']).take(3).collect { it as int }
+// android/build-release.sh (run by the release kit) passes -PversionName, -Pbeta and -PwebDir.
+def webDir = project.hasProperty('webDir') ? project.property('webDir').toString() : '../..'
+def appVersion = project.hasProperty('versionName') ? project.property('versionName').toString()
+    : (file("$webDir/app.js").text =~ /APP_VERSION = '([0-9.]+)/)[0][1]
+def parts = (appVersion.tokenize('-')[0].tokenize('.') + ['0', '0']).take(3).collect { it as int }
+def beta = project.hasProperty('beta') && project.property('beta').toString() == 'true'
 
 android {
     namespace 'com.krazow.fishamongus'
@@ -13,6 +17,9 @@ android {
         targetSdk 34
         versionCode parts[0] * 10000 + parts[1] * 100 + parts[2]
         versionName appVersion
+        // The beta installs beside the real app, with its own log.
+        if (beta) applicationIdSuffix '.beta'
+        manifestPlaceholders = [appLabel: beta ? 'Fishamongus! Beta' : 'Fishamongus!']
     }
     buildTypes {
         release {

@@ -1,6 +1,7 @@
 // Fishamongus! service worker: keeps the app working with no signal.
-// Bump VERSION whenever you change any app file so phones pick up the update.
-const VERSION = 'tl-v33';
+// The release kit (github.com/krazow/release-kit) stamps the version in at every release, so phones pick up the update.
+const CACHE_PREFIX = 'fishamongus-';   // the kit makes this 'fishamongusbeta-' in the beta
+const VERSION = CACHE_PREFIX + '4.9.3';
 const TILES = 'tl-tiles';          // map tiles you've looked at, kept across app updates
 const MAX_TILES = 1500;            // about 30 MB
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest',
@@ -10,7 +11,7 @@ self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== VERSION && k !== TILES).map((k) => caches.delete(k))))
+  e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => (k.startsWith(CACHE_PREFIX) || (CACHE_PREFIX === 'fishamongus-' && /^tl-v\d+$/.test(k))) && k !== VERSION).map((k) => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 async function trimTiles(cache) {

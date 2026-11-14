@@ -149,11 +149,11 @@ Download both from the latest release: **https://github.com/krazow/fishamongus/r
 - **Android 7.0 or newer:** open `Fishamongus-<version>.apk` on the phone. Android asks once to allow installs from your browser or file manager. It works offline from the first launch, maps included; installing a newer APK updates it and keeps your log. Spreadsheets, backups and GPX/KML files can be opened with Fishamongus! from a file manager or email.
 - **Windows 10 and 11:** run `FishamongusSetup-<version>.exe` (no administrator needed). It opens in a Microsoft Edge app window, with Start menu and desktop shortcuts, and uninstalls from Settings → Apps. SmartScreen may warn because the file isn't code-signed: More info → Run anyway. How it's built: [windows/README.md](windows/README.md).
 
-Each install keeps its own log on that device; move catches between them with a backup or spreadsheet file. Both are built by GitHub Actions ([build-apps.yml](.github/workflows/build-apps.yml)) on every change, with the map library bundled.
+Each install keeps its own log on that device; move catches between them with a backup or spreadsheet file. Both are built with every release by the shared [Krazow release kit](https://github.com/krazow/release-kit), with the map library bundled (see [Releasing](#releasing)).
 
 ## Get it on your phone (about 2 minutes)
 
-Fishamongus! is live at **https://krazow.github.io/fishamongus/**, published by GitHub Pages from the `main` branch of this repository.
+Fishamongus! is live at **https://krazow.github.io/fishamongus/**. New versions are tried first at **https://krazow.github.io/fishamongus/beta/**, which keeps its own log, separate from your real one.
 
 1. Open that link on your phone:
    - **iPhone (Safari, not Chrome):** tap Share → **Add to Home Screen**.
@@ -161,7 +161,13 @@ Fishamongus! is live at **https://krazow.github.io/fishamongus/**, published by 
 2. Open Fishamongus! from your home screen, tap **Get started** and allow **Location**. Allow **Camera** when you add a photo.
 3. In Settings → Backup, choose how often to back up.
 
-**Updating:** push changes to `main` and GitHub Pages republishes in a minute or two. Bump `VERSION` in `sw.js` with every change so installed copies pick up the update the next time they open online. Keep the same web address: your log is stored on the phone and tied to it.
+**Updating:** see [Releasing](#releasing). Keep the same web address: your log is stored on the phone and tied to it.
+
+## Releasing
+
+Type **`/releasenow`** in a Claude chat on this repo. It bumps `VERSION`, updates `APP_VERSION` and `CHANGELOG.md`, and starts the shared [Krazow release kit](https://github.com/krazow/release-kit) pipeline: tests, then the beta at https://krazow.github.io/fishamongus/beta/ and a pre-release with the **Fishamongus! Beta** Android app (it installs beside the real one, with its own log). When it's good, **`/releasenow promote`** puts the same version live and publishes the APK and `FishamongusSetup-<version>.exe` as the Latest release. `/releasenow all`, `status` and `rollback` are there too.
+
+Pushing to `main` no longer changes the live app; tests run on every pull request ([CI](.github/workflows/ci.yml)). The kit stamps the version into `sw.js`, so installed copies pick up each release. The Android build ([android/build-release.sh](android/build-release.sh)) signs with the repo secrets `ANDROID_KEYSTORE_B64`, `ANDROID_KEYSTORE_PASSWORD` and `ANDROID_KEY_ALIAS`, which must hold the same key as earlier releases; without them a release has no APK, because one signed with another key couldn't update the app on phones.
 
 ## How it works
 
