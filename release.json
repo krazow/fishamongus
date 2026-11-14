@@ -1,0 +1,23 @@
+{
+  "id": "fishamongus",
+  "name": "Fishamongus!",
+  "description": "A fishing log: what you caught, where, on what, and in what conditions.",
+  "site": ".",
+  "app": ".",
+  "sw": "sw.js",
+  "version": [{ "file": "app.js", "pattern": "const APP_VERSION = '([0-9.]+[^ ']*)" }],
+  "android": {
+    "enabled": true,
+    "build": "custom",
+    "custom": "bash android/build-release.sh"
+  },
+  "windows": {
+    "enabled": true,
+    "build": "custom",
+    "betaBuild": false,
+    "custom": "bash windows/build-release.sh"
+  },
+  "ios": { "enabled": false },
+  "macos": { "enabled": false },
+  "extras": { "enabled": false }
+}
