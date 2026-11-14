@@ -1,6 +1,7 @@
 # Builds the Android app (APK) and the Windows installer from the web app in this repository.
 # Both carry the map library, so maps work offline from the first launch.
-# Signing: with the secrets ANDROID_KEYSTORE_B64, ANDROID_KEYSTORE_PASSWORD and ANDROID_KEY_ALIAS set, the APK is
+# Signing: with the secret ANDROID_SIGNING_KEY (the whole android-signing-key.txt file), or the three secrets
+# ANDROID_KEYSTORE_B64, ANDROID_KEYSTORE_PASSWORD and ANDROID_KEY_ALIAS, set, the APK is
 # signed here and published as a release. Without them, the unsigned APK is pushed to the `builds` branch to be signed.
 name: Build Android and Windows apps
 on:
@@ -59,8 +60,16 @@ jobs:
           KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
           KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KS_FILE: ${{ secrets.ANDROID_SIGNING_KEY }}
           EXPECTED_CERT: 941c7276419e8e131db99bba49564556e2f5cc8953df7985171a5a893b3c3335
         run: |
+          # One secret can hold the whole android-signing-key.txt file instead of the three separate ones.
+          if [ -n "$KS_FILE" ]; then
+            KS_ALIAS=$(printf '%s\n' "$KS_FILE" | sed -n 's/^ *ANDROID_KEY_ALIAS *= *//p' | head -1 | tr -d ' \r')
+            KS_PASS=$(printf '%s\n' "$KS_FILE" | sed -n 's/^ *ANDROID_KEYSTORE_PASSWORD *= *//p' | head -1 | tr -d ' \r')
+            KS_B64=$(printf '%s\n' "$KS_FILE" | tr -d '\r' | grep -E '^[A-Za-z0-9+/=]{200,}$' | head -1)
+            export KS_ALIAS KS_PASS KS_B64
+          fi
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           mkdir -p dist
           "$BT/zipalign" -f -p 4 android/app/build/outputs/apk/release/app-release-unsigned.apk "dist/Fishamongus-${{ steps.v.outputs.ver }}-unsigned.apk"
@@ -81,9 +90,18 @@ jobs:
           KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
           KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KS_FILE: ${{ secrets.ANDROID_SIGNING_KEY }}
         run: |
           r=/tmp/signing-diag.txt; : > $r
           say() { echo "$1" | tee -a $r; }
+          [ -n "$KS_FILE" ] && say "Using ANDROID_SIGNING_KEY (the whole file, ${#KS_FILE} characters)" || say "ANDROID_SIGNING_KEY not set; using the three separate secrets"
+          # One secret can hold the whole android-signing-key.txt file instead of the three separate ones.
+          if [ -n "$KS_FILE" ]; then
+            KS_ALIAS=$(printf '%s\n' "$KS_FILE" | sed -n 's/^ *ANDROID_KEY_ALIAS *= *//p' | head -1 | tr -d ' \r')
+            KS_PASS=$(printf '%s\n' "$KS_FILE" | sed -n 's/^ *ANDROID_KEYSTORE_PASSWORD *= *//p' | head -1 | tr -d ' \r')
+            KS_B64=$(printf '%s\n' "$KS_FILE" | tr -d '\r' | grep -E '^[A-Za-z0-9+/=]{200,}$' | head -1)
+            export KS_ALIAS KS_PASS KS_B64
+          fi
           say "ANDROID_KEYSTORE_B64: ${#KS_B64} characters (expected 4560)"
           clean=$(printf '%s' "$KS_B64" | tr -d ' \r\n\t')
           say "  after removing spaces and line breaks: ${#clean} characters"
