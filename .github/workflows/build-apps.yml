@@ -91,9 +91,12 @@ jobs:
           KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KS_FILE: ${{ secrets.ANDROID_SIGNING_KEY }}
+          # Only whether these exist as Variables (saved on the wrong tab) is reported, never their contents.
+          V_NAMES: ${{ join(fromJSON(format('["{0}","{1}","{2}","{3}"]', vars.ANDROID_SIGNING_KEY != '' && 'ANDROID_SIGNING_KEY' || '', vars.ANDROID_KEYSTORE_B64 != '' && 'ANDROID_KEYSTORE_B64' || '', vars.ANDROID_KEYSTORE_PASSWORD != '' && 'ANDROID_KEYSTORE_PASSWORD' || '', vars.ANDROID_KEY_ALIAS != '' && 'ANDROID_KEY_ALIAS' || '')), ' ') }}
         run: |
           r=/tmp/signing-diag.txt; : > $r
           say() { echo "$1" | tee -a $r; }
+          v=$(echo $V_NAMES); [ -n "$v" ] && say "Saved as Variables, not Secrets: $v" || say "No signing values saved as Variables"
           [ -n "$KS_FILE" ] && say "Using ANDROID_SIGNING_KEY (the whole file, ${#KS_FILE} characters)" || say "ANDROID_SIGNING_KEY not set; using the three separate secrets"
           # One secret can hold the whole android-signing-key.txt file instead of the three separate ones.
           if [ -n "$KS_FILE" ]; then
