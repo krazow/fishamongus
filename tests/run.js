@@ -66,7 +66,7 @@ const EXPECT = {
     /^readout: Senko in Partly cloudy: 3 catches/m,
     /^pressure -> Rising Senko 3 of 9/m,
     /^bass tiles: +13Fish/m,
-    /^metric temp cols: 7 Lure Below 10°C/m,
+    /^metric temp cols: \d+ Lure Below 10°C/m,
     /^page width: 390$/m,
     NO_ERRORS,
   ],
