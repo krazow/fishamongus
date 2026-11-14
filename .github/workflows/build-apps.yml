@@ -75,6 +75,30 @@ jobs:
             echo "::error::The signing secrets aren't set: ANDROID_KEYSTORE_B64 is empty."; exit 1
           fi
           ls -la dist
+      - name: Diagnose the signing secrets (check only; never prints them)
+        if: ${{ always() && inputs.check_signing }}
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          r=/tmp/signing-diag.txt; : > $r
+          say() { echo "$1" | tee -a $r; }
+          say "ANDROID_KEYSTORE_B64: ${#KS_B64} characters (expected 4560)"
+          clean=$(printf '%s' "$KS_B64" | tr -d ' \r\n\t')
+          say "  after removing spaces and line breaks: ${#clean} characters"
+          case "$KS_B64" in ANDROID*|*" = "*) say "  starts with a name or contains ' = ': only the value should be pasted";; esac
+          if printf '%s' "$clean" | base64 -d > /tmp/k.p12 2>/dev/null; then say "  decodes: yes, $(stat -c%s /tmp/k.p12) bytes (expected 3418)"; else say "  decodes: NO (not valid base64)"; fi
+          sum=$(sha256sum /tmp/k.p12 | cut -c1-64); [ "$sum" = 04b8a54f2374744328159dd1ce8766bc555fd9354377dc530cf33992ffb266c8 ] && say "  same key file as 4.9.3: yes" || say "  same key file as 4.9.3: NO"
+          say "ANDROID_KEYSTORE_PASSWORD: ${#KS_PASS} characters (expected 24)"
+          if keytool -list -keystore /tmp/k.p12 -storetype PKCS12 -storepass:env KS_PASS > /tmp/kl.txt 2>&1; then say "  opens the key file: yes"; else say "  opens the key file: NO ($(grep -o 'password was incorrect\|keystore password was incorrect\|Invalid keystore format' /tmp/kl.txt | head -1))"; fi
+          say "ANDROID_KEY_ALIAS: ${#KS_ALIAS} characters (expected 11)"
+          if grep -qi "^${KS_ALIAS}," /tmp/kl.txt; then say "  found in the key file: yes"; else say "  found in the key file: NO (aliases in the file: $(grep -c 'PrivateKeyEntry' /tmp/kl.txt))"; fi
+          rm -f /tmp/k.p12 /tmp/kl.txt
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git stash -q 2>/dev/null || true
+          git checkout -q --orphan diag-new && git rm -rfq . && git clean -fdq
+          cp $r signing-diag.txt && git add signing-diag.txt && git commit -qm "Signing diagnosis for ${GITHUB_SHA::7}" && git push -qf origin diag-new:signing-diag
       - name: Windows installer
         run: |
           set -o pipefail
