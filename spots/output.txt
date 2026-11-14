@@ -1,0 +1,23 @@
+toast: North cove dock saved · linked 4 catches
+spot cards: [
+  'North cove dock Last catch Nov 11 · You are here Largemouth Bass · Senko 4fish'
+]
+unassigned note: 1 catch not linked to a spot. Open a catch and choose Save this location as a spot, or edit it to pick a spot.
+auto spot: North cove dock – here | Matched automatically – you are at this spot.
+log meta: 10:26 PM · North cove dock
+at B spot: (none) | Not inside a saved spot. | options: No spot / North cove dock – 1.2 mi / + New spot here…
+no-name error: Give the new spot a name.
+spots now: [ 'Rocky point', 'North cove dock' ]
+catch detail spot row: North cove dock
+stats active: true spot filter: North cove dock | tiles:  5Fish 2Species 100%Releasedof 4 recorded 4.41 lbBiggestLargemouth Bass 
+sheets open: 0
+make-spot loc: 34.50000, -118.20000 From the catch
+detail after: Upper creek
+after delete spots: [ 'North cove dock', 'Upper creek' ] | sheets open: 0
+smallmouth unlinked: [ null ]
+map msg: 
+backup spots: [ 'North cove dock', 'Upper creek' ] catches: 7
+csv: ﻿Date,Time,Spot,Species,Count,Lure/Bait,Lure colour,Lure size,Length (in),Weight (lb),Released,Latitude,Longitude,GPS accuracy (m),Weather,Temp (°F),Wind (mph),
+restore toast: Restored 7 catches, 2 spots
+upgrade from v1: [ 'Walleye' ]
+errors: []

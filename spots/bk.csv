@@ -1,0 +1,8 @@
+﻿Date,Time,Spot,Species,Count,Lure/Bait,Lure colour,Lure size,Length (in),Weight (lb),Released,Latitude,Longitude,GPS accuracy (m),Weather,Temp (°F),Wind (mph),Wind dir,Pressure (inHg),Pressure trend,Humidity (%),Moon,Tide stage,Tide height (ft),Tidal coefficient,Tide station,Water temp (°F),Waves (ft),Wave period (s),Session,Fish or shellfish,Bait (shellfish),Crab sex,Shell,Carapace (in),Pots,Soak (h),River flow (cfs),Flow trend,From,Notes
+2026-11-13,22:26,,Smallmouth Bass,1,Ned rig,,,,,,34.163000,-118.813300,8,Overcast,64,5.6,WNW,29.88,falling,62,Waxing crescent,,,,,,,,,fish,,,,,,,,,,
+2026-11-13,22:26,North cove dock,Largemouth Bass,1,Senko,,,,,,34.145600,-118.813300,6,Overcast,64,5.6,WNW,29.88,falling,62,Waxing crescent,,,,,,,,,fish,,,,,,,,,,
+2026-11-11,22:26,North cove dock,Largemouth Bass,1,Senko,,,11.8,2.2,yes,34.145600,-118.813300,5,Mostly clear,59,3.7,SSW,29.97,steady,60,Waxing crescent,,,,,,,,,fish,,,,,,,,,,
+2026-11-10,22:26,North cove dock,Largemouth Bass,1,Senko,,,13.8,4.41,yes,34.145900,-118.813300,5,Overcast,66.2,6.8,SSW,29.97,falling,60,New moon,,,,,,,,,fish,,,,,,,,,,
+2026-11-09,22:26,North cove dock,Largemouth Bass,1,Ned rig,,,15.7,,yes,34.146200,-118.813300,5,Mostly clear,73.4,9.9,SSW,29.97,steady,60,New moon,,,,,,,,,fish,,,,,,,,,,
+2026-11-08,22:26,North cove dock,Bluegill,1,Topwater popper,,,17.7,,yes,34.146500,-118.813300,5,Overcast,80.6,13,SSW,29.97,falling,60,New moon,,,,,,,,,fish,,,,,,,,,,
+2026-11-03,12:26,Upper creek,Rainbow Trout,1,PowerBait,,,,,no,34.500000,-118.200000,5,,,,,,,,Last quarter,,,,,,,,,fish,,,,,,,,,,

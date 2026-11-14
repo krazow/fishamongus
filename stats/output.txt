@@ -1,0 +1,13 @@
+empty: No stats yetLog a few catches and this s
+readout: Senko in Partly cloudy: 3 catches, 60% of your 5 partly cloudy catches and 27% of this lure's catches.
+pressure -> Rising Senko 3 of 9 | Steady Senko 4 of 12 | Falling Senko 4 of 14
+temp -> Below 50°F Senko 2 of 5 | 50–65°F No clear favorite 2 of 12 | 65–80°F Senko / Topwater popper 2 of 8 | 80°F + Senko 5 of 10
+wind -> Calm Ned rig / Senko 2 of 9 | Light Senko 6 of 12 | Breezy No clear favorite 2 of 10 | Windy Senko 2 of 4
+time -> Dawn PowerBait 2 of 5 | Morning Ned rig / Senko 2 of 5 | Midday Spinnerbait / Topwater popper 1 of 2 · few | Afternoon Senko / Topwater popper 3 of 10 | Evening Senko 3 of 7 | Night Senko 5 of 11
+moon -> New moon Senko 4 of 12 | Waxing Senko 4 of 13 | Full moon Senko 2 of 6 | Waning Senko 3 of 9
+bass tiles:  13Fish 6Lures that worked 85%Released 5.46 lbBiggestLargemouth Bass 
+30d:  5Fish 4Lures that worked 60%Released 5.46 lbBiggestLargemouth Bass What your lo
+detail open: true
+metric temp cols: 9 Lure Below 10°C5 10–18°C12 18–27°C8 27°C +10
+page width: 390
+errors: []

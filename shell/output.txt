@@ -1,0 +1,31 @@
+--- fish by default; water near the coast: Fish / Both
+shellfish menu: Saltwater: Crab ▸, Shrimp & prawns ▸, Clams ▸, Oysters ▸, Mussels ▸, Scallops ▸, Lobster ▸, Squid & octopus ▸ | Freshwater: Crayfish ▸ | Not listed: Other – type it in…
+labels: Gear & bait required | How many? | size row hidden: true | gear options: Pots & traps, Digging & gathering, Other, Not listed
+freshwater shellfish: Choose a shellfish…, Crayfish ▸, Other – type it in…
+crab fields: true | pot fields: true | safety: false
+toast: 3 × Dungeness Crab logged 🎣
+log card: Dungeness Crab×3 Crab pot · Chicken · male · 6.5 in 10:25 PM ⛅ 63°F · Partly cloudy · 5 mph W · 29.94 inHg →
+detail: 3 × Dungeness Crab Fri, Nov 13, 2026, 10:25 PM · Kept CatchCrab pot · Chicken GearCrab potBaitChickenNumber caught3SexMaleShellHardCarapace width6.5 inPots or rings2Soak time1.5 hReleasedNo – kept Conditions⛅ Partly cloudy · 63°F Weather⛅ Partly cloudyAir temp
+limits: Dungeness Crabmales only, hard shell, at least 6.25 in across · Kept today: 3×Red Rock Crabat least 5 in across · Kept today: 0×
+form remembers shellfish: Shellfish
+crab hint: This crab can't be kept under your limits (females must go back; under the 6.25 in minimum). Release it. | kept hint: Kept today: 4 of 5 Dungeness Crab with this one.
+confirm: This Dungeness Crab can't be kept under your limits: females must go back, under the 6.25 in minimum. Save it as kept anyway?
+manila -> kind: Shellfish | safety: true | crab fields: false
+back to fish -> species cleared: "" | size row: true | lure label: Lure or bait required
+clam limits: Butter Clam40 clams of all kinds combined, up to 10 lb in the shell, at least 1.5 in across · Kept today: 0×Cockle40 clams of all kinds combined, up to 10 lb in the shell, at least 2.5 in across · Kept today: 0×Dungeness Crabmales only, hard shell, at least 6.25 in across · Kept today: 3×Geoduckkeep the first one dug, any size or condition · Kept today: 0×Horse Clam (Gaper)keep the first 7 dug, any size or condition · Kept today: 0×Manila Clam40 clams of all kinds combined, up to 10 lb in the shell, at least 1.5 in across · Kept today: 0×Native Littleneck Clam40 clams of all kinds combined, up to 10 lb in the shell, at least 1.5 in across · Kept today: 0×Pacific Oysterat least 2.5 in across,
+manila kept hint: Kept today: 30 of 40 clams with this one.
+butter kept hint: Kept today: 39 of 40 clams with this one.
+now kept line: Kept today: Dungeness Crab 3 of 5 · clams 39 of 40
+stats bar: Fish* / Shellfish / All
+shell tiles: 43Caught 3Kinds 2%Released 6.5 inWidest crabDungeness Crab
+shell cards: What your log says | Catch per pot-hour | Catch record card | Best gear by conditions | When you catch the most | Catches by species | Top gear
+pot card: Catch per pot-hourShellfish caught for each pot or ring fished for an hour, by gear and bait. Overall: 1 per pot-hour. Crab pot · Chicken13 caught in 3 pot-hours
+crc card: Catch record cardDungeness crab you kept in 2026, for your Puget Sound catch record cards. Record each crab in ink right away; this is only a check. 0Summer cardJune 1 – Sep 7 3Winter cardAfter Labor Day – Dec 31 Report your cards to WDFW even if you caught nothing. WDFW crab seasons and rules
+fish tiles: 1Fish 1Species 100%Released –Biggest
+trip name: Trip plan
+trip cards: Hour by hour | Sun, moon and bite times | Tides | Gear that has worked | Gear checklist | Shellfish safety | Regulations
+clam box: Clam tidesNo minus tide this day – the lowest is 0.0 ft. Clamming is best on tides below 0 ft. Daylight minus tides from this date, next two weeks:Mon, Nov 233:56 PM-0.2 ftTue, Nov 244:44 PM-0.5 ftlowest
+gear: Shellfish license|Shovel or clam gun|Bucket or mesh bag|Measuring gauge|Rubber boots and gloves|Headlamp for evening low tides|Check the Shellfish Safety Map before you go|
+regs: Directions | Washington shellfish seasons and rules (WDFW) | Shellfish Safety Map (biotoxin closures) | Licenses and regulations by state
+trip list: Upcoming Nov14 Clamming & oysters tripSat · 6:00 AM–11:00 AM · Tomorrow⛅ 63°F to 66°F · wind up to 9 mph
+errors: none

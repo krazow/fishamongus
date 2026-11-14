@@ -1,0 +1,10 @@
+--- empty log, open map
+views: [{"c":[39.5,-98.35],"z":4},{"c":[34.0105,-118.497],"z":13}]
+dot: [{"c":[34.0105,-118.497],"o":{"radius":8,"bubblingMouseEvents":false,"color":"#fff","weight":3,"fillColor":"#2a7de1","fillOpacity":1}}] | accuracy circles: [6]
+message covering map: hidden
+locate button visible: true
+--- move 3 km, tap locate
+last view: {"c":[34.035,-118.47],"z":15} | last dot: [34.035,-118.47]
+--- with a saved spot elsewhere, map fits the spot and does not jump to you
+views: [{"c":[39.5,-98.35],"z":4}] | dot drawn: 2
+errors: none

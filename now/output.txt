@@ -1,0 +1,38 @@
+--- Now screen (empty log)
+active view: view-now | tab: now
+cond: Where you are34.0105, -118.4970 ↻ Weather⛅ 63°FPartly cloudyWind5 mph Wgusts 9 mphPressure29.94 inHg→ SteadyTide↑ RisingHigh at 1:38 AMCoefficient 89 (strong)Moon🌒 20%Waxing crescentSunrise6:26 AM8 h 01 min from nowWater62°FWaves 3 ft, 12 s apart
+session card: Start fishing Tap when your line goes in. Fishamongus! times the session and tracks your lure, so Stats can show fish pe
+recs: Lures for right nowLog 5 more catches and this card will suggest lures that have worked for you in conditions like these.
+--- catch form
+summary: 📍 GPS ±6 m · ⛅ 63°F · ↑ rising tide | panel hidden: true | combos hidden: true
+save button: {"y":778,"h":56,"t":"Save catch"} (viewport 844)
+panel after tap hidden: false
+combo chips: California Halibut · Live bait | Calico Bass (Kelp Bass) · Curly-tail grub | Barred Sand Bass · Curly-tail grub
+after combo tap: species Calico Bass (Kelp Bass) | bait Curly-tail grub
+--- session
+recs: Lures for right nowWhat has caught fish for you here in conditions like the next few hours. 1Curly-tail grub50–65°F air (2 fish) · Night (2 fish)2Swimbait50–65°F air (2 fish) · Night (2 fish)3Live bait50–65°F air (1 fish
+toast: Session started with Live bait
+session card: Fishing0 minEnd session 0Fish –Per hour –Spot Recording your route… keep Fishamongus! open while you move On your lineLive baitChange Quick catch – one tap saves it, add details later🎤 Say it+Califor
+quick toast: California Halibut logged 🎣 | action: Add details
+quick catch saved: California Halibut Live bait | has location: true | weather: true | sessionId: true
+fish in card: 1
+lure now: Curly-tail grub · Motor oil | toast: Now fishing Curly-tail grub
+form prefilled bait: Curly-tail grub / Motor oil
+session lures: Live bait → Curly-tail grub → Live bait
+session bar: Fishing 0 min · 2 fish · Live bait End
+bar tap -> view: view-now | bar hidden on Now: true
+--- end + stats (shift the session 2 h into the past)
+after reload, session still live: true | elapsed: 2 h 00 min
+end toast: 2 h 00 min · 2 fish · 1 per hour | action: Undo
+card after end: Start fishing Tap when your line goes in. Fishamongus! times the session and tracks your lure, so Stats can show fish pe
+stats card: Fish per hourFrom 1 fishing session, where the app knows how long each lure was in the water. 2 hTime fished 1Fish per hour2 fish Live bait2.5/h2 fish in 48 minCurly-tail grub0/h0 fish in 36 minSwimbait0/h0 fish in 36 min Best session: Nov 13 – 1 fish per hour.
+--- short accidental session is discarded
+toast: Session discarded – under 5 minutes and no fish | sessions in db: 1
+--- trips from Now
+view: view-trips | lit tab: now
+back -> view-now
+--- offline Now
+msg: No signal – showing conditions from 10:25 PM.
+--- backup includes sessions
+backup version 6 | sessions 1
+errors: none

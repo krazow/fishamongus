@@ -1,0 +1,42 @@
+PASS Now alerts: ["Wind Advisory","Small Craft Advisory"]
+PASS marine zone found off the point and its alerts fetched
+PASS test messages are left out
+PASS alert expands with instructions
+PASS calendar days: 14
+PASS best days marked: 3
+PASS stormy day flagged: Mon, Nov 16: 1 out of 5. Thunderstorms
+PASS windy day marked down: Wed, Nov 18: 2 out of 5. Windy (gusts 37 mph)
+FAIL alert day flagged: Sat, Nov 14: 3 out of 5
+  why: [
+  'Mon, Nov 23 – Best bite times, Big tides, Minus tide 3:56 PM',
+  'Tue, Nov 24 – Best bite times, Big tides, Minus tide 4:44 PM',
+  'Wed, Nov 25 – Best bite times, Big tides'
+]
+PASS trip form opened from a day: 2026-11-23 10:00
+PASS route line: Route: 0.3 mi recorded · keep the app open while you move
+PASS track saved with the session: [7]
+PASS GPX has the session track
+PASS GPX namespace
+PASS GPX import sheet opens
+   marks.gpx · 3 places · 1 route or area not imported
+   [[true,"Hump & ledge | 40 ft · 4 mi away"],[true,"Oro Bay | Here"],[true,"Waypoint 3 | 4.8 mi away"]]
+PASS GPX waypoints listed, unnamed ones numbered
+PASS GPX tracks noted as not imported
+PASS GPX spots added: ["Hump & ledge","Waypoint 3","Oro Bay"]
+PASS already-saved places left unticked on a second import
+PASS KML description cleaned of HTML
+PASS KMZ unzipped and read
+PASS map open
+PASS access markers drawn: [["ramp","Oro Bay – boat ramp"],["ramp","Lake Josephine – boat ramp"],["pier","Fishing pier (WDFW)"],["shore","Oro Bay – shore fishing"]]
+PASS unnamed ramp named from the WDFW shore site next to it
+PASS unnamed pier gets a plain label
+PASS session route drawn on the map: 1
+PASS layers panel opens
+PASS NOAA chart layer added
+PASS NOAA chart layer removed
+PASS WDFW access data fetched once and reused
+PASS outside Washington: note shown
+PASS no route line when recording is off
+errors []
+PASS no page errors
+1 FAILED
