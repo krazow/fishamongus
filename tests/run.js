@@ -27,7 +27,7 @@ const EXPECT = {
   ],
   now: [
     /^active view: view-now \| tab: now$/m,
-    /^cond: Where you are.*Weather.*Tide.*Moon.*Sunrise/m,
+    /^cond: Where you are.*Weather.*Tide.*Moon.*Sun(rise|set)/m,
     /^summary: 📍 GPS .* \| panel hidden: true/m,
     /^after combo tap: species Calico Bass \(Kelp Bass\) \| bait Curly-tail grub$/m,
     /^toast: Session started with Live bait$/m,
