@@ -27,12 +27,15 @@ fs.writeFileSync('/tmp/geo/marks.gpx', gpx); fs.writeFileSync('/tmp/geo/pots.kml
   const browser = await chromium.launch((process.env.CHROME ? { executablePath: process.env.CHROME } : {}));
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, geolocation: ORO, permissions: ['geolocation'], locale: 'en-US', timezoneId: 'America/Los_Angeles', serviceWorkers: 'block', acceptDownloads: true });
   const page = await ctx.newPage(); const errors = []; page.on('console', (m) => { if (m.text().includes('ACCESSERR')) console.log(m.text()); }); page.on('pageerror', (e) => errors.push(e.message));
+  // Hours from now until midnight in the test's time zone, so the advisory always covers all of tomorrow.
+  const laHour = +new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', hour: 'numeric', hourCycle: 'h23' }).format(new Date());
+  const TOMORROW = 24 - laHour;
   const nws = [];
   await page.route(/api\.weather\.gov/, (r) => { const u = new URL(r.request().url()); nws.push(u.pathname + u.search);
     const now = Date.now(); const alert = (id, event, severity, h0, h1) => ({ properties: { id, event, severity, status: 'Actual', messageType: 'Alert', headline: `${event} issued by NWS Seattle`, description: 'South winds 15 to 25 kt.\nWind waves 2 to 4 ft.', instruction: 'Inexperienced mariners should avoid navigating.', onset: new Date(now + h0 * 3600000).toISOString(), ends: new Date(now + h1 * 3600000).toISOString(), senderName: 'NWS Seattle WA', areaDesc: 'Puget Sound' } });
     if (u.pathname === '/zones') return r.fulfill({ contentType: 'application/geo+json', body: JSON.stringify({ features: u.searchParams.get('point').startsWith('47.1452') ? [] : [{ properties: { id: 'PZZ135', name: 'Puget Sound and Hood Canal' } }] }) });
     if (u.pathname === '/alerts/active/zone/PZZ135') return r.fulfill({ contentType: 'application/geo+json', body: JSON.stringify({ features: [alert('a1', 'Small Craft Advisory', 'Minor', -1, 30)] }) });
-    if (u.pathname === '/alerts/active') return r.fulfill({ contentType: 'application/geo+json', body: JSON.stringify({ features: [alert('a2', 'Wind Advisory', 'Moderate', 20, 44), alert('a1', 'Small Craft Advisory', 'Minor', -1, 30), { properties: { id: 'x', event: 'Test', status: 'Test' } }] }) });
+    if (u.pathname === '/alerts/active') return r.fulfill({ contentType: 'application/geo+json', body: JSON.stringify({ features: [alert('a2', 'Wind Advisory', 'Moderate', TOMORROW + 1, TOMORROW + 23), alert('a1', 'Small Craft Advisory', 'Minor', -1, 30), { properties: { id: 'x', event: 'Test', status: 'Test' } }] }) });
     r.fulfill({ status: 404, body: '{}' }); });
   await page.route(/marine-api\.open-meteo/, (r) => { const q = new URL(r.request().url()).searchParams; const past = +(q.get('past_days') || 1), fut = +(q.get('forecast_days') || 1); const h0 = Math.floor(Date.now() / 3600000) * 3600 - past * 86400; const time = [...Array((past + fut) * 24)].map((_, i) => h0 + i * 3600);
     r.fulfill({ contentType: 'application/json', body: JSON.stringify({ hourly: { time, sea_surface_temperature: time.map(() => 10.8), wave_height: time.map(() => 0.3), wave_period: time.map(() => 4), wave_direction: time.map(() => 200) } }) }); });
