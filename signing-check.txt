@@ -1,0 +1,24 @@
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v3.2 scheme (APK Signature Scheme v3.2): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+V3.0 Signer: certificate DN: O=krazow, CN=Fishamongus!
+V3.0 Signer: certificate SHA-256 digest: 941c7276419e8e131db99bba49564556e2f5cc8953df7985171a5a893b3c3335
+V3.0 Signer: certificate SHA-1 digest: fe039856bbbcf7b9cfbe45aeef79a1588170b3b1
+V3.0 Signer: certificate MD5 digest: 9be11ffd326bebd7f52130583d4680c4
+V3.0 Signer: key algorithm: RSA
+V3.0 Signer: key size (bits): 3072
+V3.0 Signer: public key SHA-256 digest: 2ad77a9251286ed78276a7aec276dc831bc60e198e3b17367a631a19bfbaf486
+V3.0 Signer: public key SHA-1 digest: fda6d5c188a5fc14302210d9fbefe84aacfde5de
+V3.0 Signer: public key MD5 digest: ab43d71cd6f49de1ed208b55bd10895c
+total 13596
+drwxr-xr-x  2 runner runner     4096 Nov 14 07:31 .
+drwxr-xr-x 10 runner runner     4096 Nov 14 07:30 ..
+-rw-r--r--  1 runner runner  1861227 Nov 14 07:30 Fishamongus-4.9.3.apk
+-rw-r--r--  1 runner runner    22397 Nov 14 07:30 Fishamongus-4.9.3.apk.idsig
+-rwxr-xr-x  1 runner runner 12025344 Nov 14 07:31 FishamongusSetup-4.9.3.exe
