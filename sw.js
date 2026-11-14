@@ -1,7 +1,7 @@
 // Fishamongus! service worker: keeps the app working with no signal.
 // The release kit (github.com/krazow/release-kit) stamps the version in at every release, so phones pick up the update.
 const CACHE_PREFIX = 'fishamongus-';   // the kit makes this 'fishamongusbeta-' in the beta
-const VERSION = CACHE_PREFIX + '4.9.3';
+const VERSION = CACHE_PREFIX + '4.9.4';
 const TILES = 'tl-tiles';          // map tiles you've looked at, kept across app updates
 const MAX_TILES = 1500;            // about 30 MB
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest',

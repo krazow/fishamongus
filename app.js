@@ -168,7 +168,7 @@
 
   // ---------------------------------------------------------------- units
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition; // speech recognition, where the browser has it
-  const APP_VERSION = '4.9.3 (Nov 13, 2026)';
+  const APP_VERSION = '4.9.4 (Nov 14, 2026)';
   // Night (dim red) mode and large text, applied before anything is drawn.
   function applyDisplay() {
     const night = store('tl.theme') === 'night'; const large = store('tl.text') === 'large';
