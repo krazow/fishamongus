@@ -116,10 +116,11 @@ jobs:
           say "ANDROID_KEY_ALIAS: ${#KS_ALIAS} characters (expected 11)"
           if grep -qi "^${KS_ALIAS}," /tmp/kl.txt; then say "  found in the key file: yes"; else say "  found in the key file: NO (aliases in the file: $(grep -c 'PrivateKeyEntry' /tmp/kl.txt))"; fi
           rm -f /tmp/k.p12 /tmp/kl.txt
-          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git stash -q 2>/dev/null || true
-          git checkout -q --orphan diag-new && git rm -rfq . && git clean -fdq
-          cp $r signing-diag.txt && git add signing-diag.txt && git commit -qm "Signing diagnosis for ${GITHUB_SHA::7}" && git push -qf origin diag-new:signing-diag
+          # Pushed from a separate folder so the build folder is left as it is.
+          d=$(mktemp -d); cp $r $d/signing-diag.txt; cd $d
+          git init -q -b signing-diag && git add signing-diag.txt
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qm "Signing diagnosis for ${GITHUB_SHA::7}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" signing-diag
       - name: Windows installer
         run: |
           set -o pipefail
