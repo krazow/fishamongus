@@ -1,0 +1,10 @@
+No signing values saved as Variables
+Using ANDROID_SIGNING_KEY (the whole file, 4645 characters)
+ANDROID_KEYSTORE_B64: 4560 characters (expected 4560)
+  after removing spaces and line breaks: 4560 characters
+  decodes: yes, 3418 bytes (expected 3418)
+  same key file as 4.9.3: yes
+ANDROID_KEYSTORE_PASSWORD: 24 characters (expected 24)
+  opens the key file: yes
+ANDROID_KEY_ALIAS: 11 characters (expected 11)
+  found in the key file: yes
