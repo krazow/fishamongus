@@ -1,0 +1,41 @@
+name: Tests
+# Runs the app's test suites in a headless browser. Called by build-apps.yml before any
+# build, and run on its own for every pull request.
+on:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: write
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.49.1
+          npx playwright install --with-deps chromium
+      - name: Run the test suites
+        run: node tests/run.js
+        env:
+          OUT: ${{ runner.temp }}/test-output
+      - name: Keep the output and screenshots if anything failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: ${{ runner.temp }}/test-output
+          retention-days: 14
+      - name: Save the output to the test-results branch if anything failed
+        if: failure()
+        run: |
+          cd "${{ runner.temp }}/test-output"
+          find . -name '*.png' -size +400k -delete
+          git init -q -b test-results && git add -A
+          git -c user.name=github-actions -c user.email=actions@github.com commit -qm "Test output for ${{ github.sha }}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" test-results
