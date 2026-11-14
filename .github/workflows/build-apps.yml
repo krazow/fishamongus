@@ -133,7 +133,7 @@ jobs:
           cp /tmp/verify.txt /tmp/signing-check.txt; ls -la dist >> /tmp/signing-check.txt
           git checkout --orphan check-new && git rm -rfq . && git clean -fdq
           cp /tmp/signing-check.txt signing-check.txt && git add signing-check.txt && git commit -qm "Signing check passed for ${GITHUB_SHA::7}"
-          git push -f origin check-new:signing-check
+          git push -f origin check-new:signing-check-result
       - name: Release (signed builds)
         if: ${{ !inputs.check_signing && hashFiles('dist/Fishamongus-*[0-9].apk') != '' }}
         env: { GH_TOKEN: '${{ github.token }}' }
