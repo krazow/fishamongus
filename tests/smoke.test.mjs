@@ -41,8 +41,7 @@ const CHECKS = [
   }],
   ['it still opens offline', async () => {
     await page.context().setOffline(true);
-    await page.reload({ waitUntil: 'load' });
-    await page.context().setOffline(false);
+    try { await page.reload({ waitUntil: 'load' }); } finally { await page.context().setOffline(false); }
   }],
   ['the Log tab opens', async () => {
     await page.click('.tab[data-view="log"]');
