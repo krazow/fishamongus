@@ -1,0 +1,33 @@
+name: Tests
+# Runs the app's test suites in a headless browser. Called by build-apps.yml before any
+# build, and run on its own for every pull request.
+on:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.49.1
+          npx playwright install --with-deps chromium
+      - name: Run the test suites
+        run: node tests/run.js
+        env:
+          OUT: ${{ runner.temp }}/test-output
+      - name: Keep the output and screenshots if anything failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: ${{ runner.temp }}/test-output
+          retention-days: 14

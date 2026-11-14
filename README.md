@@ -188,3 +188,9 @@ Fishamongus! is live at **https://krazow.github.io/fishamongus/**, published by 
 **Updating the app:** after you change any file, open `sw.js` and bump `VERSION`, for example from `tl-v1` to `tl-v2`. Then drag the folder onto Netlify again. Phones pick up the new version the next time the app is opened twice.
 
 **Renamed from Tight Lines:** the app was renamed Fishamongus!. Catches saved under the old name are kept, and backups made by the old version can still be restored. If the app is already on your home screen, delete the icon and add it again to see the new name. Before you delete it, export a backup (Settings → *Export full backup*): on iPhone, deleting the home-screen app also deletes its saved data. Then restore the backup in the new copy.
+
+## Tests
+
+`tests/` holds seven suites that drive the app in a headless browser, with the weather, tide and map services faked so the results don't depend on the network: shellfish, the Now screen and sessions, spots and backups, map location, the 4.9 features, stats, and edge cases. `node tests/run.js` runs them all (or name some: `node tests/run.js now spots`) and checks each one's output for the results that must appear. They need Playwright (`npm install --no-save playwright` and `npx playwright install chromium`).
+
+GitHub runs them on every pull request, and the Android and Windows builds only start once they pass.
