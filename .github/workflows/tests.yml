@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   workflow_call:
 permissions:
-  contents: read
+  contents: write
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -31,3 +31,11 @@ jobs:
           name: test-output
           path: ${{ runner.temp }}/test-output
           retention-days: 14
+      - name: Save the output to the test-results branch if anything failed
+        if: failure()
+        run: |
+          cd "${{ runner.temp }}/test-output"
+          find . -name '*.png' -size +400k -delete
+          git init -q -b test-results && git add -A
+          git -c user.name=github-actions -c user.email=actions@github.com commit -qm "Test output for ${{ github.sha }}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" test-results
