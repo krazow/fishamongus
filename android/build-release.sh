@@ -27,5 +27,11 @@ BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
 echo "$KS_B64" | base64 -d > /tmp/fa.ks
 "$BT/apksigner" sign --ks /tmp/fa.ks --ks-pass env:KS_PASS --ks-key-alias "$KS_ALIAS" --out "$OUT/$NAME" /tmp/fa-aligned.apk
 rm -f /tmp/fa.ks
-"$BT/apksigner" verify "$OUT/$NAME"
+"$BT/apksigner" verify --print-certs "$OUT/$NAME" | tee /tmp/fa-verify.txt
+# Must be the key that signed every release so far (4.9.3 and earlier), or the APK won't install over people's app.
+EXPECTED_CERT=941c7276419e8e131db99bba49564556e2f5cc8953df7985171a5a893b3c3335
+if ! grep -qi "certificate SHA-256 digest: $EXPECTED_CERT" /tmp/fa-verify.txt; then
+  echo "::error::Fishamongus! Android: signed with a different key than earlier releases. Check the ANDROID_KEYSTORE_B64 secret."
+  rm -f "$OUT/$NAME"; exit 1
+fi
 rm -rf "$ROOT/android/app/build"

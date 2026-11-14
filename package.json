@@ -1,7 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "test": "node tests/smoke.test.mjs"
+    "test": "node tests/smoke.test.mjs && node tests/run.js"
   },
   "devDependencies": {
     "playwright": "^1.47.0"
