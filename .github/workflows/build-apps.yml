@@ -5,6 +5,11 @@
 name: Build Android and Windows apps
 on:
   workflow_dispatch:
+    inputs:
+      check_signing:
+        description: 'Only check signing: sign and verify the APK with the repository secrets, publish nothing'
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths: ['app.js', 'index.html', 'styles.css', 'sw.js', 'manifest.webmanifest', 'icons/**', 'android/**', 'windows/**', '.github/workflows/build-apps.yml', '.github/workflows/tests.yml', 'tests/**']
@@ -54,6 +59,7 @@ jobs:
           KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
           KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          EXPECTED_CERT: 941c7276419e8e131db99bba49564556e2f5cc8953df7985171a5a893b3c3335
         run: |
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           mkdir -p dist
@@ -61,8 +67,12 @@ jobs:
           if [ -n "$KS_B64" ]; then
             echo "$KS_B64" | base64 -d > /tmp/ks.p12
             "$BT/apksigner" sign --ks /tmp/ks.p12 --ks-pass env:KS_PASS --ks-key-alias "$KS_ALIAS" --out "dist/Fishamongus-${{ steps.v.outputs.ver }}.apk" "dist/Fishamongus-${{ steps.v.outputs.ver }}-unsigned.apk"
-            "$BT/apksigner" verify --verbose "dist/Fishamongus-${{ steps.v.outputs.ver }}.apk"
+            "$BT/apksigner" verify --verbose --print-certs "dist/Fishamongus-${{ steps.v.outputs.ver }}.apk" | tee /tmp/verify.txt
+            # Must be the key that signed every release so far, or the APK won't install over people's current app.
+            grep -qi "certificate SHA-256 digest: $EXPECTED_CERT" /tmp/verify.txt || { echo "::error::The APK was signed with a different key than earlier releases. Check the ANDROID_KEYSTORE_B64 secret."; exit 1; }
             rm "dist/Fishamongus-${{ steps.v.outputs.ver }}-unsigned.apk" /tmp/ks.p12
+          elif [ "${{ inputs.check_signing }}" = "true" ]; then
+            echo "::error::The signing secrets aren't set: ANDROID_KEYSTORE_B64 is empty."; exit 1
           fi
           ls -la dist
       - name: Windows installer
@@ -70,15 +80,23 @@ jobs:
           set -o pipefail
           LEAFLET_DIR=/tmp/leaflet/package/dist sh windows/build.sh 2>&1 | tee -a /tmp/build.log
           cp windows/dist/FishamongusSetup-*.exe dist/
+      - name: Signing check result
+        if: ${{ inputs.check_signing }}
+        run: |
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cp /tmp/verify.txt /tmp/signing-check.txt; ls -la dist >> /tmp/signing-check.txt
+          git checkout --orphan check-new && git rm -rfq . && git clean -fdq
+          cp /tmp/signing-check.txt signing-check.txt && git add signing-check.txt && git commit -qm "Signing check passed for ${GITHUB_SHA::7}"
+          git push -f origin check-new:signing-check
       - name: Release (signed builds)
-        if: ${{ hashFiles('dist/Fishamongus-*[0-9].apk') != '' }}
+        if: ${{ !inputs.check_signing && hashFiles('dist/Fishamongus-*[0-9].apk') != '' }}
         env: { GH_TOKEN: '${{ github.token }}' }
         run: |
           V=${{ steps.v.outputs.ver }}
           gh release delete "v$V" --yes --cleanup-tag 2>/dev/null || true
           gh release create "v$V" dist/Fishamongus-$V.apk dist/FishamongusSetup-$V.exe --target "$GITHUB_SHA" --title "Fishamongus! $V" --notes-file android/RELEASE_NOTES.md
       - name: Push unsigned build to the builds branch
-        if: ${{ hashFiles('dist/Fishamongus-*-unsigned.apk') != '' }}
+        if: ${{ !inputs.check_signing && hashFiles('dist/Fishamongus-*-unsigned.apk') != '' }}
         run: |
           git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           mkdir -p /tmp/b/unsigned /tmp/b/.github/workflows && cp dist/* /tmp/b/unsigned/ && cp android/RELEASE_NOTES.md /tmp/b/
