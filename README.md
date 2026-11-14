@@ -142,14 +142,14 @@ Tides show only where they apply:
 
 Settings (units, pounds or pounds and ounces, backup, and Help) is the gear icon at the top right. The app also has a map of all your catch spots, search, an "Open spot in Maps" button for getting back to a spot, sharing, and imperial/metric units.
 
-## Android and Windows apps
+## Windows app (and the old Android app)
 
-Download both from the latest release: **https://github.com/krazow/fishamongus/releases/latest**
+Download from the latest release: **https://github.com/krazow/fishamongus/releases/latest**
 
-- **Android 7.0 or newer:** open `Fishamongus-<version>.apk` on the phone. Android asks once to allow installs from your browser or file manager. It works offline from the first launch, maps included; installing a newer APK updates it and keeps your log. Spreadsheets, backups and GPX/KML files can be opened with Fishamongus! from a file manager or email.
+- **Android:** releases no longer include an APK. Install the web app instead (see below: Chrome → **Install app**). An APK you already have keeps working with your log; the last one is on the [4.9.3 release](https://github.com/krazow/fishamongus/releases/tag/v4.9.3).
 - **Windows 10 and 11:** run `FishamongusSetup-<version>.exe` (no administrator needed). It opens in a Microsoft Edge app window, with Start menu and desktop shortcuts, and uninstalls from Settings → Apps. SmartScreen may warn because the file isn't code-signed: More info → Run anyway. How it's built: [windows/README.md](windows/README.md).
 
-Each install keeps its own log on that device; move catches between them with a backup or spreadsheet file. Both are built with every release by the shared [Krazow release kit](https://github.com/krazow/release-kit), with the map library bundled (see [Releasing](#releasing)).
+Each install keeps its own log on that device; move catches between them with a backup or spreadsheet file. The Windows installer is built with every release by the shared [Krazow release kit](https://github.com/krazow/release-kit), with the map library bundled (see [Releasing](#releasing)).
 
 ## Get it on your phone (about 2 minutes)
 
@@ -165,9 +165,9 @@ Fishamongus! is live at **https://krazow.github.io/fishamongus/**. New versions 
 
 ## Releasing
 
-Type **`/release now`** in a Claude chat on this repo. It bumps `VERSION`, updates `APP_VERSION` and `CHANGELOG.md`, and starts the shared [Krazow release kit](https://github.com/krazow/release-kit) pipeline: tests, then the beta at https://krazow.github.io/fishamongus/beta/ and a pre-release with the **Fishamongus! Beta** Android app (it installs beside the real one, with its own log). When it's good, **`/release promote`** puts the same version live and publishes the APK and `FishamongusSetup-<version>.exe` as the Latest release. `/release all`, `status` and `rollback` are there too.
+Type **`/release now`** in a Claude chat on this repo. It bumps `VERSION`, updates `APP_VERSION` and `CHANGELOG.md`, and starts the shared [Krazow release kit](https://github.com/krazow/release-kit) pipeline: tests, then the beta at https://krazow.github.io/fishamongus/beta/ (with its own log, separate from your real one), announced on a pre-release. When it's good, **`/release promote`** puts the same version live and publishes `FishamongusSetup-<version>.exe` as the Latest release. `/release all`, `status` and `rollback` are there too.
 
-Pushing to `main` no longer changes the live app; tests run on every pull request ([CI](.github/workflows/ci.yml)). The kit stamps the version into `sw.js`, so installed copies pick up each release. The Android build ([android/build-release.sh](android/build-release.sh)) signs with the repo secrets `ANDROID_KEYSTORE_B64`, `ANDROID_KEYSTORE_PASSWORD` and `ANDROID_KEY_ALIAS`, which must hold the same key as earlier releases; without them a release has no APK, and a build signed with any other key is stopped (its certificate is checked), because it couldn't update the app on phones.
+Pushing to `main` no longer changes the live app; tests run on every pull request ([CI](.github/workflows/ci.yml)). The kit stamps the version into `sw.js`, so installed copies pick up each release. Releases don't build the Android app anymore (`"android": {"enabled": false}` in [release.json](release.json)); the project in `android/` and its build script stay, so it can be switched back on.
 
 ## How it works
 

@@ -8,8 +8,8 @@ are taken from it.
 No changes to how the app works; this release changes how new versions reach you.
 
 ### Changed
-- New versions come out as a beta first, at https://krazow.github.io/fishamongus/beta/, with its own separate log, and a separate "Fishamongus! Beta" Android app that installs beside the real one. Once it has been tried, it's promoted to the main app. Pushing to `main` no longer changes the live app.
-- Every Android update is checked to be signed with the same key as earlier versions, so it always installs over the app on your phone.
+- New versions come out as a beta first, at https://krazow.github.io/fishamongus/beta/, with its own separate log. Once it has been tried, it's promoted to the main app. Pushing to `main` no longer changes the live app.
+- Releases no longer include an Android APK. On Android, install the web app from Chrome (**Install app**); an APK you already have keeps working with your log. The Windows installer is unchanged.
 - Seven test suites (shellfish, the Now screen and sessions, spots and backups, map location, the 4.9 features, stats and edge cases) plus a smoke test run before every release.
 
 ### Fixed
